@@ -1,6 +1,7 @@
 # Survival Board Game
 
 This repository contains a small prototype of a turn-based survival board game.
+The player roams a 10×10 grid collecting supplies while avoiding zombies.
 
 ## Requirements
 - Python 3.12+
@@ -9,6 +10,15 @@ This repository contains a small prototype of a turn-based survival board game.
 ```bash
 python game.py
 ```
-Move the player using `W`, `A`, `S`, and `D` keys.
-Avoid zombies that chase you after each move.
-The game ends when your health drops to zero.
+
+### Controls
+
+During your turn you have two actions. Enter:
+
+- `W` `A` `S` `D` – move one tile.
+- `F` – attack an adjacent zombie (70% hit chance).
+- `G` – scavenge the current tile for supplies.
+- `P` – pass the remaining actions.
+
+Zombies move after you finish your actions. Collect **5 supplies** to win,
+or survive as long as you can before your health reaches zero.
