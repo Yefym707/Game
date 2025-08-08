@@ -12,6 +12,10 @@ zombies. Inventory space is limited so choose carefully what to carry.
 python game.py
 ```
 
+At launch you'll be prompted to choose a difficulty level. Available options
+are **easy**, **normal**, and **hard**. If unsure, press Enter for the default
+normal difficulty.
+
 ### Controls
 
 During your turn you have two actions. Enter:
