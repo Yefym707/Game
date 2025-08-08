@@ -50,6 +50,7 @@ HUNGER_EAT_AMOUNT = 4
 HUNGER_STARVE_DAMAGE = 1
 
 CAMPAIGN_FILE = "campaign_save.json"
+SAVE_FILE = "savegame.json"
 ANTIDOTE_SYMBOL = "A"
 KEYS_SYMBOL = "K"
 FUEL_SYMBOL = "F"
@@ -185,6 +186,95 @@ class Game:
         self.reveal_area(self.player.x, self.player.y)
         self.turn: int = 0
         self.actions_per_turn: int = ACTIONS_PER_TURN
+        self.keep_save = False
+
+    # ------------------------------------------------------------------
+    # Persistence helpers
+    def to_dict(self) -> dict:
+        """Serialize current game state to a dictionary."""
+        return {
+            "difficulty": self.difficulty,
+            "scenario": self.scenario,
+            "start_pos": self.start_pos,
+            "player": {
+                "x": self.player.x,
+                "y": self.player.y,
+                "max_health": self.player.max_health,
+                "health": self.player.health,
+                "max_hunger": self.player.max_hunger,
+                "hunger": self.player.hunger,
+                "supplies": self.player.supplies,
+                "medkits": self.player.medkits,
+                "has_antidote": self.player.has_antidote,
+                "has_keys": self.player.has_keys,
+                "has_fuel": self.player.has_fuel,
+                "has_weapon": self.player.has_weapon,
+            },
+            "zombies": [(z.x, z.y) for z in self.zombies],
+            "supplies_positions": list(self.supplies_positions),
+            "revealed": list(self.revealed),
+            "antidote_pos": self.antidote_pos,
+            "keys_pos": self.keys_pos,
+            "fuel_pos": self.fuel_pos,
+            "radio_positions": list(self.radio_positions),
+            "radio_tower_pos": self.radio_tower_pos,
+            "radio_parts_collected": self.radio_parts_collected,
+            "called_rescue": self.called_rescue,
+            "rescue_timer": self.rescue_timer,
+            "turn": self.turn,
+            "double_move_tokens": self.double_move_tokens,
+            "has_signal_device": self.has_signal_device,
+            "actions_per_turn": self.actions_per_turn,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Game":
+        """Reconstruct a Game instance from serialized data."""
+        game = cls(data["difficulty"], data["scenario"])
+        p = data["player"]
+        game.player.x = p["x"]
+        game.player.y = p["y"]
+        game.player.max_health = p["max_health"]
+        game.player.health = p["health"]
+        game.player.max_hunger = p["max_hunger"]
+        game.player.hunger = p["hunger"]
+        game.player.supplies = p["supplies"]
+        game.player.medkits = p["medkits"]
+        game.player.has_antidote = p["has_antidote"]
+        game.player.has_keys = p["has_keys"]
+        game.player.has_fuel = p["has_fuel"]
+        game.player.has_weapon = p["has_weapon"]
+        game.start_pos = tuple(data["start_pos"])
+        game.zombies = [Zombie(x, y) for x, y in data["zombies"]]
+        game.supplies_positions = {tuple(pos) for pos in data["supplies_positions"]}
+        game.revealed = {tuple(pos) for pos in data["revealed"]}
+        game.antidote_pos = tuple(data["antidote_pos"]) if data["antidote_pos"] else None
+        game.keys_pos = tuple(data["keys_pos"]) if data["keys_pos"] else None
+        game.fuel_pos = tuple(data["fuel_pos"]) if data["fuel_pos"] else None
+        game.radio_positions = {tuple(pos) for pos in data["radio_positions"]}
+        game.radio_tower_pos = (
+            tuple(data["radio_tower_pos"]) if data["radio_tower_pos"] else None
+        )
+        game.radio_parts_collected = data["radio_parts_collected"]
+        game.called_rescue = data["called_rescue"]
+        game.rescue_timer = data["rescue_timer"]
+        game.turn = data["turn"]
+        game.double_move_tokens = data.get("double_move_tokens", 0)
+        game.has_signal_device = data.get("has_signal_device", False)
+        game.actions_per_turn = data.get("actions_per_turn", ACTIONS_PER_TURN)
+        return game
+
+    def save_game(self, filename: str = SAVE_FILE) -> None:
+        """Write current game state to disk."""
+        with open(filename, "w", encoding="utf-8") as fh:
+            json.dump(self.to_dict(), fh)
+
+    @classmethod
+    def load_game(cls, filename: str = SAVE_FILE) -> "Game":
+        """Load game state from disk."""
+        with open(filename, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        return cls.from_dict(data)
 
     def reveal_area(self, x: int, y: int) -> None:
         """Reveal tiles around (x, y) and trigger discovery events."""
@@ -539,7 +629,7 @@ class Game:
         while actions_left > 0 and self.player.health > 0:
             self.draw_board()
             cmd = input(
-                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, e=eat, p=pass]: "
+                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, e=eat, p=pass, q=save]: "
             ).strip().lower()
 
             if cmd in {"w", "a", "s", "d"}:
@@ -573,6 +663,11 @@ class Game:
                     print("Nothing to eat!")
             elif cmd == "p":
                 break
+            elif cmd == "q":
+                self.save_game()
+                self.keep_save = True
+                print("Game saved.")
+                raise SystemExit
             else:
                 print("Unknown command.")
 
@@ -600,19 +695,19 @@ class Game:
     def run(self) -> None:
         if self.scenario == 1:
             print(
-                "Find the antidote and return to the safe zone. Your pack holds at most eight items. Ctrl+C to quit."
+                "Find the antidote and return to the safe zone. Your pack holds at most eight items. Press Q to save and quit."
             )
         elif self.scenario == 2:
             print(
-                "Locate keys and fuel then get back to the starting tile to escape. Your pack holds at most eight items. Ctrl+C to quit."
+                "Locate keys and fuel then get back to the starting tile to escape. Your pack holds at most eight items. Press Q to save and quit."
             )
         elif self.scenario == 3:
             print(
-                "Gather three radio parts and return to the safe zone. Your pack holds at most eight items. Ctrl+C to quit."
+                "Gather three radio parts and return to the safe zone. Your pack holds at most eight items. Press Q to save and quit."
             )
         elif self.scenario == 4:
             print(
-                "Call for rescue and survive until help arrives. Scavenge the start tile with a radio device or find the tower. Ctrl+C to quit."
+                "Call for rescue and survive until help arrives. Scavenge the start tile with a radio device or find the tower. Press Q to save and quit."
             )
         if self.campaign.get("hp_bonus"):
             print(f"Campaign bonus: +{self.campaign['hp_bonus']} max health")
@@ -668,14 +763,20 @@ class Game:
             self.campaign["double_move_tokens"] = self.double_move_tokens
             self.campaign["signal_device"] = 1 if self.has_signal_device else 0
             save_campaign(self.campaign)
+            if not self.keep_save and os.path.exists(SAVE_FILE):
+                os.remove(SAVE_FILE)
 
 
 if __name__ == "__main__":
-    diff = input("Choose difficulty [easy/normal/hard]: ").strip().lower() or "normal"
-    scen = input("Choose scenario [1/2/3/4]: ").strip() or "1"
-    try:
-        scen_num = int(scen)
-    except ValueError:
-        scen_num = 1
-    Game(diff, scen_num).run()
+    if os.path.exists(SAVE_FILE) and input("Load saved game? [y/N]: ").strip().lower() == "y":
+        game = Game.load_game()
+    else:
+        diff = input("Choose difficulty [easy/normal/hard]: ").strip().lower() or "normal"
+        scen = input("Choose scenario [1/2/3/4]: ").strip() or "1"
+        try:
+            scen_num = int(scen)
+        except ValueError:
+            scen_num = 1
+        game = Game(diff, scen_num)
+    game.run()
 
