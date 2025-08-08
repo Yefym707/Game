@@ -1,7 +1,8 @@
 # Survival Board Game
 
 This repository contains a small prototype of a turn-based survival board game.
-The player roams a 10×10 grid collecting supplies while avoiding zombies.
+The player roams a fog-covered 10×10 grid collecting supplies while avoiding
+zombies. Inventory space is limited so choose carefully what to carry.
 
 ## Requirements
 - Python 3.12+
@@ -23,4 +24,5 @@ During your turn you have two actions. Enter:
 
 Zombies move after you finish your actions, then a random event may occur.
 The scenario ends after 20 rounds or when you collect **5 supplies**.
+You can carry at most eight items (supplies and medkits combined).
 Survive as long as you can before your health reaches zero.
