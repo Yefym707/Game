@@ -37,6 +37,8 @@ SCAVENGE_FIND_CHANCE = 0.5
 ZOMBIE_SPAWN_CHANCE = 0.3
 MEDKIT_FIND_CHANCE = 0.2
 MEDKIT_HEAL = 3
+WEAPON_FIND_CHANCE = 0.1
+WEAPON_HIT_CHANCE = 0.9
 TURN_LIMIT = 20
 REVEAL_RADIUS = 1
 REVEAL_SUPPLY_CHANCE = 0.05
@@ -114,6 +116,7 @@ class Player(Entity):
         self.has_antidote: bool = False
         self.has_keys: bool = False
         self.has_fuel: bool = False
+        self.has_weapon: bool = False
 
     @property
     def inventory_size(self) -> int:
@@ -329,7 +332,7 @@ class Game:
                 board[z.y][z.x] = z.symbol
 
         print(
-            f"Health: {self.player.health}    Medkits: {self.player.medkits}    Supplies: {self.player.supplies}    Inventory: {self.player.inventory_size}/{INVENTORY_LIMIT}    Tokens: {self.double_move_tokens}"
+            f"Health: {self.player.health}    Medkits: {self.player.medkits}    Supplies: {self.player.supplies}    Inventory: {self.player.inventory_size}/{INVENTORY_LIMIT}    Tokens: {self.double_move_tokens}    Weapon: {'Y' if self.player.has_weapon else 'N'}"
         )
         for row in board:
             print(" ".join(row))
@@ -365,7 +368,8 @@ class Game:
         # Find adjacent zombie (4-directional)
         for z in list(self.zombies):
             if abs(z.x - self.player.x) + abs(z.y - self.player.y) == 1:
-                if random.random() < ATTACK_HIT_CHANCE:
+                hit_chance = WEAPON_HIT_CHANCE if self.player.has_weapon else ATTACK_HIT_CHANCE
+                if random.random() < hit_chance:
                     self.zombies.remove(z)
                     print("You slay a zombie!")
                 else:
@@ -422,22 +426,29 @@ class Game:
                 print("Your pack is full. You leave the supply behind.")
             return
 
-        if self.player.inventory_size >= INVENTORY_LIMIT:
+        weapon_found = False
+        if not self.player.has_weapon and random.random() < WEAPON_FIND_CHANCE:
+            weapon_found = True
+
+        if self.player.inventory_size >= INVENTORY_LIMIT and not weapon_found:
             print("Your pack is full. You can't carry more.")
             return
 
         found = False
-        if random.random() < SCAVENGE_FIND_CHANCE:
-            self.player.supplies += 1
+        if weapon_found:
+            self.player.has_weapon = True
             found = True
-            print("You find a supply!")
-        if (
-            self.player.inventory_size < INVENTORY_LIMIT
-            and random.random() < MEDKIT_FIND_CHANCE
-        ):
-            self.player.medkits += 1
-            found = True
-            print("You find a medkit!")
+            print("You find a weapon!")
+
+        if self.player.inventory_size < INVENTORY_LIMIT:
+            if random.random() < SCAVENGE_FIND_CHANCE:
+                self.player.supplies += 1
+                found = True
+                print("You find a supply!")
+            if random.random() < MEDKIT_FIND_CHANCE:
+                self.player.medkits += 1
+                found = True
+                print("You find a medkit!")
         if not found:
             print("You find nothing of use.")
 
