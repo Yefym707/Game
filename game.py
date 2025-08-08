@@ -30,12 +30,16 @@ STARTING_HEALTH = 10
 STARTING_ZOMBIES = 5
 STARTING_SUPPLIES = 5
 SUPPLIES_TO_WIN = 5
+INVENTORY_LIMIT = 8
 ATTACK_HIT_CHANCE = 0.7
 SCAVENGE_FIND_CHANCE = 0.5
 ZOMBIE_SPAWN_CHANCE = 0.3
 MEDKIT_FIND_CHANCE = 0.2
 MEDKIT_HEAL = 3
 TURN_LIMIT = 20
+REVEAL_RADIUS = 1
+REVEAL_SUPPLY_CHANCE = 0.05
+REVEAL_ZOMBIE_CHANCE = 0.05
 
 
 @dataclass
@@ -54,6 +58,11 @@ class Player(Entity):
         self.supplies: int = 0
         self.medkits: int = 0
 
+    @property
+    def inventory_size(self) -> int:
+        """Total number of items currently carried."""
+        return self.supplies + self.medkits
+
 
 class Zombie(Entity):
     """Simple zombie that pursues the player."""
@@ -71,9 +80,33 @@ class Game:
         self.player = Player(self.board_size // 2, self.board_size // 2)
         self.zombies: List[Zombie] = []
         self.supplies_positions: Set[Tuple[int, int]] = set()
+        self.revealed: Set[Tuple[int, int]] = set()
         self.spawn_zombies(STARTING_ZOMBIES)
         self.spawn_supplies(STARTING_SUPPLIES)
+        self.reveal_area(self.player.x, self.player.y)
         self.turn: int = 0
+
+    def reveal_area(self, x: int, y: int) -> None:
+        """Reveal tiles around (x, y) and trigger discovery events."""
+        for dx in range(-REVEAL_RADIUS, REVEAL_RADIUS + 1):
+            for dy in range(-REVEAL_RADIUS, REVEAL_RADIUS + 1):
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < self.board_size and 0 <= ny < self.board_size:
+                    if (nx, ny) not in self.revealed:
+                        self.revealed.add((nx, ny))
+                        if (
+                            (nx, ny) not in self.supplies_positions
+                            and all((z.x, z.y) != (nx, ny) for z in self.zombies)
+                        ):
+                            roll = random.random()
+                            if roll < REVEAL_SUPPLY_CHANCE:
+                                self.supplies_positions.add((nx, ny))
+                                if (nx, ny) == (x, y):
+                                    print("You uncover a supply cache!")
+                            elif roll < REVEAL_SUPPLY_CHANCE + REVEAL_ZOMBIE_CHANCE:
+                                self.zombies.append(Zombie(nx, ny))
+                                if (nx, ny) == (x, y):
+                                    print("A lurking zombie surprises you!")
 
     # ------------------------------------------------------------------
     # Board setup helpers
@@ -105,15 +138,26 @@ class Game:
     # ------------------------------------------------------------------
     # Drawing helpers
     def draw_board(self) -> None:
-        board = [["." for _ in range(self.board_size)] for _ in range(self.board_size)]
+        board = []
+        for y in range(self.board_size):
+            row: List[str] = []
+            for x in range(self.board_size):
+                if (x, y) in self.revealed:
+                    row.append(".")
+                else:
+                    row.append("?")
+            board.append(row)
+
         board[self.player.y][self.player.x] = self.player.symbol
         for x, y in self.supplies_positions:
-            board[y][x] = "R"
+            if (x, y) in self.revealed:
+                board[y][x] = "R"
         for z in self.zombies:
-            board[z.y][z.x] = z.symbol
+            if (z.x, z.y) in self.revealed:
+                board[z.y][z.x] = z.symbol
 
         print(
-            f"Health: {self.player.health}    Medkits: {self.player.medkits}    Supplies: {self.player.supplies}"
+            f"Health: {self.player.health}    Medkits: {self.player.medkits}    Supplies: {self.player.supplies}    Inventory: {self.player.inventory_size}/{INVENTORY_LIMIT}"
         )
         for row in board:
             print(" ".join(row))
@@ -136,6 +180,7 @@ class Game:
         nx, ny = self.player.x + dx, self.player.y + dy
         if 0 <= nx < self.board_size and 0 <= ny < self.board_size:
             self.player.x, self.player.y = nx, ny
+            self.reveal_area(nx, ny)
             return True
         return False
 
@@ -155,9 +200,16 @@ class Game:
     def scavenge(self) -> None:
         pos = (self.player.x, self.player.y)
         if pos in self.supplies_positions:
-            self.supplies_positions.remove(pos)
-            self.player.supplies += 1
-            print("You pick up a supply.")
+            if self.player.inventory_size < INVENTORY_LIMIT:
+                self.supplies_positions.remove(pos)
+                self.player.supplies += 1
+                print("You pick up a supply.")
+            else:
+                print("Your pack is full. You leave the supply behind.")
+            return
+
+        if self.player.inventory_size >= INVENTORY_LIMIT:
+            print("Your pack is full. You can't carry more.")
             return
 
         found = False
@@ -165,7 +217,10 @@ class Game:
             self.player.supplies += 1
             found = True
             print("You find a supply!")
-        if random.random() < MEDKIT_FIND_CHANCE:
+        if (
+            self.player.inventory_size < INVENTORY_LIMIT
+            and random.random() < MEDKIT_FIND_CHANCE
+        ):
             self.player.medkits += 1
             found = True
             print("You find a medkit!")
@@ -250,7 +305,9 @@ class Game:
         return self.player.health <= 0
 
     def run(self) -> None:
-        print("Collect supplies and survive. Ctrl+C to quit.")
+        print(
+            "Collect supplies and survive. Your pack holds at most eight items. Ctrl+C to quit."
+        )
         try:
             while True:
                 self.player_turn()
