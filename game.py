@@ -1,7 +1,7 @@
 """Turn-based survival board game prototype.
 
 This module implements a simple console survival game where the player
-attempts to gather supplies while avoiding zombies on a grid based map.
+scours a zombie infested grid for an antidote then races back to safety.
 
 Features
 --------
@@ -10,8 +10,8 @@ Features
 * Melee combat with a chance to hit. Failed attacks cost health.
 * Random scavenge system for finding additional supplies.
 * Zombies pursue the player and new ones may spawn each round.
-* Player wins by collecting enough supplies or loses when health reaches
-  zero.
+* Player wins by finding the antidote and returning to the starting tile.
+  Victory grants +1 max health for the next run, saved to disk.
 
 The code is intentionally compact and uses only the Python standard
 library so it can run in any environment with Python 3.12 or newer.
@@ -19,9 +19,11 @@ library so it can run in any environment with Python 3.12 or newer.
 
 from __future__ import annotations
 
+import json
+import os
 import random
 from dataclasses import dataclass
-from typing import List, Set, Tuple
+from typing import List, Optional, Set, Tuple
 
 
 BOARD_SIZE = 10
@@ -29,7 +31,6 @@ ACTIONS_PER_TURN = 2
 STARTING_HEALTH = 10
 STARTING_ZOMBIES = 5
 STARTING_SUPPLIES = 5
-SUPPLIES_TO_WIN = 5
 INVENTORY_LIMIT = 8
 ATTACK_HIT_CHANCE = 0.7
 SCAVENGE_FIND_CHANCE = 0.5
@@ -41,27 +42,44 @@ REVEAL_RADIUS = 1
 REVEAL_SUPPLY_CHANCE = 0.05
 REVEAL_ZOMBIE_CHANCE = 0.05
 
+CAMPAIGN_FILE = "campaign_save.json"
+ANTIDOTE_SYMBOL = "A"
+
+
+def load_campaign() -> dict:
+    """Load persistent campaign data from disk."""
+    if os.path.exists(CAMPAIGN_FILE):
+        with open(CAMPAIGN_FILE, "r", encoding="utf-8") as fh:
+            try:
+                return json.load(fh)
+            except json.JSONDecodeError:
+                pass
+    return {"hp_bonus": 0}
+
+
+def save_campaign(data: dict) -> None:
+    """Persist campaign data to disk."""
+    with open(CAMPAIGN_FILE, "w", encoding="utf-8") as fh:
+        json.dump(data, fh)
+
 
 DIFFICULTY_SETTINGS = {
     "easy": {
         "starting_health": STARTING_HEALTH + 2,
         "starting_zombies": max(1, STARTING_ZOMBIES - 2),
         "zombie_spawn_chance": ZOMBIE_SPAWN_CHANCE * 0.7,
-        "supplies_to_win": max(1, SUPPLIES_TO_WIN - 1),
         "turn_limit": TURN_LIMIT + 5,
     },
     "normal": {
         "starting_health": STARTING_HEALTH,
         "starting_zombies": STARTING_ZOMBIES,
         "zombie_spawn_chance": ZOMBIE_SPAWN_CHANCE,
-        "supplies_to_win": SUPPLIES_TO_WIN,
         "turn_limit": TURN_LIMIT,
     },
     "hard": {
         "starting_health": max(1, STARTING_HEALTH - 2),
         "starting_zombies": STARTING_ZOMBIES + 2,
         "zombie_spawn_chance": ZOMBIE_SPAWN_CHANCE * 1.3,
-        "supplies_to_win": SUPPLIES_TO_WIN + 1,
         "turn_limit": max(1, TURN_LIMIT - 5),
     },
 }
@@ -83,6 +101,7 @@ class Player(Entity):
         self.health: int = starting_health
         self.supplies: int = 0
         self.medkits: int = 0
+        self.has_antidote: bool = False
 
     @property
     def inventory_size(self) -> int:
@@ -107,16 +126,19 @@ class Game:
         if settings is None:
             raise ValueError("Unknown difficulty")
         self.difficulty = difficulty.lower()
+        self.campaign = load_campaign()
         self.zombie_spawn_chance = settings["zombie_spawn_chance"]
-        self.supplies_to_win = settings["supplies_to_win"]
         self.turn_limit = settings["turn_limit"]
-        starting_health = settings["starting_health"]
+        starting_health = settings["starting_health"] + self.campaign.get("hp_bonus", 0)
         self.player = Player(self.board_size // 2, self.board_size // 2, starting_health)
+        self.start_pos = (self.player.x, self.player.y)
+        self.antidote_pos: Optional[Tuple[int, int]] = None
         self.zombies: List[Zombie] = []
         self.supplies_positions: Set[Tuple[int, int]] = set()
         self.revealed: Set[Tuple[int, int]] = set()
         self.spawn_zombies(settings["starting_zombies"])
         self.spawn_supplies(STARTING_SUPPLIES)
+        self.spawn_antidote()
         self.reveal_area(self.player.x, self.player.y)
         self.turn: int = 0
         self.actions_per_turn: int = ACTIONS_PER_TURN
@@ -131,6 +153,7 @@ class Game:
                         self.revealed.add((nx, ny))
                         if (
                             (nx, ny) not in self.supplies_positions
+                            and (nx, ny) != self.antidote_pos
                             and all((z.x, z.y) != (nx, ny) for z in self.zombies)
                         ):
                             roll = random.random()
@@ -163,12 +186,24 @@ class Game:
                 x, y = random.randrange(self.board_size), random.randrange(
                     self.board_size
                 )
-                if (x, y) not in self.supplies_positions and (x, y) != (
-                    self.player.x,
-                    self.player.y,
+                if (
+                    (x, y) not in self.supplies_positions
+                    and (x, y) != (self.player.x, self.player.y)
+                    and (x, y) != self.antidote_pos
                 ):
                     self.supplies_positions.add((x, y))
                     break
+
+    def spawn_antidote(self) -> None:
+        while True:
+            x, y = random.randrange(self.board_size), random.randrange(self.board_size)
+            if (
+                (x, y) not in self.supplies_positions
+                and (x, y) != self.start_pos
+                and all((z.x, z.y) != (x, y) for z in self.zombies)
+            ):
+                self.antidote_pos = (x, y)
+                break
 
     # ------------------------------------------------------------------
     # Drawing helpers
@@ -182,8 +217,14 @@ class Game:
                 else:
                     row.append("?")
             board.append(row)
+        sx, sy = self.start_pos
+        if (sx, sy) in self.revealed and (sx, sy) != (self.player.x, self.player.y):
+            board[sy][sx] = "S"
 
         board[self.player.y][self.player.x] = self.player.symbol
+        if self.antidote_pos and self.antidote_pos in self.revealed:
+            ax, ay = self.antidote_pos
+            board[ay][ax] = ANTIDOTE_SYMBOL
         for x, y in self.supplies_positions:
             if (x, y) in self.revealed:
                 board[y][x] = "R"
@@ -234,6 +275,12 @@ class Game:
 
     def scavenge(self) -> None:
         pos = (self.player.x, self.player.y)
+        if pos == self.antidote_pos:
+            self.antidote_pos = None
+            self.player.has_antidote = True
+            print("You secure the antidote!")
+            return
+
         if pos in self.supplies_positions:
             if self.player.inventory_size < INVENTORY_LIMIT:
                 self.supplies_positions.remove(pos)
@@ -343,20 +390,25 @@ class Game:
                 print("Unknown command.")
 
     def check_victory(self) -> bool:
-        return self.player.supplies >= self.supplies_to_win
+        return self.player.has_antidote and (self.player.x, self.player.y) == self.start_pos
 
     def check_defeat(self) -> bool:
         return self.player.health <= 0
 
     def run(self) -> None:
         print(
-            "Collect supplies and survive. Your pack holds at most eight items. Ctrl+C to quit."
+            "Find the antidote and return to the safe zone. Your pack holds at most eight items. Ctrl+C to quit."
         )
+        if self.campaign.get("hp_bonus"):
+            print(f"Campaign bonus: +{self.campaign['hp_bonus']} max health")
         try:
             while True:
                 self.player_turn()
                 if self.check_victory():
-                    print("You gathered enough supplies and escape. You win!")
+                    print("You return with the antidote and escape. You win!")
+                    self.campaign["hp_bonus"] = self.campaign.get("hp_bonus", 0) + 1
+                    save_campaign(self.campaign)
+                    print("Max health increased for next game!")
                     break
                 if self.check_defeat():
                     print("You have fallen to the zombies...")
