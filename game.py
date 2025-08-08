@@ -33,6 +33,9 @@ SUPPLIES_TO_WIN = 5
 ATTACK_HIT_CHANCE = 0.7
 SCAVENGE_FIND_CHANCE = 0.5
 ZOMBIE_SPAWN_CHANCE = 0.3
+MEDKIT_FIND_CHANCE = 0.2
+MEDKIT_HEAL = 3
+TURN_LIMIT = 20
 
 
 @dataclass
@@ -49,6 +52,7 @@ class Player(Entity):
         super().__init__(x, y, "@")
         self.health: int = STARTING_HEALTH
         self.supplies: int = 0
+        self.medkits: int = 0
 
 
 class Zombie(Entity):
@@ -69,6 +73,7 @@ class Game:
         self.supplies_positions: Set[Tuple[int, int]] = set()
         self.spawn_zombies(STARTING_ZOMBIES)
         self.spawn_supplies(STARTING_SUPPLIES)
+        self.turn: int = 0
 
     # ------------------------------------------------------------------
     # Board setup helpers
@@ -107,7 +112,9 @@ class Game:
         for z in self.zombies:
             board[z.y][z.x] = z.symbol
 
-        print(f"Health: {self.player.health}    Supplies: {self.player.supplies}")
+        print(
+            f"Health: {self.player.health}    Medkits: {self.player.medkits}    Supplies: {self.player.supplies}"
+        )
         for row in board:
             print(" ".join(row))
 
@@ -153,11 +160,25 @@ class Game:
             print("You pick up a supply.")
             return
 
+        found = False
         if random.random() < SCAVENGE_FIND_CHANCE:
             self.player.supplies += 1
+            found = True
             print("You find a supply!")
-        else:
+        if random.random() < MEDKIT_FIND_CHANCE:
+            self.player.medkits += 1
+            found = True
+            print("You find a medkit!")
+        if not found:
             print("You find nothing of use.")
+
+    def use_medkit(self) -> bool:
+        if self.player.medkits > 0 and self.player.health < STARTING_HEALTH:
+            self.player.medkits -= 1
+            self.player.health = min(STARTING_HEALTH, self.player.health + MEDKIT_HEAL)
+            print("You use a medkit and recover health.")
+            return True
+        return False
 
     # ------------------------------------------------------------------
     # Zombie behaviour
@@ -176,6 +197,19 @@ class Game:
             self.spawn_zombies(1)
             print("A zombie shambles in from the darkness...")
 
+    def random_event(self) -> None:
+        """Trigger a random event at the end of the round."""
+        event = random.choice(["nothing", "heal", "supply", "horde"])
+        if event == "heal" and self.player.health < STARTING_HEALTH:
+            self.player.health += 1
+            print("You catch your breath and recover 1 health.")
+        elif event == "supply":
+            self.spawn_supplies(1)
+            print("A supply crate drops nearby!")
+        elif event == "horde":
+            self.spawn_zombies(2)
+            print("A small horde shambles in!")
+
     # ------------------------------------------------------------------
     # Turn handling and game state
     def player_turn(self) -> None:
@@ -183,7 +217,7 @@ class Game:
         while actions_left > 0 and self.player.health > 0:
             self.draw_board()
             cmd = input(
-                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, p=pass]: "
+                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, p=pass]: "
             ).strip().lower()
 
             if cmd in {"w", "a", "s", "d"}:
@@ -199,6 +233,11 @@ class Game:
             elif cmd == "g":
                 self.scavenge()
                 actions_left -= 1
+            elif cmd == "h":
+                if self.use_medkit():
+                    actions_left -= 1
+                else:
+                    print("No medkit to use!")
             elif cmd == "p":
                 break
             else:
@@ -226,6 +265,11 @@ class Game:
                     print("You have fallen to the zombies...")
                     break
                 self.spawn_random_zombie()
+                self.random_event()
+                self.turn += 1
+                if self.turn >= TURN_LIMIT:
+                    print("Time runs out and the area is overrun. You perish...")
+                    break
         except (KeyboardInterrupt, EOFError):
             print("\nThanks for playing!")
 
