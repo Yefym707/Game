@@ -59,6 +59,8 @@ RADIO_TOWER_SYMBOL = "T"
 RADIO_PARTS_REQUIRED = 3
 EVACUATION_TURNS = 5
 DOUBLE_MOVE_REWARD = 5
+WEAPON_NOISE_ZOMBIE_CHANCE = 0.3
+VEHICLE_NOISE_ZOMBIE_CHANCE = 0.5
 
 
 def load_campaign() -> dict:
@@ -482,6 +484,13 @@ class Game:
                 else:
                     self.player.health -= 1
                     print("Your attack misses! You take 1 damage.")
+                if self.player.has_weapon:
+                    self.spawn_zombie_near(
+                        self.player.x,
+                        self.player.y,
+                        WEAPON_NOISE_ZOMBIE_CHANCE,
+                    )
+                    print("The gunshot echoes...")
                 return True
         return False
 
@@ -594,6 +603,24 @@ class Game:
             self.spawn_zombies(1)
             print("A zombie shambles in from the darkness...")
 
+    def spawn_zombie_near(self, x: int, y: int, chance: float) -> None:
+        """Spawn a zombie adjacent to (x, y) with the given chance."""
+        if random.random() < chance:
+            candidates = [
+                (nx, ny)
+                for nx in range(x - 1, x + 2)
+                for ny in range(y - 1, y + 2)
+                if 0 <= nx < self.board_size
+                and 0 <= ny < self.board_size
+                and (nx, ny) != (x, y)
+                and all((z.x, z.y) != (nx, ny) for z in self.zombies)
+            ]
+            if candidates:
+                zx, zy = random.choice(candidates)
+                self.zombies.append(Zombie(zx, zy))
+                if (zx, zy) in self.revealed:
+                    print("Noise draws a zombie nearby!")
+
     def random_event(self) -> None:
         """Trigger a random event at the end of the round."""
         event = random.choice(
@@ -640,6 +667,13 @@ class Game:
                         steps = 2
                         self.double_move_tokens -= 1
                 if self.move_player(cmd, steps):
+                    if steps > 1:
+                        self.spawn_zombie_near(
+                            self.player.x,
+                            self.player.y,
+                            VEHICLE_NOISE_ZOMBIE_CHANCE,
+                        )
+                        print("The engine roar attracts the dead!")
                     actions_left -= 1
                 else:
                     print("You can't move there!")

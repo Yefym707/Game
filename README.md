@@ -42,6 +42,7 @@ During your turn you have two actions. Enter:
  returning to the `S` marked starting tile. Scenario 2 is won by bringing both
  keys and fuel back to the start.
  You can carry at most eight items (supplies and medkits combined). Weapons and scenario objectives don't take space.
+ Gunfire and the roar of an engine are risky – using a weapon or a double-move token may attract additional zombies.
  Each victory in scenario 1 grants +1 max health for future runs. Winning
  scenario 2 awards five double-move tokens that let you move two tiles in a
  single action on subsequent games. All campaign progress is stored in
