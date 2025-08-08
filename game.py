@@ -44,17 +44,23 @@ REVEAL_ZOMBIE_CHANCE = 0.05
 
 CAMPAIGN_FILE = "campaign_save.json"
 ANTIDOTE_SYMBOL = "A"
+KEYS_SYMBOL = "K"
+FUEL_SYMBOL = "F"
+DOUBLE_MOVE_REWARD = 5
 
 
 def load_campaign() -> dict:
     """Load persistent campaign data from disk."""
+    data = {"hp_bonus": 0, "double_move_tokens": 0}
     if os.path.exists(CAMPAIGN_FILE):
         with open(CAMPAIGN_FILE, "r", encoding="utf-8") as fh:
             try:
-                return json.load(fh)
+                loaded = json.load(fh)
+                if isinstance(loaded, dict):
+                    data.update(loaded)
             except json.JSONDecodeError:
                 pass
-    return {"hp_bonus": 0}
+    return data
 
 
 def save_campaign(data: dict) -> None:
@@ -102,6 +108,8 @@ class Player(Entity):
         self.supplies: int = 0
         self.medkits: int = 0
         self.has_antidote: bool = False
+        self.has_keys: bool = False
+        self.has_fuel: bool = False
 
     @property
     def inventory_size(self) -> int:
@@ -121,24 +129,34 @@ class Game:
 
     board_size: int = BOARD_SIZE
 
-    def __init__(self, difficulty: str = "normal") -> None:
+    def __init__(self, difficulty: str = "normal", scenario: int = 1) -> None:
         settings = DIFFICULTY_SETTINGS.get(difficulty.lower())
         if settings is None:
             raise ValueError("Unknown difficulty")
         self.difficulty = difficulty.lower()
+        self.scenario = scenario
         self.campaign = load_campaign()
+        self.double_move_tokens = self.campaign.get("double_move_tokens", 0)
         self.zombie_spawn_chance = settings["zombie_spawn_chance"]
         self.turn_limit = settings["turn_limit"]
         starting_health = settings["starting_health"] + self.campaign.get("hp_bonus", 0)
         self.player = Player(self.board_size // 2, self.board_size // 2, starting_health)
         self.start_pos = (self.player.x, self.player.y)
         self.antidote_pos: Optional[Tuple[int, int]] = None
+        self.keys_pos: Optional[Tuple[int, int]] = None
+        self.fuel_pos: Optional[Tuple[int, int]] = None
         self.zombies: List[Zombie] = []
         self.supplies_positions: Set[Tuple[int, int]] = set()
         self.revealed: Set[Tuple[int, int]] = set()
         self.spawn_zombies(settings["starting_zombies"])
         self.spawn_supplies(STARTING_SUPPLIES)
-        self.spawn_antidote()
+        if self.scenario == 1:
+            self.spawn_antidote()
+        elif self.scenario == 2:
+            self.spawn_keys()
+            self.spawn_fuel()
+        else:
+            self.spawn_antidote()
         self.reveal_area(self.player.x, self.player.y)
         self.turn: int = 0
         self.actions_per_turn: int = ACTIONS_PER_TURN
@@ -154,6 +172,8 @@ class Game:
                         if (
                             (nx, ny) not in self.supplies_positions
                             and (nx, ny) != self.antidote_pos
+                            and (nx, ny) != self.keys_pos
+                            and (nx, ny) != self.fuel_pos
                             and all((z.x, z.y) != (nx, ny) for z in self.zombies)
                         ):
                             roll = random.random()
@@ -205,6 +225,29 @@ class Game:
                 self.antidote_pos = (x, y)
                 break
 
+    def spawn_keys(self) -> None:
+        while True:
+            x, y = random.randrange(self.board_size), random.randrange(self.board_size)
+            if (
+                (x, y) not in self.supplies_positions
+                and (x, y) != self.start_pos
+                and all((z.x, z.y) != (x, y) for z in self.zombies)
+            ):
+                self.keys_pos = (x, y)
+                break
+
+    def spawn_fuel(self) -> None:
+        while True:
+            x, y = random.randrange(self.board_size), random.randrange(self.board_size)
+            if (
+                (x, y) not in self.supplies_positions
+                and (x, y) != self.start_pos
+                and (x, y) != self.keys_pos
+                and all((z.x, z.y) != (x, y) for z in self.zombies)
+            ):
+                self.fuel_pos = (x, y)
+                break
+
     # ------------------------------------------------------------------
     # Drawing helpers
     def draw_board(self) -> None:
@@ -225,6 +268,12 @@ class Game:
         if self.antidote_pos and self.antidote_pos in self.revealed:
             ax, ay = self.antidote_pos
             board[ay][ax] = ANTIDOTE_SYMBOL
+        if self.keys_pos and self.keys_pos in self.revealed:
+            kx, ky = self.keys_pos
+            board[ky][kx] = KEYS_SYMBOL
+        if self.fuel_pos and self.fuel_pos in self.revealed:
+            fx, fy = self.fuel_pos
+            board[fy][fx] = FUEL_SYMBOL
         for x, y in self.supplies_positions:
             if (x, y) in self.revealed:
                 board[y][x] = "R"
@@ -233,14 +282,14 @@ class Game:
                 board[z.y][z.x] = z.symbol
 
         print(
-            f"Health: {self.player.health}    Medkits: {self.player.medkits}    Supplies: {self.player.supplies}    Inventory: {self.player.inventory_size}/{INVENTORY_LIMIT}"
+            f"Health: {self.player.health}    Medkits: {self.player.medkits}    Supplies: {self.player.supplies}    Inventory: {self.player.inventory_size}/{INVENTORY_LIMIT}    Tokens: {self.double_move_tokens}"
         )
         for row in board:
             print(" ".join(row))
 
     # ------------------------------------------------------------------
     # Player actions
-    def move_player(self, direction: str) -> bool:
+    def move_player(self, direction: str, steps: int = 1) -> bool:
         dx, dy = 0, 0
         if direction == "w":
             dy = -1
@@ -253,12 +302,17 @@ class Game:
         else:
             return False
 
-        nx, ny = self.player.x + dx, self.player.y + dy
-        if 0 <= nx < self.board_size and 0 <= ny < self.board_size:
-            self.player.x, self.player.y = nx, ny
-            self.reveal_area(nx, ny)
-            return True
-        return False
+        original = (self.player.x, self.player.y)
+        for _ in range(steps):
+            nx, ny = self.player.x + dx, self.player.y + dy
+            if 0 <= nx < self.board_size and 0 <= ny < self.board_size:
+                self.player.x, self.player.y = nx, ny
+                self.reveal_area(nx, ny)
+            else:
+                self.player.x, self.player.y = original
+                self.reveal_area(*original)
+                return False
+        return True
 
     def attack(self) -> bool:
         # Find adjacent zombie (4-directional)
@@ -279,6 +333,16 @@ class Game:
             self.antidote_pos = None
             self.player.has_antidote = True
             print("You secure the antidote!")
+            return
+        if pos == self.keys_pos:
+            self.keys_pos = None
+            self.player.has_keys = True
+            print("You grab the car keys!")
+            return
+        if pos == self.fuel_pos:
+            self.fuel_pos = None
+            self.player.has_fuel = True
+            print("You siphon some fuel!")
             return
 
         if pos in self.supplies_positions:
@@ -367,7 +431,13 @@ class Game:
             ).strip().lower()
 
             if cmd in {"w", "a", "s", "d"}:
-                if self.move_player(cmd):
+                steps = 1
+                if self.double_move_tokens > 0:
+                    use = input("Use double move token? [y/N]: ").strip().lower()
+                    if use == "y":
+                        steps = 2
+                        self.double_move_tokens -= 1
+                if self.move_player(cmd, steps):
                     actions_left -= 1
                 else:
                     print("You can't move there!")
@@ -390,25 +460,46 @@ class Game:
                 print("Unknown command.")
 
     def check_victory(self) -> bool:
-        return self.player.has_antidote and (self.player.x, self.player.y) == self.start_pos
+        if self.scenario == 1:
+            return self.player.has_antidote and (self.player.x, self.player.y) == self.start_pos
+        if self.scenario == 2:
+            return (
+                self.player.has_keys
+                and self.player.has_fuel
+                and (self.player.x, self.player.y) == self.start_pos
+            )
+        return False
 
     def check_defeat(self) -> bool:
         return self.player.health <= 0
 
     def run(self) -> None:
-        print(
-            "Find the antidote and return to the safe zone. Your pack holds at most eight items. Ctrl+C to quit."
-        )
+        if self.scenario == 1:
+            print(
+                "Find the antidote and return to the safe zone. Your pack holds at most eight items. Ctrl+C to quit."
+            )
+        elif self.scenario == 2:
+            print(
+                "Locate keys and fuel then get back to the starting tile to escape. Your pack holds at most eight items. Ctrl+C to quit."
+            )
         if self.campaign.get("hp_bonus"):
             print(f"Campaign bonus: +{self.campaign['hp_bonus']} max health")
+        if self.double_move_tokens:
+            print(f"Campaign bonus: {self.double_move_tokens} double-move tokens")
         try:
             while True:
                 self.player_turn()
                 if self.check_victory():
-                    print("You return with the antidote and escape. You win!")
-                    self.campaign["hp_bonus"] = self.campaign.get("hp_bonus", 0) + 1
-                    save_campaign(self.campaign)
-                    print("Max health increased for next game!")
+                    if self.scenario == 1:
+                        print("You return with the antidote and escape. You win!")
+                        self.campaign["hp_bonus"] = self.campaign.get("hp_bonus", 0) + 1
+                        print("Max health increased for next game!")
+                    elif self.scenario == 2:
+                        print("You fuel up the vehicle and drive to safety. You win!")
+                        self.double_move_tokens += DOUBLE_MOVE_REWARD
+                        print(
+                            f"You gain {DOUBLE_MOVE_REWARD} double-move tokens for future runs!"
+                        )
                     break
                 if self.check_defeat():
                     print("You have fallen to the zombies...")
@@ -425,9 +516,18 @@ class Game:
                     break
         except (KeyboardInterrupt, EOFError):
             print("\nThanks for playing!")
+        finally:
+            self.campaign["hp_bonus"] = self.campaign.get("hp_bonus", 0)
+            self.campaign["double_move_tokens"] = self.double_move_tokens
+            save_campaign(self.campaign)
 
 
 if __name__ == "__main__":
     diff = input("Choose difficulty [easy/normal/hard]: ").strip().lower() or "normal"
-    Game(diff).run()
+    scen = input("Choose scenario [1/2]: ").strip() or "1"
+    try:
+        scen_num = int(scen)
+    except ValueError:
+        scen_num = 1
+    Game(diff, scen_num).run()
 

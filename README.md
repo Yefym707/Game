@@ -1,7 +1,7 @@
 # Survival Board Game
 
 This repository contains a small prototype of a turn-based survival board game.
-The player roams a fog-covered 10×10 grid searching for a vital antidote while
+The player roams a fog-covered 10×10 grid searching for objectives while
 avoiding zombies. Inventory space is limited so choose carefully what to carry.
 
 ## Requirements
@@ -12,15 +12,17 @@ avoiding zombies. Inventory space is limited so choose carefully what to carry.
 python game.py
 ```
 
-At launch you'll be prompted to choose a difficulty level. Available options
-are **easy**, **normal**, and **hard**. If unsure, press Enter for the default
-normal difficulty.
+At launch you'll be prompted to choose a difficulty level and a scenario.
+Available difficulties are **easy**, **normal**, and **hard**. If unsure, press
+Enter for the defaults. Scenario **1** tasks you with finding an antidote and
+returning to the starting tile. Scenario **2** requires locating both car keys
+and fuel before escaping.
 
 ### Controls
 
 During your turn you have two actions. Enter:
 
-- `W` `A` `S` `D` – move one tile.
+- `W` `A` `S` `D` – move one tile (or two if using a double-move token).
 - `F` – attack an adjacent zombie (70% hit chance).
 - `G` – scavenge the current tile for supplies or the antidote.
 - `H` – use a found medkit to recover health.
@@ -29,8 +31,12 @@ During your turn you have two actions. Enter:
  Zombies move after you finish your actions, then a random event may occur.
  Events can alter your next turn – a storm might reduce you to one action while
  an adrenaline rush grants an extra move.
- The scenario ends after 20 rounds. Win by finding the antidote and returning
- to the `S` marked starting tile.
+ The scenario ends after 20 rounds. Win scenario 1 by finding the antidote and
+ returning to the `S` marked starting tile. Scenario 2 is won by bringing both
+ keys and fuel back to the start.
  You can carry at most eight items (supplies and medkits combined).
- Each victory grants +1 max health for future runs, stored in `campaign_save.json`.
+ Each victory in scenario 1 grants +1 max health for future runs. Winning
+ scenario 2 awards five double-move tokens that let you move two tiles in a
+ single action on subsequent games. All campaign progress is stored in
+ `campaign_save.json`.
  Survive as long as you can before your health reaches zero.
