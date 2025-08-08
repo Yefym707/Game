@@ -119,6 +119,7 @@ class Game:
         self.spawn_supplies(STARTING_SUPPLIES)
         self.reveal_area(self.player.x, self.player.y)
         self.turn: int = 0
+        self.actions_per_turn: int = ACTIONS_PER_TURN
 
     def reveal_area(self, x: int, y: int) -> None:
         """Reveal tiles around (x, y) and trigger discovery events."""
@@ -288,7 +289,9 @@ class Game:
 
     def random_event(self) -> None:
         """Trigger a random event at the end of the round."""
-        event = random.choice(["nothing", "heal", "supply", "horde"])
+        event = random.choice(
+            ["nothing", "heal", "supply", "horde", "storm", "adrenaline"]
+        )
         if event == "heal" and self.player.health < self.player.max_health:
             self.player.health = min(self.player.max_health, self.player.health + 1)
             print("You catch your breath and recover 1 health.")
@@ -298,11 +301,18 @@ class Game:
         elif event == "horde":
             self.spawn_zombies(2)
             print("A small horde shambles in!")
+        elif event == "storm":
+            self.actions_per_turn = max(1, ACTIONS_PER_TURN - 1)
+            print("A fierce storm slows you down. Only one action next turn!")
+        elif event == "adrenaline":
+            self.actions_per_turn = ACTIONS_PER_TURN + 1
+            print("Adrenaline surges through you! You gain an extra action next turn.")
 
     # ------------------------------------------------------------------
     # Turn handling and game state
     def player_turn(self) -> None:
-        actions_left = ACTIONS_PER_TURN
+        actions_left = self.actions_per_turn
+        self.actions_per_turn = ACTIONS_PER_TURN
         while actions_left > 0 and self.player.health > 0:
             self.draw_board()
             cmd = input(

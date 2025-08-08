@@ -26,7 +26,9 @@ During your turn you have two actions. Enter:
 - `H` – use a found medkit to recover health.
 - `P` – pass the remaining actions.
 
-Zombies move after you finish your actions, then a random event may occur.
-The scenario ends after 20 rounds or when you collect **5 supplies**.
-You can carry at most eight items (supplies and medkits combined).
-Survive as long as you can before your health reaches zero.
+ Zombies move after you finish your actions, then a random event may occur.
+ Events can alter your next turn – a storm might reduce you to one action while
+ an adrenaline rush grants an extra move.
+ The scenario ends after 20 rounds or when you collect **5 supplies**.
+ You can carry at most eight items (supplies and medkits combined).
+ Survive as long as you can before your health reaches zero.
