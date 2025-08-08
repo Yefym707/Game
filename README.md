@@ -16,7 +16,9 @@ At launch you'll be prompted to choose a difficulty level and a scenario.
 Available difficulties are **easy**, **normal**, and **hard**. If unsure, press
 Enter for the defaults. Scenario **1** tasks you with finding an antidote and
 returning to the starting tile. Scenario **2** requires locating both car keys
-and fuel before escaping.
+and fuel before escaping. Scenario **3** asks you to gather three radio parts
+then retreat to the start. Scenario **4** is a final stand: call for rescue and
+survive until it arrives.
 
 ### Controls
 

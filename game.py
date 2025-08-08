@@ -46,12 +46,16 @@ CAMPAIGN_FILE = "campaign_save.json"
 ANTIDOTE_SYMBOL = "A"
 KEYS_SYMBOL = "K"
 FUEL_SYMBOL = "F"
+RADIO_PART_SYMBOL = "P"
+RADIO_TOWER_SYMBOL = "T"
+RADIO_PARTS_REQUIRED = 3
+EVACUATION_TURNS = 5
 DOUBLE_MOVE_REWARD = 5
 
 
 def load_campaign() -> dict:
     """Load persistent campaign data from disk."""
-    data = {"hp_bonus": 0, "double_move_tokens": 0}
+    data = {"hp_bonus": 0, "double_move_tokens": 0, "signal_device": 0}
     if os.path.exists(CAMPAIGN_FILE):
         with open(CAMPAIGN_FILE, "r", encoding="utf-8") as fh:
             try:
@@ -137,6 +141,7 @@ class Game:
         self.scenario = scenario
         self.campaign = load_campaign()
         self.double_move_tokens = self.campaign.get("double_move_tokens", 0)
+        self.has_signal_device = bool(self.campaign.get("signal_device"))
         self.zombie_spawn_chance = settings["zombie_spawn_chance"]
         self.turn_limit = settings["turn_limit"]
         starting_health = settings["starting_health"] + self.campaign.get("hp_bonus", 0)
@@ -145,6 +150,11 @@ class Game:
         self.antidote_pos: Optional[Tuple[int, int]] = None
         self.keys_pos: Optional[Tuple[int, int]] = None
         self.fuel_pos: Optional[Tuple[int, int]] = None
+        self.radio_positions: Set[Tuple[int, int]] = set()
+        self.radio_tower_pos: Optional[Tuple[int, int]] = None
+        self.radio_parts_collected = 0
+        self.called_rescue = False
+        self.rescue_timer: Optional[int] = None
         self.zombies: List[Zombie] = []
         self.supplies_positions: Set[Tuple[int, int]] = set()
         self.revealed: Set[Tuple[int, int]] = set()
@@ -155,6 +165,11 @@ class Game:
         elif self.scenario == 2:
             self.spawn_keys()
             self.spawn_fuel()
+        elif self.scenario == 3:
+            self.spawn_radio_parts(RADIO_PARTS_REQUIRED)
+        elif self.scenario == 4:
+            if not self.has_signal_device:
+                self.spawn_radio_tower()
         else:
             self.spawn_antidote()
         self.reveal_area(self.player.x, self.player.y)
@@ -174,6 +189,8 @@ class Game:
                             and (nx, ny) != self.antidote_pos
                             and (nx, ny) != self.keys_pos
                             and (nx, ny) != self.fuel_pos
+                            and (nx, ny) not in self.radio_positions
+                            and (nx, ny) != self.radio_tower_pos
                             and all((z.x, z.y) != (nx, ny) for z in self.zombies)
                         ):
                             roll = random.random()
@@ -248,6 +265,30 @@ class Game:
                 self.fuel_pos = (x, y)
                 break
 
+    def spawn_radio_parts(self, count: int) -> None:
+        for _ in range(count):
+            while True:
+                x, y = random.randrange(self.board_size), random.randrange(self.board_size)
+                if (
+                    (x, y) not in self.supplies_positions
+                    and (x, y) != self.start_pos
+                    and (x, y) not in self.radio_positions
+                    and all((z.x, z.y) != (x, y) for z in self.zombies)
+                ):
+                    self.radio_positions.add((x, y))
+                    break
+
+    def spawn_radio_tower(self) -> None:
+        while True:
+            x, y = random.randrange(self.board_size), random.randrange(self.board_size)
+            if (
+                (x, y) not in self.supplies_positions
+                and (x, y) != self.start_pos
+                and all((z.x, z.y) != (x, y) for z in self.zombies)
+            ):
+                self.radio_tower_pos = (x, y)
+                break
+
     # ------------------------------------------------------------------
     # Drawing helpers
     def draw_board(self) -> None:
@@ -274,6 +315,12 @@ class Game:
         if self.fuel_pos and self.fuel_pos in self.revealed:
             fx, fy = self.fuel_pos
             board[fy][fx] = FUEL_SYMBOL
+        for x, y in self.radio_positions:
+            if (x, y) in self.revealed:
+                board[y][x] = RADIO_PART_SYMBOL
+        if self.radio_tower_pos and self.radio_tower_pos in self.revealed:
+            tx, ty = self.radio_tower_pos
+            board[ty][tx] = RADIO_TOWER_SYMBOL
         for x, y in self.supplies_positions:
             if (x, y) in self.revealed:
                 board[y][x] = "R"
@@ -344,6 +391,27 @@ class Game:
             self.player.has_fuel = True
             print("You siphon some fuel!")
             return
+        if pos in self.radio_positions:
+            self.radio_positions.remove(pos)
+            self.radio_parts_collected += 1
+            print(
+                f"You collect a radio part ({self.radio_parts_collected}/{RADIO_PARTS_REQUIRED})!"
+            )
+            return
+        if self.scenario == 4 and not self.called_rescue:
+            if pos == self.start_pos:
+                if self.has_signal_device:
+                    self.called_rescue = True
+                    self.rescue_timer = EVACUATION_TURNS
+                    print("You radio for rescue! Hold out!")
+                else:
+                    print("You need a radio to signal for help.")
+                return
+            if self.radio_tower_pos and pos == self.radio_tower_pos:
+                self.called_rescue = True
+                self.rescue_timer = EVACUATION_TURNS
+                print("You activate the tower and call for rescue! Hold out!")
+                return
 
         if pos in self.supplies_positions:
             if self.player.inventory_size < INVENTORY_LIMIT:
@@ -468,6 +536,13 @@ class Game:
                 and self.player.has_fuel
                 and (self.player.x, self.player.y) == self.start_pos
             )
+        if self.scenario == 3:
+            return (
+                self.radio_parts_collected >= RADIO_PARTS_REQUIRED
+                and (self.player.x, self.player.y) == self.start_pos
+            )
+        if self.scenario == 4:
+            return self.called_rescue and self.rescue_timer is not None and self.rescue_timer <= 0
         return False
 
     def check_defeat(self) -> bool:
@@ -482,10 +557,20 @@ class Game:
             print(
                 "Locate keys and fuel then get back to the starting tile to escape. Your pack holds at most eight items. Ctrl+C to quit."
             )
+        elif self.scenario == 3:
+            print(
+                "Gather three radio parts and return to the safe zone. Your pack holds at most eight items. Ctrl+C to quit."
+            )
+        elif self.scenario == 4:
+            print(
+                "Call for rescue and survive until help arrives. Scavenge the start tile with a radio device or find the tower. Ctrl+C to quit."
+            )
         if self.campaign.get("hp_bonus"):
             print(f"Campaign bonus: +{self.campaign['hp_bonus']} max health")
         if self.double_move_tokens:
             print(f"Campaign bonus: {self.double_move_tokens} double-move tokens")
+        if self.has_signal_device:
+            print("Campaign bonus: portable radio device")
         try:
             while True:
                 self.player_turn()
@@ -500,6 +585,13 @@ class Game:
                         print(
                             f"You gain {DOUBLE_MOVE_REWARD} double-move tokens for future runs!"
                         )
+                    elif self.scenario == 3:
+                        print("You assemble the radio and send out a signal. You win!")
+                        self.has_signal_device = True
+                        self.campaign["signal_device"] = 1
+                        print("A portable radio will aid you in the final escape!")
+                    elif self.scenario == 4:
+                        print("The rescue helicopter arrives and lifts you to safety. You win!")
                     break
                 if self.check_defeat():
                     print("You have fallen to the zombies...")
@@ -510,6 +602,11 @@ class Game:
                     break
                 self.spawn_random_zombie()
                 self.random_event()
+                if self.called_rescue and self.rescue_timer is not None:
+                    self.rescue_timer -= 1
+                    if self.check_victory():
+                        print("The rescue helicopter arrives and lifts you to safety. You win!")
+                        break
                 self.turn += 1
                 if self.turn >= self.turn_limit:
                     print("Time runs out and the area is overrun. You perish...")
@@ -519,12 +616,13 @@ class Game:
         finally:
             self.campaign["hp_bonus"] = self.campaign.get("hp_bonus", 0)
             self.campaign["double_move_tokens"] = self.double_move_tokens
+            self.campaign["signal_device"] = 1 if self.has_signal_device else 0
             save_campaign(self.campaign)
 
 
 if __name__ == "__main__":
     diff = input("Choose difficulty [easy/normal/hard]: ").strip().lower() or "normal"
-    scen = input("Choose scenario [1/2]: ").strip() or "1"
+    scen = input("Choose scenario [1/2/3/4]: ").strip() or "1"
     try:
         scen_num = int(scen)
     except ValueError:
