@@ -8,10 +8,11 @@ Features
 * 10x10 board with player, zombies and supply tokens.
 * Player has two actions per turn: move, attack, scavenge or pass.
 * Melee combat with a chance to hit. Failed attacks cost health.
-* Random scavenge system for finding additional supplies.
+* Random scavenge system for finding additional supplies and food.
 * Zombies pursue the player and new ones may spawn each round.
 * Player wins by finding the antidote and returning to the starting tile.
   Victory grants +1 max health for the next run, saved to disk.
+* Hunger mechanic – eat supplies to avoid starving each round.
 
 The code is intentionally compact and uses only the Python standard
 library so it can run in any environment with Python 3.12 or newer.
@@ -43,6 +44,10 @@ TURN_LIMIT = 20
 REVEAL_RADIUS = 1
 REVEAL_SUPPLY_CHANCE = 0.05
 REVEAL_ZOMBIE_CHANCE = 0.05
+STARTING_HUNGER = 10
+HUNGER_DECAY = 1
+HUNGER_EAT_AMOUNT = 4
+HUNGER_STARVE_DAMAGE = 1
 
 CAMPAIGN_FILE = "campaign_save.json"
 ANTIDOTE_SYMBOL = "A"
@@ -111,6 +116,8 @@ class Player(Entity):
         super().__init__(x, y, "@")
         self.max_health: int = starting_health
         self.health: int = starting_health
+        self.max_hunger: int = STARTING_HUNGER
+        self.hunger: int = STARTING_HUNGER
         self.supplies: int = 0
         self.medkits: int = 0
         self.has_antidote: bool = False
@@ -332,7 +339,17 @@ class Game:
                 board[z.y][z.x] = z.symbol
 
         print(
-            f"Health: {self.player.health}    Medkits: {self.player.medkits}    Supplies: {self.player.supplies}    Inventory: {self.player.inventory_size}/{INVENTORY_LIMIT}    Tokens: {self.double_move_tokens}    Weapon: {'Y' if self.player.has_weapon else 'N'}"
+            "Health: {}    Hunger: {}/{}    Medkits: {}    Supplies: {}    Inventory: {}/{}    Tokens: {}    Weapon: {}".format(
+                self.player.health,
+                self.player.hunger,
+                self.player.max_hunger,
+                self.player.medkits,
+                self.player.supplies,
+                self.player.inventory_size,
+                INVENTORY_LIMIT,
+                self.double_move_tokens,
+                "Y" if self.player.has_weapon else "N",
+            )
         )
         for row in board:
             print(" ".join(row))
@@ -460,6 +477,16 @@ class Game:
             return True
         return False
 
+    def eat_food(self) -> bool:
+        if self.player.supplies > 0 and self.player.hunger < self.player.max_hunger:
+            self.player.supplies -= 1
+            self.player.hunger = min(
+                self.player.max_hunger, self.player.hunger + HUNGER_EAT_AMOUNT
+            )
+            print("You eat some supplies and feel less hungry.")
+            return True
+        return False
+
     # ------------------------------------------------------------------
     # Zombie behaviour
     def move_zombies(self) -> None:
@@ -498,6 +525,12 @@ class Game:
             self.actions_per_turn = ACTIONS_PER_TURN + 1
             print("Adrenaline surges through you! You gain an extra action next turn.")
 
+    def apply_hunger(self) -> None:
+        self.player.hunger = max(0, self.player.hunger - HUNGER_DECAY)
+        if self.player.hunger == 0:
+            self.player.health -= HUNGER_STARVE_DAMAGE
+            print("Starvation gnaws at you! -1 health")
+
     # ------------------------------------------------------------------
     # Turn handling and game state
     def player_turn(self) -> None:
@@ -506,7 +539,7 @@ class Game:
         while actions_left > 0 and self.player.health > 0:
             self.draw_board()
             cmd = input(
-                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, p=pass]: "
+                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, e=eat, p=pass]: "
             ).strip().lower()
 
             if cmd in {"w", "a", "s", "d"}:
@@ -533,6 +566,11 @@ class Game:
                     actions_left -= 1
                 else:
                     print("No medkit to use!")
+            elif cmd == "e":
+                if self.eat_food():
+                    actions_left -= 1
+                else:
+                    print("Nothing to eat!")
             elif cmd == "p":
                 break
             else:
@@ -613,6 +651,7 @@ class Game:
                     break
                 self.spawn_random_zombie()
                 self.random_event()
+                self.apply_hunger()
                 if self.called_rescue and self.rescue_timer is not None:
                     self.rescue_timer -= 1
                     if self.check_victory():
