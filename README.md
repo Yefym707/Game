@@ -25,8 +25,8 @@ survive until it arrives.
 During your turn you have two actions. Enter:
 
 - `W` `A` `S` `D` – move one tile (or two if using a double-move token).
-- `F` – attack an adjacent zombie (70% hit chance).
-- `G` – scavenge the current tile for supplies or the antidote.
+- `F` – attack an adjacent zombie (70% hit chance, 90% if armed).
+- `G` – scavenge the current tile for supplies, weapons or the antidote.
 - `H` – use a found medkit to recover health.
 - `P` – pass the remaining actions.
 
@@ -36,7 +36,7 @@ During your turn you have two actions. Enter:
  The scenario ends after 20 rounds. Win scenario 1 by finding the antidote and
  returning to the `S` marked starting tile. Scenario 2 is won by bringing both
  keys and fuel back to the start.
- You can carry at most eight items (supplies and medkits combined).
+ You can carry at most eight items (supplies and medkits combined). Weapons and scenario objectives don't take space.
  Each victory in scenario 1 grants +1 max health for future runs. Winning
  scenario 2 awards five double-move tokens that let you move two tiles in a
  single action on subsequent games. All campaign progress is stored in
