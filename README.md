@@ -3,6 +3,7 @@
 This repository contains a small prototype of a turn-based survival board game.
 The player roams a fog-covered 10×10 grid searching for objectives while
 avoiding zombies. Inventory space is limited so choose carefully what to carry.
+Each turn your hunger drops – eat supplies to keep from starving.
 
 ## Requirements
 - Python 3.12+
@@ -28,11 +29,13 @@ During your turn you have two actions. Enter:
 - `F` – attack an adjacent zombie (70% hit chance, 90% if armed).
 - `G` – scavenge the current tile for supplies, weapons or the antidote.
 - `H` – use a found medkit to recover health.
+- `E` – consume one supply to restore hunger.
 - `P` – pass the remaining actions.
 
  Zombies move after you finish your actions, then a random event may occur.
  Events can alter your next turn – a storm might reduce you to one action while
  an adrenaline rush grants an extra move.
+ Each round hunger decreases. Starving costs health.
  The scenario ends after 20 rounds. Win scenario 1 by finding the antidote and
  returning to the `S` marked starting tile. Scenario 2 is won by bringing both
  keys and fuel back to the start.
