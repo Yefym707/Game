@@ -42,6 +42,31 @@ REVEAL_SUPPLY_CHANCE = 0.05
 REVEAL_ZOMBIE_CHANCE = 0.05
 
 
+DIFFICULTY_SETTINGS = {
+    "easy": {
+        "starting_health": STARTING_HEALTH + 2,
+        "starting_zombies": max(1, STARTING_ZOMBIES - 2),
+        "zombie_spawn_chance": ZOMBIE_SPAWN_CHANCE * 0.7,
+        "supplies_to_win": max(1, SUPPLIES_TO_WIN - 1),
+        "turn_limit": TURN_LIMIT + 5,
+    },
+    "normal": {
+        "starting_health": STARTING_HEALTH,
+        "starting_zombies": STARTING_ZOMBIES,
+        "zombie_spawn_chance": ZOMBIE_SPAWN_CHANCE,
+        "supplies_to_win": SUPPLIES_TO_WIN,
+        "turn_limit": TURN_LIMIT,
+    },
+    "hard": {
+        "starting_health": max(1, STARTING_HEALTH - 2),
+        "starting_zombies": STARTING_ZOMBIES + 2,
+        "zombie_spawn_chance": ZOMBIE_SPAWN_CHANCE * 1.3,
+        "supplies_to_win": SUPPLIES_TO_WIN + 1,
+        "turn_limit": max(1, TURN_LIMIT - 5),
+    },
+}
+
+
 @dataclass
 class Entity:
     x: int
@@ -52,9 +77,10 @@ class Entity:
 class Player(Entity):
     """Player entity with health and collected supplies."""
 
-    def __init__(self, x: int, y: int) -> None:
+    def __init__(self, x: int, y: int, starting_health: int) -> None:
         super().__init__(x, y, "@")
-        self.health: int = STARTING_HEALTH
+        self.max_health: int = starting_health
+        self.health: int = starting_health
         self.supplies: int = 0
         self.medkits: int = 0
 
@@ -76,12 +102,20 @@ class Game:
 
     board_size: int = BOARD_SIZE
 
-    def __init__(self) -> None:
-        self.player = Player(self.board_size // 2, self.board_size // 2)
+    def __init__(self, difficulty: str = "normal") -> None:
+        settings = DIFFICULTY_SETTINGS.get(difficulty.lower())
+        if settings is None:
+            raise ValueError("Unknown difficulty")
+        self.difficulty = difficulty.lower()
+        self.zombie_spawn_chance = settings["zombie_spawn_chance"]
+        self.supplies_to_win = settings["supplies_to_win"]
+        self.turn_limit = settings["turn_limit"]
+        starting_health = settings["starting_health"]
+        self.player = Player(self.board_size // 2, self.board_size // 2, starting_health)
         self.zombies: List[Zombie] = []
         self.supplies_positions: Set[Tuple[int, int]] = set()
         self.revealed: Set[Tuple[int, int]] = set()
-        self.spawn_zombies(STARTING_ZOMBIES)
+        self.spawn_zombies(settings["starting_zombies"])
         self.spawn_supplies(STARTING_SUPPLIES)
         self.reveal_area(self.player.x, self.player.y)
         self.turn: int = 0
@@ -228,9 +262,9 @@ class Game:
             print("You find nothing of use.")
 
     def use_medkit(self) -> bool:
-        if self.player.medkits > 0 and self.player.health < STARTING_HEALTH:
+        if self.player.medkits > 0 and self.player.health < self.player.max_health:
             self.player.medkits -= 1
-            self.player.health = min(STARTING_HEALTH, self.player.health + MEDKIT_HEAL)
+            self.player.health = min(self.player.max_health, self.player.health + MEDKIT_HEAL)
             print("You use a medkit and recover health.")
             return True
         return False
@@ -248,15 +282,15 @@ class Game:
                 print("A zombie bites you! -1 health")
 
     def spawn_random_zombie(self) -> None:
-        if random.random() < ZOMBIE_SPAWN_CHANCE:
+        if random.random() < self.zombie_spawn_chance:
             self.spawn_zombies(1)
             print("A zombie shambles in from the darkness...")
 
     def random_event(self) -> None:
         """Trigger a random event at the end of the round."""
         event = random.choice(["nothing", "heal", "supply", "horde"])
-        if event == "heal" and self.player.health < STARTING_HEALTH:
-            self.player.health += 1
+        if event == "heal" and self.player.health < self.player.max_health:
+            self.player.health = min(self.player.max_health, self.player.health + 1)
             print("You catch your breath and recover 1 health.")
         elif event == "supply":
             self.spawn_supplies(1)
@@ -299,7 +333,7 @@ class Game:
                 print("Unknown command.")
 
     def check_victory(self) -> bool:
-        return self.player.supplies >= SUPPLIES_TO_WIN
+        return self.player.supplies >= self.supplies_to_win
 
     def check_defeat(self) -> bool:
         return self.player.health <= 0
@@ -324,7 +358,7 @@ class Game:
                 self.spawn_random_zombie()
                 self.random_event()
                 self.turn += 1
-                if self.turn >= TURN_LIMIT:
+                if self.turn >= self.turn_limit:
                     print("Time runs out and the area is overrun. You perish...")
                     break
         except (KeyboardInterrupt, EOFError):
@@ -332,5 +366,6 @@ class Game:
 
 
 if __name__ == "__main__":
-    Game().run()
+    diff = input("Choose difficulty [easy/normal/hard]: ").strip().lower() or "normal"
+    Game(diff).run()
 
