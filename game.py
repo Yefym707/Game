@@ -62,6 +62,15 @@ DOUBLE_MOVE_REWARD = 5
 WEAPON_NOISE_ZOMBIE_CHANCE = 0.3
 VEHICLE_NOISE_ZOMBIE_CHANCE = 0.5
 
+# Special tile settings
+PHARMACY_SYMBOL = "M"
+ARMORY_SYMBOL = "W"
+PHARMACY_COUNT = 3
+ARMORY_COUNT = 2
+PHARMACY_MEDKIT_CHANCE = 0.8
+ARMORY_WEAPON_CHANCE = 0.6
+ARMORY_SUPPLY_CHANCE = 0.4
+
 # Simple achievement definitions evaluated against the persistent campaign
 # data. Additional achievements can be added here without touching the game
 # logic.
@@ -193,8 +202,12 @@ class Game:
         self.rescue_timer: Optional[int] = None
         self.zombies: List[Zombie] = []
         self.supplies_positions: Set[Tuple[int, int]] = set()
+        self.pharmacy_positions: Set[Tuple[int, int]] = set()
+        self.armory_positions: Set[Tuple[int, int]] = set()
         self.revealed: Set[Tuple[int, int]] = set()
         self.spawn_zombies(settings["starting_zombies"])
+        self.spawn_pharmacies(PHARMACY_COUNT)
+        self.spawn_armories(ARMORY_COUNT)
         self.spawn_supplies(STARTING_SUPPLIES)
         if self.scenario == 1:
             self.spawn_antidote()
@@ -238,6 +251,8 @@ class Game:
             },
             "zombies": [(z.x, z.y) for z in self.zombies],
             "supplies_positions": list(self.supplies_positions),
+            "pharmacy_positions": list(self.pharmacy_positions),
+            "armory_positions": list(self.armory_positions),
             "revealed": list(self.revealed),
             "antidote_pos": self.antidote_pos,
             "keys_pos": self.keys_pos,
@@ -274,6 +289,12 @@ class Game:
         game.start_pos = tuple(data["start_pos"])
         game.zombies = [Zombie(x, y) for x, y in data["zombies"]]
         game.supplies_positions = {tuple(pos) for pos in data["supplies_positions"]}
+        game.pharmacy_positions = {
+            tuple(pos) for pos in data.get("pharmacy_positions", [])
+        }
+        game.armory_positions = {
+            tuple(pos) for pos in data.get("armory_positions", [])
+        }
         game.revealed = {tuple(pos) for pos in data["revealed"]}
         game.antidote_pos = tuple(data["antidote_pos"]) if data["antidote_pos"] else None
         game.keys_pos = tuple(data["keys_pos"]) if data["keys_pos"] else None
@@ -319,6 +340,8 @@ class Game:
                             and (nx, ny) != self.fuel_pos
                             and (nx, ny) not in self.radio_positions
                             and (nx, ny) != self.radio_tower_pos
+                            and (nx, ny) not in self.pharmacy_positions
+                            and (nx, ny) not in self.armory_positions
                             and all((z.x, z.y) != (nx, ny) for z in self.zombies)
                         ):
                             roll = random.random()
@@ -345,6 +368,36 @@ class Game:
                     self.zombies.append(Zombie(x, y))
                     break
 
+    def spawn_pharmacies(self, count: int) -> None:
+        for _ in range(count):
+            while True:
+                x, y = random.randrange(self.board_size), random.randrange(
+                    self.board_size
+                )
+                if (
+                    (x, y) not in self.pharmacy_positions
+                    and (x, y) not in self.armory_positions
+                    and (x, y) != (self.player.x, self.player.y)
+                    and all((z.x, z.y) != (x, y) for z in self.zombies)
+                ):
+                    self.pharmacy_positions.add((x, y))
+                    break
+
+    def spawn_armories(self, count: int) -> None:
+        for _ in range(count):
+            while True:
+                x, y = random.randrange(self.board_size), random.randrange(
+                    self.board_size
+                )
+                if (
+                    (x, y) not in self.pharmacy_positions
+                    and (x, y) not in self.armory_positions
+                    and (x, y) != (self.player.x, self.player.y)
+                    and all((z.x, z.y) != (x, y) for z in self.zombies)
+                ):
+                    self.armory_positions.add((x, y))
+                    break
+
     def spawn_supplies(self, count: int) -> None:
         for _ in range(count):
             while True:
@@ -353,6 +406,8 @@ class Game:
                 )
                 if (
                     (x, y) not in self.supplies_positions
+                    and (x, y) not in self.pharmacy_positions
+                    and (x, y) not in self.armory_positions
                     and (x, y) != (self.player.x, self.player.y)
                     and (x, y) != self.antidote_pos
                 ):
@@ -364,6 +419,8 @@ class Game:
             x, y = random.randrange(self.board_size), random.randrange(self.board_size)
             if (
                 (x, y) not in self.supplies_positions
+                and (x, y) not in self.pharmacy_positions
+                and (x, y) not in self.armory_positions
                 and (x, y) != self.start_pos
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
@@ -375,6 +432,8 @@ class Game:
             x, y = random.randrange(self.board_size), random.randrange(self.board_size)
             if (
                 (x, y) not in self.supplies_positions
+                and (x, y) not in self.pharmacy_positions
+                and (x, y) not in self.armory_positions
                 and (x, y) != self.start_pos
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
@@ -386,6 +445,8 @@ class Game:
             x, y = random.randrange(self.board_size), random.randrange(self.board_size)
             if (
                 (x, y) not in self.supplies_positions
+                and (x, y) not in self.pharmacy_positions
+                and (x, y) not in self.armory_positions
                 and (x, y) != self.start_pos
                 and (x, y) != self.keys_pos
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
@@ -399,6 +460,8 @@ class Game:
                 x, y = random.randrange(self.board_size), random.randrange(self.board_size)
                 if (
                     (x, y) not in self.supplies_positions
+                    and (x, y) not in self.pharmacy_positions
+                    and (x, y) not in self.armory_positions
                     and (x, y) != self.start_pos
                     and (x, y) not in self.radio_positions
                     and all((z.x, z.y) != (x, y) for z in self.zombies)
@@ -411,6 +474,8 @@ class Game:
             x, y = random.randrange(self.board_size), random.randrange(self.board_size)
             if (
                 (x, y) not in self.supplies_positions
+                and (x, y) not in self.pharmacy_positions
+                and (x, y) not in self.armory_positions
                 and (x, y) != self.start_pos
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
@@ -449,6 +514,12 @@ class Game:
         if self.radio_tower_pos and self.radio_tower_pos in self.revealed:
             tx, ty = self.radio_tower_pos
             board[ty][tx] = RADIO_TOWER_SYMBOL
+        for x, y in self.pharmacy_positions:
+            if (x, y) in self.revealed:
+                board[y][x] = PHARMACY_SYMBOL
+        for x, y in self.armory_positions:
+            if (x, y) in self.revealed:
+                board[y][x] = ARMORY_SYMBOL
         for x, y in self.supplies_positions:
             if (x, y) in self.revealed:
                 board[y][x] = "R"
@@ -544,6 +615,41 @@ class Game:
             print(
                 f"You collect a radio part ({self.radio_parts_collected}/{RADIO_PARTS_REQUIRED})!"
             )
+            return
+        if pos in self.pharmacy_positions:
+            self.pharmacy_positions.remove(pos)
+            if self.player.inventory_size < INVENTORY_LIMIT:
+                found = False
+                if random.random() < PHARMACY_MEDKIT_CHANCE:
+                    self.player.medkits += 1
+                    found = True
+                    print("You raid the pharmacy and find a medkit!")
+                if random.random() < SCAVENGE_FIND_CHANCE:
+                    self.player.supplies += 1
+                    found = True
+                    print("You grab some supplies.")
+                if not found:
+                    print("The pharmacy shelves are empty.")
+            else:
+                print("Your pack is full. You leave the pharmacy untouched.")
+            return
+        if pos in self.armory_positions:
+            self.armory_positions.remove(pos)
+            found = False
+            if not self.player.has_weapon and random.random() < ARMORY_WEAPON_CHANCE:
+                self.player.has_weapon = True
+                found = True
+                print("You find a weapon in the armory!")
+            if self.player.inventory_size < INVENTORY_LIMIT:
+                if random.random() < ARMORY_SUPPLY_CHANCE:
+                    self.player.supplies += 1
+                    found = True
+                    print("You scavenge some useful gear.")
+            elif not found:
+                print("Your pack is full. You can't carry more.")
+                return
+            if not found:
+                print("The armory is picked clean.")
             return
         if self.scenario == 4 and not self.called_rescue:
             if pos == self.start_pos:
