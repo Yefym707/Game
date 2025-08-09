@@ -14,7 +14,8 @@ python game.py
 ```
 
 At launch you'll be prompted to choose a difficulty level, number of players
-–1–4 in hot-seat mode–and a scenario. If a previous run was saved, you'll be
+–1–4 in hot-seat mode–and a scenario. You may also add simple AI-controlled
+survivors to fill any empty slots. If a previous run was saved, you'll be
 offered to load it instead. Available difficulties are **easy**, **normal**, and
 **hard**. If unsure, press Enter for the defaults. Scenario **1** tasks you with
 finding an antidote and returning to the starting tile. Scenario **2** requires

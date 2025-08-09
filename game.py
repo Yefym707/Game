@@ -153,9 +153,15 @@ class Player(Entity):
     """Player entity with health and collected supplies."""
 
     def __init__(
-        self, x: int, y: int, starting_health: int, symbol: str = "@"
+        self,
+        x: int,
+        y: int,
+        starting_health: int,
+        symbol: str = "@",
+        is_ai: bool = False,
     ) -> None:
         super().__init__(x, y, symbol)
+        self.is_ai: bool = is_ai
         self.max_health: int = starting_health
         self.health: int = starting_health
         self.max_hunger: int = STARTING_HUNGER
@@ -186,7 +192,11 @@ class Game:
     board_size: int = BOARD_SIZE
 
     def __init__(
-        self, difficulty: str = "normal", scenario: int = 1, num_players: int = 1
+        self,
+        difficulty: str = "normal",
+        scenario: int = 1,
+        num_players: int = 1,
+        num_ai: int = 0,
     ) -> None:
         settings = DIFFICULTY_SETTINGS.get(difficulty.lower())
         if settings is None:
@@ -202,10 +212,13 @@ class Game:
         center = self.board_size // 2
         offsets = [(0, 0), (0, 1), (1, 0), (-1, 0), (0, -1)]
         self.players: List[Player] = []
-        for i in range(max(1, num_players)):
+        total_players = max(1, num_players)
+        num_ai = max(0, min(num_ai, total_players - 1))
+        for i in range(total_players):
             dx, dy = offsets[i % len(offsets)]
+            is_ai = i >= total_players - num_ai
             self.players.append(
-                Player(center + dx, center + dy, starting_health, str(i + 1))
+                Player(center + dx, center + dy, starting_health, str(i + 1), is_ai)
             )
         self.player: Player = self.players[0]
         self.start_pos = (center, center)
@@ -273,6 +286,7 @@ class Game:
                     "has_fuel": p.has_fuel,
                     "has_weapon": p.has_weapon,
                     "symbol": p.symbol,
+                    "is_ai": getattr(p, "is_ai", False),
                 }
                 for p in self.players
             ],
@@ -317,6 +331,7 @@ class Game:
             p.has_fuel = pdata["has_fuel"]
             p.has_weapon = pdata["has_weapon"]
             p.symbol = pdata.get("symbol", p.symbol)
+            p.is_ai = pdata.get("is_ai", False)
         game.player = game.players[data.get("current_player", 0)]
         game.zombies = [Zombie(x, y) for x, y in data["zombies"]]
         game.supplies_positions = {tuple(pos) for pos in data["supplies_positions"]}
@@ -914,9 +929,53 @@ class Game:
 
     # ------------------------------------------------------------------
     # Turn handling and game state
+    def ai_turn(self, player: Player) -> None:
+        """Execute a simple turn for an AI-controlled player."""
+        actions_left = self.actions_per_turn
+        while actions_left > 0 and player.health > 0:
+            self.draw_board()
+            # Heal if badly hurt
+            if player.health <= player.max_health // 2 and player.medkits > 0:
+                print(f"Player {player.symbol} uses a medkit.")
+                self.use_medkit()
+                actions_left -= 1
+                continue
+            # Eat if starving
+            if player.hunger <= player.max_hunger // 2 and player.supplies > 0:
+                print(f"Player {player.symbol} eats a supply.")
+                self.eat_food()
+                actions_left -= 1
+                continue
+            # Attack if a zombie is adjacent
+            if any(
+                abs(z.x - player.x) + abs(z.y - player.y) == 1 for z in self.zombies
+            ):
+                if self.attack():
+                    actions_left -= 1
+                    continue
+            # Scavenge if inventory not full
+            if player.inventory_size < INVENTORY_LIMIT:
+                self.scavenge()
+                actions_left -= 1
+                continue
+            # Otherwise move randomly
+            dirs = ["w", "a", "s", "d"]
+            random.shuffle(dirs)
+            moved = False
+            for d in dirs:
+                if self.move_player(d):
+                    moved = True
+                    actions_left -= 1
+                    break
+            if not moved:
+                break
+
     def player_turn(self, player: Player) -> None:
         self.player = player
         print(f"Player {player.symbol}'s turn")
+        if player.is_ai:
+            self.ai_turn(player)
+            return
         actions_left = self.actions_per_turn
         while actions_left > 0 and self.player.health > 0:
             self.draw_board()
@@ -1112,6 +1171,11 @@ if __name__ == "__main__":
             num_players = max(1, min(4, int(players)))
         except ValueError:
             num_players = 1
-        game = Game(diff, scen_num, num_players)
+        bots = input(f"AI players [0-{max(0, num_players - 1)}]: ").strip() or "0"
+        try:
+            num_ai = max(0, min(num_players - 1, int(bots)))
+        except ValueError:
+            num_ai = 0
+        game = Game(diff, scen_num, num_players, num_ai)
     game.run()
 
