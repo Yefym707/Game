@@ -389,6 +389,18 @@ class Game:
                                 if (nx, ny) == (x, y):
                                     print("A lurking zombie surprises you!")
 
+    def reveal_random_tiles(self, count: int) -> None:
+        """Reveal up to *count* random hidden tiles."""
+        hidden = [
+            (x, y)
+            for x in range(self.board_size)
+            for y in range(self.board_size)
+            if (x, y) not in self.revealed
+        ]
+        random.shuffle(hidden)
+        for x, y in hidden[:count]:
+            self.reveal_area(x, y)
+
     # ------------------------------------------------------------------
     # Board setup helpers
     def spawn_zombies(self, count: int) -> None:
@@ -833,7 +845,16 @@ class Game:
     def random_event(self) -> None:
         """Trigger a random event at the end of the round."""
         event = random.choice(
-            ["nothing", "heal", "supply", "horde", "storm", "adrenaline"]
+            [
+                "nothing",
+                "heal",
+                "supply",
+                "horde",
+                "storm",
+                "adrenaline",
+                "survivors",
+                "fog",
+            ]
         )
         if event == "heal":
             healed = False
@@ -855,6 +876,22 @@ class Game:
         elif event == "adrenaline":
             self.actions_per_turn = ACTIONS_PER_TURN + 1
             print("Adrenaline surges through you! You gain an extra action next turn.")
+        elif event == "survivors":
+            given = False
+            for p in self.players:
+                if p.inventory_size < INVENTORY_LIMIT:
+                    if random.random() < 0.5:
+                        p.supplies += 1
+                        print(f"Friendly survivors toss supplies to player {p.symbol}!")
+                    else:
+                        p.medkits += 1
+                        print(f"Friendly survivors share a medkit with player {p.symbol}!")
+                    given = True
+            if not given:
+                print("Friendly survivors pass by but everyone's packs are full.")
+        elif event == "fog":
+            self.reveal_random_tiles(5)
+            print("A gust of wind lifts the fog, revealing more of the area.")
 
     def apply_hunger(self) -> None:
         for p in self.players:
