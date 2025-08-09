@@ -31,6 +31,7 @@ During your turn you have two actions. Enter:
 - `G` – scavenge the current tile for supplies, weapons or the antidote.
 - `H` – use a found medkit to recover health.
 - `E` – consume one supply to restore hunger.
+- `B` – spend two supplies to barricade the current tile, blocking zombies once.
 - `P` – pass the remaining actions.
 - `Q` – save the game and quit.
 
