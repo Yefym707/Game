@@ -37,6 +37,9 @@ During your turn you have two actions. Enter:
  Zombies move after you finish your actions, then a random event may occur.
  Events can alter your next turn – a storm might reduce you to one action while
  an adrenaline rush grants an extra move.
+ Exploring may also uncover special locations. Pharmacies (`M`) have a high
+ chance of yielding medkits while armories (`W`) are the best spots to find
+ weapons. Once revealed, their symbols remain on the board.
  Each round hunger decreases. Starving costs health.
  The scenario ends after 20 rounds. Win scenario 1 by finding the antidote and
  returning to the `S` marked starting tile. Scenario 2 is won by bringing both
