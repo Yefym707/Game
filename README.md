@@ -17,11 +17,15 @@ At launch you'll be prompted to choose a difficulty level, number of players
 –1–4 in hot-seat mode–and a scenario. You may also add simple AI-controlled
 survivors to fill any empty slots. If a previous run was saved, you'll be
 offered to load it instead. Available difficulties are **easy**, **normal**, and
-**hard**. If unsure, press Enter for the defaults. Scenario **1** tasks you with
+**hard**. If unsure, press Enter for the defaults. You can optionally enable a
+cooperative mode where all survivors must escape together. Scenario **1** tasks you with
 finding an antidote and returning to the starting tile. Scenario **2** requires
 locating both car keys and fuel before escaping. Scenario **3** asks you to
 gather three radio parts then retreat to the start. Scenario **4** is a final
 stand: call for rescue and survive until it arrives.
+
+In cooperative mode the group shares victory conditions – once the objective is
+met all surviving players must regroup on the starting tile to win together.
 
 ### Controls
 

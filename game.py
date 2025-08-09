@@ -197,12 +197,14 @@ class Game:
         scenario: int = 1,
         num_players: int = 1,
         num_ai: int = 0,
+        cooperative: bool = False,
     ) -> None:
         settings = DIFFICULTY_SETTINGS.get(difficulty.lower())
         if settings is None:
             raise ValueError("Unknown difficulty")
         self.difficulty = difficulty.lower()
         self.scenario = scenario
+        self.cooperative = cooperative
         self.campaign = load_campaign()
         self.double_move_tokens = self.campaign.get("double_move_tokens", 0)
         self.has_signal_device = bool(self.campaign.get("signal_device"))
@@ -310,12 +312,18 @@ class Game:
             "has_signal_device": self.has_signal_device,
             "actions_per_turn": self.actions_per_turn,
             "zombies_killed": self.zombies_killed,
+            "cooperative": self.cooperative,
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> "Game":
         """Reconstruct a Game instance from serialized data."""
-        game = cls(data["difficulty"], data["scenario"], len(data["players"]))
+        game = cls(
+            data["difficulty"],
+            data["scenario"],
+            len(data["players"]),
+            cooperative=data.get("cooperative", False),
+        )
         game.start_pos = tuple(data["start_pos"])
         for p, pdata in zip(game.players, data["players"]):
             p.x = pdata["x"]
@@ -1033,22 +1041,50 @@ class Game:
                 print("Unknown command.")
 
     def check_victory(self) -> bool:
-        if self.scenario == 1:
-            return self.player.has_antidote and (self.player.x, self.player.y) == self.start_pos
-        if self.scenario == 2:
-            return (
-                self.player.has_keys
-                and self.player.has_fuel
-                and (self.player.x, self.player.y) == self.start_pos
-            )
-        if self.scenario == 3:
-            return (
-                self.radio_parts_collected >= RADIO_PARTS_REQUIRED
-                and (self.player.x, self.player.y) == self.start_pos
-            )
-        if self.scenario == 4:
-            return self.called_rescue and self.rescue_timer is not None and self.rescue_timer <= 0
-        return False
+        if self.cooperative:
+            at_start = all((p.x, p.y) == self.start_pos for p in self.players)
+            if self.scenario == 1:
+                return any(p.has_antidote for p in self.players) and at_start
+            if self.scenario == 2:
+                return (
+                    any(p.has_keys for p in self.players)
+                    and any(p.has_fuel for p in self.players)
+                    and at_start
+                )
+            if self.scenario == 3:
+                return (
+                    self.radio_parts_collected >= RADIO_PARTS_REQUIRED and at_start
+                )
+            if self.scenario == 4:
+                return (
+                    self.called_rescue
+                    and self.rescue_timer is not None
+                    and self.rescue_timer <= 0
+                    and any(p.health > 0 for p in self.players)
+                )
+            return False
+        else:
+            if self.scenario == 1:
+                return self.player.has_antidote and (self.player.x, self.player.y) == self.start_pos
+            if self.scenario == 2:
+                return (
+                    self.player.has_keys
+                    and self.player.has_fuel
+                    and (self.player.x, self.player.y) == self.start_pos
+                )
+            if self.scenario == 3:
+                return (
+                    self.radio_parts_collected >= RADIO_PARTS_REQUIRED
+                    and (self.player.x, self.player.y) == self.start_pos
+                )
+            if self.scenario == 4:
+                return (
+                    self.called_rescue
+                    and self.rescue_timer is not None
+                    and self.rescue_timer <= 0
+                    and self.player.health > 0
+                )
+            return False
 
     def check_defeat(self) -> bool:
         return self.player.health <= 0
@@ -1070,6 +1106,8 @@ class Game:
             print(
                 "Call for rescue and survive until help arrives. Scavenge the start tile with a radio device or find the tower. Press Q to save and quit."
             )
+        if self.cooperative:
+            print("Cooperative mode: all survivors must reach the start to escape together.")
         if self.campaign.get("hp_bonus"):
             print(f"Campaign bonus: +{self.campaign['hp_bonus']} max health")
         if self.double_move_tokens:
@@ -1120,24 +1158,36 @@ class Game:
             if winner:
                 self.player = winner
                 if self.scenario == 1:
-                    print("You return with the antidote and escape. You win!")
+                    if self.cooperative:
+                        print("The survivors return with the antidote and escape together. You win!")
+                    else:
+                        print("You return with the antidote and escape. You win!")
                     self.campaign["hp_bonus"] = self.campaign.get("hp_bonus", 0) + 1
                     print("Max health increased for next game!")
                 elif self.scenario == 2:
-                    print("You fuel up the vehicle and drive to safety. You win!")
+                    if self.cooperative:
+                        print("The survivors fuel up the vehicle and drive to safety. You win!")
+                    else:
+                        print("You fuel up the vehicle and drive to safety. You win!")
                     self.double_move_tokens += DOUBLE_MOVE_REWARD
                     print(
                         f"You gain {DOUBLE_MOVE_REWARD} double-move tokens for future runs!"
                     )
                 elif self.scenario == 3:
-                    print("You assemble the radio and send out a signal. You win!")
+                    if self.cooperative:
+                        print("The survivors assemble the radio and send out a signal. You win!")
+                    else:
+                        print("You assemble the radio and send out a signal. You win!")
                     self.has_signal_device = True
                     self.campaign["signal_device"] = 1
                     print("A portable radio will aid you in the final escape!")
                 elif self.scenario == 4 and not (
                     self.called_rescue and self.rescue_timer is not None and self.rescue_timer <= 0
                 ):
-                    print("The rescue helicopter arrives and lifts you to safety. You win!")
+                    if self.cooperative:
+                        print("The rescue helicopter arrives and lifts everyone to safety. You win!")
+                    else:
+                        print("The rescue helicopter arrives and lifts you to safety. You win!")
                 completed = self.campaign.setdefault("completed_scenarios", [])
                 if self.scenario not in completed:
                     completed.append(self.scenario)
@@ -1176,6 +1226,7 @@ if __name__ == "__main__":
             num_ai = max(0, min(num_players - 1, int(bots)))
         except ValueError:
             num_ai = 0
-        game = Game(diff, scen_num, num_players, num_ai)
+        coop = input("Cooperative mode? [y/N]: ").strip().lower() == "y"
+        game = Game(diff, scen_num, num_players, num_ai, cooperative=coop)
     game.run()
 
