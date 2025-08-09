@@ -48,3 +48,13 @@ During your turn you have two actions. Enter:
  single action on subsequent games. All campaign progress is stored in
  `campaign_save.json`. A save file is also written so you can resume a run later.
  Survive as long as you can before your health reaches zero.
+
+### Achievements
+
+Progress across games unlocks simple achievements that persist between runs:
+
+- **Zombie Hunter** – slay 10 zombies in total.
+- **Master Survivor** – complete all four scenarios.
+
+Unlocked achievements are written to `campaign_save.json` together with other
+campaign data.
