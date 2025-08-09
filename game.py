@@ -71,6 +71,10 @@ PHARMACY_MEDKIT_CHANCE = 0.8
 ARMORY_WEAPON_CHANCE = 0.6
 ARMORY_SUPPLY_CHANCE = 0.4
 
+# Barricade settings
+BARRICADE_SYMBOL = "B"
+BARRICADE_SUPPLY_COST = 2
+
 # Simple achievement definitions evaluated against the persistent campaign
 # data. Additional achievements can be added here without touching the game
 # logic.
@@ -204,6 +208,7 @@ class Game:
         self.supplies_positions: Set[Tuple[int, int]] = set()
         self.pharmacy_positions: Set[Tuple[int, int]] = set()
         self.armory_positions: Set[Tuple[int, int]] = set()
+        self.barricade_positions: Set[Tuple[int, int]] = set()
         self.revealed: Set[Tuple[int, int]] = set()
         self.spawn_zombies(settings["starting_zombies"])
         self.spawn_pharmacies(PHARMACY_COUNT)
@@ -253,6 +258,7 @@ class Game:
             "supplies_positions": list(self.supplies_positions),
             "pharmacy_positions": list(self.pharmacy_positions),
             "armory_positions": list(self.armory_positions),
+            "barricade_positions": list(self.barricade_positions),
             "revealed": list(self.revealed),
             "antidote_pos": self.antidote_pos,
             "keys_pos": self.keys_pos,
@@ -294,6 +300,9 @@ class Game:
         }
         game.armory_positions = {
             tuple(pos) for pos in data.get("armory_positions", [])
+        }
+        game.barricade_positions = {
+            tuple(pos) for pos in data.get("barricade_positions", [])
         }
         game.revealed = {tuple(pos) for pos in data["revealed"]}
         game.antidote_pos = tuple(data["antidote_pos"]) if data["antidote_pos"] else None
@@ -342,6 +351,7 @@ class Game:
                             and (nx, ny) != self.radio_tower_pos
                             and (nx, ny) not in self.pharmacy_positions
                             and (nx, ny) not in self.armory_positions
+                            and (nx, ny) not in self.barricade_positions
                             and all((z.x, z.y) != (nx, ny) for z in self.zombies)
                         ):
                             roll = random.random()
@@ -362,9 +372,11 @@ class Game:
                 x, y = random.randrange(self.board_size), random.randrange(
                     self.board_size
                 )
-                if (x, y) != (self.player.x, self.player.y) and (x, y) not in {
-                    (z.x, z.y) for z in self.zombies
-                }:
+                if (
+                    (x, y) != (self.player.x, self.player.y)
+                    and (x, y) not in {(z.x, z.y) for z in self.zombies}
+                    and (x, y) not in self.barricade_positions
+                ):
                     self.zombies.append(Zombie(x, y))
                     break
 
@@ -378,6 +390,7 @@ class Game:
                     (x, y) not in self.pharmacy_positions
                     and (x, y) not in self.armory_positions
                     and (x, y) != (self.player.x, self.player.y)
+                    and (x, y) not in self.barricade_positions
                     and all((z.x, z.y) != (x, y) for z in self.zombies)
                 ):
                     self.pharmacy_positions.add((x, y))
@@ -393,6 +406,7 @@ class Game:
                     (x, y) not in self.pharmacy_positions
                     and (x, y) not in self.armory_positions
                     and (x, y) != (self.player.x, self.player.y)
+                    and (x, y) not in self.barricade_positions
                     and all((z.x, z.y) != (x, y) for z in self.zombies)
                 ):
                     self.armory_positions.add((x, y))
@@ -410,6 +424,7 @@ class Game:
                     and (x, y) not in self.armory_positions
                     and (x, y) != (self.player.x, self.player.y)
                     and (x, y) != self.antidote_pos
+                    and (x, y) not in self.barricade_positions
                 ):
                     self.supplies_positions.add((x, y))
                     break
@@ -422,6 +437,7 @@ class Game:
                 and (x, y) not in self.pharmacy_positions
                 and (x, y) not in self.armory_positions
                 and (x, y) != self.start_pos
+                and (x, y) not in self.barricade_positions
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
                 self.antidote_pos = (x, y)
@@ -435,6 +451,7 @@ class Game:
                 and (x, y) not in self.pharmacy_positions
                 and (x, y) not in self.armory_positions
                 and (x, y) != self.start_pos
+                and (x, y) not in self.barricade_positions
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
                 self.keys_pos = (x, y)
@@ -449,6 +466,7 @@ class Game:
                 and (x, y) not in self.armory_positions
                 and (x, y) != self.start_pos
                 and (x, y) != self.keys_pos
+                and (x, y) not in self.barricade_positions
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
                 self.fuel_pos = (x, y)
@@ -464,6 +482,7 @@ class Game:
                     and (x, y) not in self.armory_positions
                     and (x, y) != self.start_pos
                     and (x, y) not in self.radio_positions
+                    and (x, y) not in self.barricade_positions
                     and all((z.x, z.y) != (x, y) for z in self.zombies)
                 ):
                     self.radio_positions.add((x, y))
@@ -477,6 +496,7 @@ class Game:
                 and (x, y) not in self.pharmacy_positions
                 and (x, y) not in self.armory_positions
                 and (x, y) != self.start_pos
+                and (x, y) not in self.barricade_positions
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
                 self.radio_tower_pos = (x, y)
@@ -520,6 +540,9 @@ class Game:
         for x, y in self.armory_positions:
             if (x, y) in self.revealed:
                 board[y][x] = ARMORY_SYMBOL
+        for x, y in self.barricade_positions:
+            if (x, y) in self.revealed and (x, y) != (self.player.x, self.player.y):
+                board[y][x] = BARRICADE_SYMBOL
         for x, y in self.supplies_positions:
             if (x, y) in self.revealed:
                 board[y][x] = "R"
@@ -719,14 +742,31 @@ class Game:
             return True
         return False
 
+    def build_barricade(self) -> bool:
+        pos = (self.player.x, self.player.y)
+        if pos in self.barricade_positions:
+            print("There's already a barricade here.")
+            return False
+        if self.player.supplies >= BARRICADE_SUPPLY_COST:
+            self.player.supplies -= BARRICADE_SUPPLY_COST
+            self.barricade_positions.add(pos)
+            print("You hastily build a barricade.")
+            return True
+        print("Not enough supplies to build a barricade.")
+        return False
+
     # ------------------------------------------------------------------
     # Zombie behaviour
     def move_zombies(self) -> None:
         for z in list(self.zombies):
             dx = 0 if z.x == self.player.x else (1 if z.x < self.player.x else -1)
             dy = 0 if z.y == self.player.y else (1 if z.y < self.player.y else -1)
-            z.x += dx
-            z.y += dy
+            nx, ny = z.x + dx, z.y + dy
+            if (nx, ny) in self.barricade_positions:
+                self.barricade_positions.remove((nx, ny))
+                print("A zombie claws at a barricade, tearing it down!")
+                continue
+            z.x, z.y = nx, ny
             if z.x == self.player.x and z.y == self.player.y:
                 self.player.health -= 1
                 print("A zombie bites you! -1 health")
@@ -746,6 +786,7 @@ class Game:
                 if 0 <= nx < self.board_size
                 and 0 <= ny < self.board_size
                 and (nx, ny) != (x, y)
+                and (nx, ny) not in self.barricade_positions
                 and all((z.x, z.y) != (nx, ny) for z in self.zombies)
             ]
             if candidates:
@@ -801,7 +842,7 @@ class Game:
         while actions_left > 0 and self.player.health > 0:
             self.draw_board()
             cmd = input(
-                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, e=eat, p=pass, q=save]: "
+                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, e=eat, b=barricade, p=pass, q=save]: "
             ).strip().lower()
 
             if cmd in {"w", "a", "s", "d"}:
@@ -840,6 +881,9 @@ class Game:
                     actions_left -= 1
                 else:
                     print("Nothing to eat!")
+            elif cmd == "b":
+                if self.build_barricade():
+                    actions_left -= 1
             elif cmd == "p":
                 break
             elif cmd == "q":
