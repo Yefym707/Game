@@ -1,12 +1,13 @@
 """Turn-based survival board game prototype.
 
-This module implements a simple console survival game where the player
-scours a zombie infested grid for an antidote then races back to safety.
+This module implements a simple console survival game where one or more
+players scour a zombie infested grid for an antidote then race back to
+safety.
 
 Features
 --------
-* 10x10 board with player, zombies and supply tokens.
-* Player has two actions per turn: move, attack, scavenge or pass.
+* 10x10 board with up to four players, zombies and supply tokens.
+* Each player has two actions per turn: move, attack, scavenge or pass.
 * Melee combat with a chance to hit. Failed attacks cost health.
 * Random scavenge system for finding additional supplies and food.
 * Zombies pursue the player and new ones may spawn each round.
@@ -151,8 +152,10 @@ class Entity:
 class Player(Entity):
     """Player entity with health and collected supplies."""
 
-    def __init__(self, x: int, y: int, starting_health: int) -> None:
-        super().__init__(x, y, "@")
+    def __init__(
+        self, x: int, y: int, starting_health: int, symbol: str = "@"
+    ) -> None:
+        super().__init__(x, y, symbol)
         self.max_health: int = starting_health
         self.health: int = starting_health
         self.max_hunger: int = STARTING_HUNGER
@@ -182,7 +185,9 @@ class Game:
 
     board_size: int = BOARD_SIZE
 
-    def __init__(self, difficulty: str = "normal", scenario: int = 1) -> None:
+    def __init__(
+        self, difficulty: str = "normal", scenario: int = 1, num_players: int = 1
+    ) -> None:
         settings = DIFFICULTY_SETTINGS.get(difficulty.lower())
         if settings is None:
             raise ValueError("Unknown difficulty")
@@ -194,8 +199,16 @@ class Game:
         self.zombie_spawn_chance = settings["zombie_spawn_chance"]
         self.turn_limit = settings["turn_limit"]
         starting_health = settings["starting_health"] + self.campaign.get("hp_bonus", 0)
-        self.player = Player(self.board_size // 2, self.board_size // 2, starting_health)
-        self.start_pos = (self.player.x, self.player.y)
+        center = self.board_size // 2
+        offsets = [(0, 0), (0, 1), (1, 0), (-1, 0), (0, -1)]
+        self.players: List[Player] = []
+        for i in range(max(1, num_players)):
+            dx, dy = offsets[i % len(offsets)]
+            self.players.append(
+                Player(center + dx, center + dy, starting_health, str(i + 1))
+            )
+        self.player: Player = self.players[0]
+        self.start_pos = (center, center)
         self.antidote_pos: Optional[Tuple[int, int]] = None
         self.keys_pos: Optional[Tuple[int, int]] = None
         self.fuel_pos: Optional[Tuple[int, int]] = None
@@ -226,11 +239,16 @@ class Game:
                 self.spawn_radio_tower()
         else:
             self.spawn_antidote()
-        self.reveal_area(self.player.x, self.player.y)
+        for p in self.players:
+            self.reveal_area(p.x, p.y)
         self.turn: int = 0
         self.actions_per_turn: int = ACTIONS_PER_TURN
         self.keep_save = False
         self.zombies_killed: int = 0
+
+    def is_player_at(self, x: int, y: int) -> bool:
+        """Return True if any player occupies (x, y)."""
+        return any(p.x == x and p.y == y for p in self.players)
 
     # ------------------------------------------------------------------
     # Persistence helpers
@@ -240,20 +258,24 @@ class Game:
             "difficulty": self.difficulty,
             "scenario": self.scenario,
             "start_pos": self.start_pos,
-            "player": {
-                "x": self.player.x,
-                "y": self.player.y,
-                "max_health": self.player.max_health,
-                "health": self.player.health,
-                "max_hunger": self.player.max_hunger,
-                "hunger": self.player.hunger,
-                "supplies": self.player.supplies,
-                "medkits": self.player.medkits,
-                "has_antidote": self.player.has_antidote,
-                "has_keys": self.player.has_keys,
-                "has_fuel": self.player.has_fuel,
-                "has_weapon": self.player.has_weapon,
-            },
+            "players": [
+                {
+                    "x": p.x,
+                    "y": p.y,
+                    "max_health": p.max_health,
+                    "health": p.health,
+                    "max_hunger": p.max_hunger,
+                    "hunger": p.hunger,
+                    "supplies": p.supplies,
+                    "medkits": p.medkits,
+                    "has_antidote": p.has_antidote,
+                    "has_keys": p.has_keys,
+                    "has_fuel": p.has_fuel,
+                    "has_weapon": p.has_weapon,
+                    "symbol": p.symbol,
+                }
+                for p in self.players
+            ],
             "zombies": [(z.x, z.y) for z in self.zombies],
             "supplies_positions": list(self.supplies_positions),
             "pharmacy_positions": list(self.pharmacy_positions),
@@ -269,6 +291,7 @@ class Game:
             "called_rescue": self.called_rescue,
             "rescue_timer": self.rescue_timer,
             "turn": self.turn,
+            "current_player": self.players.index(self.player),
             "double_move_tokens": self.double_move_tokens,
             "has_signal_device": self.has_signal_device,
             "actions_per_turn": self.actions_per_turn,
@@ -278,21 +301,23 @@ class Game:
     @classmethod
     def from_dict(cls, data: dict) -> "Game":
         """Reconstruct a Game instance from serialized data."""
-        game = cls(data["difficulty"], data["scenario"])
-        p = data["player"]
-        game.player.x = p["x"]
-        game.player.y = p["y"]
-        game.player.max_health = p["max_health"]
-        game.player.health = p["health"]
-        game.player.max_hunger = p["max_hunger"]
-        game.player.hunger = p["hunger"]
-        game.player.supplies = p["supplies"]
-        game.player.medkits = p["medkits"]
-        game.player.has_antidote = p["has_antidote"]
-        game.player.has_keys = p["has_keys"]
-        game.player.has_fuel = p["has_fuel"]
-        game.player.has_weapon = p["has_weapon"]
+        game = cls(data["difficulty"], data["scenario"], len(data["players"]))
         game.start_pos = tuple(data["start_pos"])
+        for p, pdata in zip(game.players, data["players"]):
+            p.x = pdata["x"]
+            p.y = pdata["y"]
+            p.max_health = pdata["max_health"]
+            p.health = pdata["health"]
+            p.max_hunger = pdata["max_hunger"]
+            p.hunger = pdata["hunger"]
+            p.supplies = pdata["supplies"]
+            p.medkits = pdata["medkits"]
+            p.has_antidote = pdata["has_antidote"]
+            p.has_keys = pdata["has_keys"]
+            p.has_fuel = pdata["has_fuel"]
+            p.has_weapon = pdata["has_weapon"]
+            p.symbol = pdata.get("symbol", p.symbol)
+        game.player = game.players[data.get("current_player", 0)]
         game.zombies = [Zombie(x, y) for x, y in data["zombies"]]
         game.supplies_positions = {tuple(pos) for pos in data["supplies_positions"]}
         game.pharmacy_positions = {
@@ -373,7 +398,7 @@ class Game:
                     self.board_size
                 )
                 if (
-                    (x, y) != (self.player.x, self.player.y)
+                    not self.is_player_at(x, y)
                     and (x, y) not in {(z.x, z.y) for z in self.zombies}
                     and (x, y) not in self.barricade_positions
                 ):
@@ -389,7 +414,7 @@ class Game:
                 if (
                     (x, y) not in self.pharmacy_positions
                     and (x, y) not in self.armory_positions
-                    and (x, y) != (self.player.x, self.player.y)
+                    and not self.is_player_at(x, y)
                     and (x, y) not in self.barricade_positions
                     and all((z.x, z.y) != (x, y) for z in self.zombies)
                 ):
@@ -405,7 +430,7 @@ class Game:
                 if (
                     (x, y) not in self.pharmacy_positions
                     and (x, y) not in self.armory_positions
-                    and (x, y) != (self.player.x, self.player.y)
+                    and not self.is_player_at(x, y)
                     and (x, y) not in self.barricade_positions
                     and all((z.x, z.y) != (x, y) for z in self.zombies)
                 ):
@@ -422,7 +447,7 @@ class Game:
                     (x, y) not in self.supplies_positions
                     and (x, y) not in self.pharmacy_positions
                     and (x, y) not in self.armory_positions
-                    and (x, y) != (self.player.x, self.player.y)
+                    and not self.is_player_at(x, y)
                     and (x, y) != self.antidote_pos
                     and (x, y) not in self.barricade_positions
                 ):
@@ -437,6 +462,7 @@ class Game:
                 and (x, y) not in self.pharmacy_positions
                 and (x, y) not in self.armory_positions
                 and (x, y) != self.start_pos
+                and not self.is_player_at(x, y)
                 and (x, y) not in self.barricade_positions
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
@@ -451,6 +477,7 @@ class Game:
                 and (x, y) not in self.pharmacy_positions
                 and (x, y) not in self.armory_positions
                 and (x, y) != self.start_pos
+                and not self.is_player_at(x, y)
                 and (x, y) not in self.barricade_positions
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
@@ -466,6 +493,7 @@ class Game:
                 and (x, y) not in self.armory_positions
                 and (x, y) != self.start_pos
                 and (x, y) != self.keys_pos
+                and not self.is_player_at(x, y)
                 and (x, y) not in self.barricade_positions
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
@@ -482,6 +510,7 @@ class Game:
                     and (x, y) not in self.armory_positions
                     and (x, y) != self.start_pos
                     and (x, y) not in self.radio_positions
+                    and not self.is_player_at(x, y)
                     and (x, y) not in self.barricade_positions
                     and all((z.x, z.y) != (x, y) for z in self.zombies)
                 ):
@@ -496,6 +525,7 @@ class Game:
                 and (x, y) not in self.pharmacy_positions
                 and (x, y) not in self.armory_positions
                 and (x, y) != self.start_pos
+                and not self.is_player_at(x, y)
                 and (x, y) not in self.barricade_positions
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
@@ -515,10 +545,11 @@ class Game:
                     row.append("?")
             board.append(row)
         sx, sy = self.start_pos
-        if (sx, sy) in self.revealed and (sx, sy) != (self.player.x, self.player.y):
+        if (sx, sy) in self.revealed and not self.is_player_at(sx, sy):
             board[sy][sx] = "S"
 
-        board[self.player.y][self.player.x] = self.player.symbol
+        for p in self.players:
+            board[p.y][p.x] = p.symbol
         if self.antidote_pos and self.antidote_pos in self.revealed:
             ax, ay = self.antidote_pos
             board[ay][ax] = ANTIDOTE_SYMBOL
@@ -541,7 +572,7 @@ class Game:
             if (x, y) in self.revealed:
                 board[y][x] = ARMORY_SYMBOL
         for x, y in self.barricade_positions:
-            if (x, y) in self.revealed and (x, y) != (self.player.x, self.player.y):
+            if (x, y) in self.revealed and not self.is_player_at(x, y):
                 board[y][x] = BARRICADE_SYMBOL
         for x, y in self.supplies_positions:
             if (x, y) in self.revealed:
@@ -759,17 +790,20 @@ class Game:
     # Zombie behaviour
     def move_zombies(self) -> None:
         for z in list(self.zombies):
-            dx = 0 if z.x == self.player.x else (1 if z.x < self.player.x else -1)
-            dy = 0 if z.y == self.player.y else (1 if z.y < self.player.y else -1)
+            target = min(self.players, key=lambda p: abs(z.x - p.x) + abs(z.y - p.y))
+            dx = 0 if z.x == target.x else (1 if z.x < target.x else -1)
+            dy = 0 if z.y == target.y else (1 if z.y < target.y else -1)
             nx, ny = z.x + dx, z.y + dy
             if (nx, ny) in self.barricade_positions:
                 self.barricade_positions.remove((nx, ny))
                 print("A zombie claws at a barricade, tearing it down!")
                 continue
-            z.x, z.y = nx, ny
-            if z.x == self.player.x and z.y == self.player.y:
-                self.player.health -= 1
-                print("A zombie bites you! -1 health")
+            if not any((other.x, other.y) == (nx, ny) for other in self.zombies):
+                z.x, z.y = nx, ny
+            for p in self.players:
+                if z.x == p.x and z.y == p.y:
+                    p.health -= 1
+                    print(f"Player {p.symbol} is bitten! -1 health")
 
     def spawn_random_zombie(self) -> None:
         if random.random() < self.zombie_spawn_chance:
@@ -788,6 +822,7 @@ class Game:
                 and (nx, ny) != (x, y)
                 and (nx, ny) not in self.barricade_positions
                 and all((z.x, z.y) != (nx, ny) for z in self.zombies)
+                and not self.is_player_at(nx, ny)
             ]
             if candidates:
                 zx, zy = random.choice(candidates)
@@ -800,9 +835,14 @@ class Game:
         event = random.choice(
             ["nothing", "heal", "supply", "horde", "storm", "adrenaline"]
         )
-        if event == "heal" and self.player.health < self.player.max_health:
-            self.player.health = min(self.player.max_health, self.player.health + 1)
-            print("You catch your breath and recover 1 health.")
+        if event == "heal":
+            healed = False
+            for p in self.players:
+                if p.health < p.max_health:
+                    p.health = min(p.max_health, p.health + 1)
+                    healed = True
+            if healed:
+                print("Everyone catches their breath and recovers 1 health.")
         elif event == "supply":
             self.spawn_supplies(1)
             print("A supply crate drops nearby!")
@@ -817,10 +857,11 @@ class Game:
             print("Adrenaline surges through you! You gain an extra action next turn.")
 
     def apply_hunger(self) -> None:
-        self.player.hunger = max(0, self.player.hunger - HUNGER_DECAY)
-        if self.player.hunger == 0:
-            self.player.health -= HUNGER_STARVE_DAMAGE
-            print("Starvation gnaws at you! -1 health")
+        for p in self.players:
+            p.hunger = max(0, p.hunger - HUNGER_DECAY)
+            if p.hunger == 0:
+                p.health -= HUNGER_STARVE_DAMAGE
+                print(f"Player {p.symbol} is starving! -1 health")
 
     def check_achievements(self) -> None:
         """Unlock achievements based on campaign stats."""
@@ -836,9 +877,10 @@ class Game:
 
     # ------------------------------------------------------------------
     # Turn handling and game state
-    def player_turn(self) -> None:
+    def player_turn(self, player: Player) -> None:
+        self.player = player
+        print(f"Player {player.symbol}'s turn")
         actions_left = self.actions_per_turn
-        self.actions_per_turn = ACTIONS_PER_TURN
         while actions_left > 0 and self.player.health > 0:
             self.draw_board()
             cmd = input(
@@ -939,49 +981,72 @@ class Game:
         if self.has_signal_device:
             print("Campaign bonus: portable radio device")
         try:
+            winner: Optional[Player] = None
             while True:
-                self.player_turn()
-                if self.check_victory():
-                    if self.scenario == 1:
-                        print("You return with the antidote and escape. You win!")
-                        self.campaign["hp_bonus"] = self.campaign.get("hp_bonus", 0) + 1
-                        print("Max health increased for next game!")
-                    elif self.scenario == 2:
-                        print("You fuel up the vehicle and drive to safety. You win!")
-                        self.double_move_tokens += DOUBLE_MOVE_REWARD
-                        print(
-                            f"You gain {DOUBLE_MOVE_REWARD} double-move tokens for future runs!"
-                        )
-                    elif self.scenario == 3:
-                        print("You assemble the radio and send out a signal. You win!")
-                        self.has_signal_device = True
-                        self.campaign["signal_device"] = 1
-                        print("A portable radio will aid you in the final escape!")
-                    elif self.scenario == 4:
-                        print("The rescue helicopter arrives and lifts you to safety. You win!")
-                    completed = self.campaign.setdefault("completed_scenarios", [])
-                    if self.scenario not in completed:
-                        completed.append(self.scenario)
-                    break
-                if self.check_defeat():
-                    print("You have fallen to the zombies...")
+                for pl in list(self.players):
+                    self.player_turn(pl)
+                    if self.check_victory():
+                        winner = pl
+                        break
+                    if self.check_defeat():
+                        print(f"Player {pl.symbol} has fallen to the zombies...")
+                        self.players.remove(pl)
+                if winner or not self.players:
                     break
                 self.move_zombies()
-                if self.check_defeat():
-                    print("You have fallen to the zombies...")
+                for pl in list(self.players):
+                    self.player = pl
+                    if self.check_defeat():
+                        print(f"Player {pl.symbol} has fallen to the zombies...")
+                        self.players.remove(pl)
+                if winner or not self.players:
                     break
                 self.spawn_random_zombie()
+                self.actions_per_turn = ACTIONS_PER_TURN
                 self.random_event()
                 self.apply_hunger()
                 if self.called_rescue and self.rescue_timer is not None:
                     self.rescue_timer -= 1
-                    if self.check_victory():
-                        print("The rescue helicopter arrives and lifts you to safety. You win!")
+                    for pl in self.players:
+                        self.player = pl
+                        if self.check_victory():
+                            winner = pl
+                            print(
+                                "The rescue helicopter arrives and lifts you to safety. You win!"
+                            )
+                            break
+                    if winner:
                         break
                 self.turn += 1
                 if self.turn >= self.turn_limit:
                     print("Time runs out and the area is overrun. You perish...")
                     break
+            if winner:
+                self.player = winner
+                if self.scenario == 1:
+                    print("You return with the antidote and escape. You win!")
+                    self.campaign["hp_bonus"] = self.campaign.get("hp_bonus", 0) + 1
+                    print("Max health increased for next game!")
+                elif self.scenario == 2:
+                    print("You fuel up the vehicle and drive to safety. You win!")
+                    self.double_move_tokens += DOUBLE_MOVE_REWARD
+                    print(
+                        f"You gain {DOUBLE_MOVE_REWARD} double-move tokens for future runs!"
+                    )
+                elif self.scenario == 3:
+                    print("You assemble the radio and send out a signal. You win!")
+                    self.has_signal_device = True
+                    self.campaign["signal_device"] = 1
+                    print("A portable radio will aid you in the final escape!")
+                elif self.scenario == 4 and not (
+                    self.called_rescue and self.rescue_timer is not None and self.rescue_timer <= 0
+                ):
+                    print("The rescue helicopter arrives and lifts you to safety. You win!")
+                completed = self.campaign.setdefault("completed_scenarios", [])
+                if self.scenario not in completed:
+                    completed.append(self.scenario)
+            elif not self.players:
+                print("All players have fallen to the zombies...")
         except (KeyboardInterrupt, EOFError):
             print("\nThanks for playing!")
         finally:
@@ -1000,11 +1065,16 @@ if __name__ == "__main__":
         game = Game.load_game()
     else:
         diff = input("Choose difficulty [easy/normal/hard]: ").strip().lower() or "normal"
+        players = input("Number of players [1-4]: ").strip() or "1"
         scen = input("Choose scenario [1/2/3/4]: ").strip() or "1"
         try:
             scen_num = int(scen)
         except ValueError:
             scen_num = 1
-        game = Game(diff, scen_num)
+        try:
+            num_players = max(1, min(4, int(players)))
+        except ValueError:
+            num_players = 1
+        game = Game(diff, scen_num, num_players)
     game.run()
 
