@@ -62,10 +62,33 @@ DOUBLE_MOVE_REWARD = 5
 WEAPON_NOISE_ZOMBIE_CHANCE = 0.3
 VEHICLE_NOISE_ZOMBIE_CHANCE = 0.5
 
+# Simple achievement definitions evaluated against the persistent campaign
+# data. Additional achievements can be added here without touching the game
+# logic.
+ACHIEVEMENT_DEFS = {
+    "zombie_hunter": {
+        "desc": "Slay 10 zombies in total",
+        "check": lambda data: data.get("zombies_killed", 0) >= 10,
+    },
+    "master_survivor": {
+        "desc": "Complete all four scenarios",
+        "check": lambda data: all(
+            scen in data.get("completed_scenarios", []) for scen in (1, 2, 3, 4)
+        ),
+    },
+}
+
 
 def load_campaign() -> dict:
     """Load persistent campaign data from disk."""
-    data = {"hp_bonus": 0, "double_move_tokens": 0, "signal_device": 0}
+    data = {
+        "hp_bonus": 0,
+        "double_move_tokens": 0,
+        "signal_device": 0,
+        "zombies_killed": 0,
+        "completed_scenarios": [],
+        "achievements": [],
+    }
     if os.path.exists(CAMPAIGN_FILE):
         with open(CAMPAIGN_FILE, "r", encoding="utf-8") as fh:
             try:
@@ -189,6 +212,7 @@ class Game:
         self.turn: int = 0
         self.actions_per_turn: int = ACTIONS_PER_TURN
         self.keep_save = False
+        self.zombies_killed: int = 0
 
     # ------------------------------------------------------------------
     # Persistence helpers
@@ -227,6 +251,7 @@ class Game:
             "double_move_tokens": self.double_move_tokens,
             "has_signal_device": self.has_signal_device,
             "actions_per_turn": self.actions_per_turn,
+            "zombies_killed": self.zombies_killed,
         }
 
     @classmethod
@@ -264,6 +289,7 @@ class Game:
         game.double_move_tokens = data.get("double_move_tokens", 0)
         game.has_signal_device = data.get("has_signal_device", False)
         game.actions_per_turn = data.get("actions_per_turn", ACTIONS_PER_TURN)
+        game.zombies_killed = data.get("zombies_killed", 0)
         return game
 
     def save_game(self, filename: str = SAVE_FILE) -> None:
@@ -480,6 +506,7 @@ class Game:
                 hit_chance = WEAPON_HIT_CHANCE if self.player.has_weapon else ATTACK_HIT_CHANCE
                 if random.random() < hit_chance:
                     self.zombies.remove(z)
+                    self.zombies_killed += 1
                     print("You slay a zombie!")
                 else:
                     self.player.health -= 1
@@ -648,6 +675,18 @@ class Game:
             self.player.health -= HUNGER_STARVE_DAMAGE
             print("Starvation gnaws at you! -1 health")
 
+    def check_achievements(self) -> None:
+        """Unlock achievements based on campaign stats."""
+        unlocked = set(self.campaign.get("achievements", []))
+        new = False
+        for key, cfg in ACHIEVEMENT_DEFS.items():
+            if key not in unlocked and cfg["check"](self.campaign):
+                unlocked.add(key)
+                print(f"Achievement unlocked: {cfg['desc']}!")
+                new = True
+        if new:
+            self.campaign["achievements"] = sorted(unlocked)
+
     # ------------------------------------------------------------------
     # Turn handling and game state
     def player_turn(self) -> None:
@@ -770,6 +809,9 @@ class Game:
                         print("A portable radio will aid you in the final escape!")
                     elif self.scenario == 4:
                         print("The rescue helicopter arrives and lifts you to safety. You win!")
+                    completed = self.campaign.setdefault("completed_scenarios", [])
+                    if self.scenario not in completed:
+                        completed.append(self.scenario)
                     break
                 if self.check_defeat():
                     print("You have fallen to the zombies...")
@@ -796,6 +838,8 @@ class Game:
             self.campaign["hp_bonus"] = self.campaign.get("hp_bonus", 0)
             self.campaign["double_move_tokens"] = self.double_move_tokens
             self.campaign["signal_device"] = 1 if self.has_signal_device else 0
+            self.campaign["zombies_killed"] = self.campaign.get("zombies_killed", 0) + self.zombies_killed
+            self.check_achievements()
             save_campaign(self.campaign)
             if not self.keep_save and os.path.exists(SAVE_FILE):
                 os.remove(SAVE_FILE)
