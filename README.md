@@ -20,6 +20,8 @@ flashlights and molotov cocktails for a tactical edge. A day/night cycle
 reduces visibility after dark unless a survivor carries a flashlight.
 Combat and other risky actions explicitly roll dice, displaying the result so
 you can cheer or lament the luck of the draw just like at a real table.
+Zombie bites may also infect survivors; without an antidote they will turn
+into zombies after a few rounds, adding urgency to secure the cure.
 
 ## Requirements
 - Python 3.12+
@@ -70,6 +72,7 @@ During your turn you have two actions. Enter:
 - `F` – attack an adjacent zombie; roll a d10 (≤7 hits, ≤9 if armed).
 - `G` – scavenge the current tile for supplies, weapons or the antidote.
 - `H` – use a found medkit to recover health.
+- `V` – use the antidote to cure infection at the cost of the item.
 - `E` – consume one supply to restore hunger.
 - `B` – spend two supplies to barricade the current tile, blocking zombies once.
 - `U` – disarm a trap on your tile, salvaging a supply.
