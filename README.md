@@ -38,6 +38,8 @@ During your turn you have two actions. Enter:
 - `H` – use a found medkit to recover health.
 - `E` – consume one supply to restore hunger.
 - `B` – spend two supplies to barricade the current tile, blocking zombies once.
+- `C` – craft items (3 supplies → medkit, supply + fuel → molotov).
+- `M` – throw a molotov to burn adjacent zombies.
 - `T` – drop the item of your choice on the current tile.
 - `P` – pass the remaining actions.
 - `Q` – save the game and quit.
@@ -65,7 +67,7 @@ campaign progress is stored in `campaign_save.json`. A save file is also written
 so you can resume a run later. Survive as long as you can before your health
 reaches zero.
 
-Dropped items remain on the board: supplies show as `R`, medkits as `H` and weapons as `G` once the tile is revealed.
+Dropped items remain on the board: supplies show as `R`, medkits as `H`, weapons as `G` and molotovs as `L` once the tile is revealed.
 
 ### Achievements
 

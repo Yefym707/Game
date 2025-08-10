@@ -14,6 +14,8 @@ Features
 * Player wins by finding the antidote and returning to the starting tile.
   Victory grants +1 max health for the next run, saved to disk.
 * Hunger mechanic – eat supplies to avoid starving each round.
+* Simple crafting allows turning supplies into medkits or noisy
+  molotov cocktails that burn adjacent zombies.
 
 The code is intentionally compact and uses only the Python standard
 library so it can run in any environment with Python 3.12 or newer.
@@ -78,6 +80,12 @@ ARMORY_SUPPLY_CHANCE = 0.4
 # Barricade settings
 BARRICADE_SYMBOL = "B"
 BARRICADE_SUPPLY_COST = 2
+
+# Crafting settings
+MEDKIT_CRAFT_COST = 3
+MOLOTOV_SYMBOL = "L"
+MOLOTOV_SUPPLY_COST = 1
+MOLOTOV_NOISE_ZOMBIE_CHANCE = 0.6
 
 # Simple achievement definitions evaluated against the persistent campaign
 # data. Additional achievements can be added here without touching the game
@@ -171,6 +179,7 @@ class Player(Entity):
         self.hunger: int = STARTING_HUNGER
         self.supplies: int = 0
         self.medkits: int = 0
+        self.molotovs: int = 0
         self.has_antidote: bool = False
         self.has_keys: bool = False
         self.has_fuel: bool = False
@@ -179,7 +188,7 @@ class Player(Entity):
     @property
     def inventory_size(self) -> int:
         """Total number of items currently carried."""
-        return self.supplies + self.medkits
+        return self.supplies + self.medkits + self.molotovs
 
 
 class Zombie(Entity):
@@ -239,6 +248,7 @@ class Game:
         self.supplies_positions: Set[Tuple[int, int]] = set()
         self.medkit_positions: Set[Tuple[int, int]] = set()
         self.weapon_positions: Set[Tuple[int, int]] = set()
+        self.molotov_positions: Set[Tuple[int, int]] = set()
         self.pharmacy_positions: Set[Tuple[int, int]] = set()
         self.armory_positions: Set[Tuple[int, int]] = set()
         self.barricade_positions: Set[Tuple[int, int]] = set()
@@ -288,6 +298,7 @@ class Game:
                     "hunger": p.hunger,
                     "supplies": p.supplies,
                     "medkits": p.medkits,
+                    "molotovs": p.molotovs,
                     "has_antidote": p.has_antidote,
                     "has_keys": p.has_keys,
                     "has_fuel": p.has_fuel,
@@ -301,6 +312,7 @@ class Game:
             "supplies_positions": list(self.supplies_positions),
             "medkit_positions": list(self.medkit_positions),
             "weapon_positions": list(self.weapon_positions),
+            "molotov_positions": list(self.molotov_positions),
             "pharmacy_positions": list(self.pharmacy_positions),
             "armory_positions": list(self.armory_positions),
             "barricade_positions": list(self.barricade_positions),
@@ -341,6 +353,7 @@ class Game:
             p.hunger = pdata["hunger"]
             p.supplies = pdata["supplies"]
             p.medkits = pdata["medkits"]
+            p.molotovs = pdata.get("molotovs", 0)
             p.has_antidote = pdata["has_antidote"]
             p.has_keys = pdata["has_keys"]
             p.has_fuel = pdata["has_fuel"]
@@ -352,6 +365,7 @@ class Game:
         game.supplies_positions = {tuple(pos) for pos in data["supplies_positions"]}
         game.medkit_positions = {tuple(pos) for pos in data.get("medkit_positions", [])}
         game.weapon_positions = {tuple(pos) for pos in data.get("weapon_positions", [])}
+        game.molotov_positions = {tuple(pos) for pos in data.get("molotov_positions", [])}
         game.pharmacy_positions = {
             tuple(pos) for pos in data.get("pharmacy_positions", [])
         }
@@ -403,6 +417,7 @@ class Game:
                             (nx, ny) not in self.supplies_positions
                             and (nx, ny) not in self.medkit_positions
                             and (nx, ny) not in self.weapon_positions
+                            and (nx, ny) not in self.molotov_positions
                             and (nx, ny) != self.antidote_pos
                             and (nx, ny) != self.keys_pos
                             and (nx, ny) != self.fuel_pos
@@ -449,6 +464,7 @@ class Game:
                     and (x, y) not in self.barricade_positions
                     and (x, y) not in self.medkit_positions
                     and (x, y) not in self.weapon_positions
+                    and (x, y) not in self.molotov_positions
                 ):
                     self.zombies.append(Zombie(x, y))
                     break
@@ -466,6 +482,7 @@ class Game:
                     and (x, y) not in self.barricade_positions
                     and (x, y) not in self.medkit_positions
                     and (x, y) not in self.weapon_positions
+                    and (x, y) not in self.molotov_positions
                     and (x, y) not in self.supplies_positions
                     and all((z.x, z.y) != (x, y) for z in self.zombies)
                 ):
@@ -485,6 +502,7 @@ class Game:
                     and (x, y) not in self.barricade_positions
                     and (x, y) not in self.medkit_positions
                     and (x, y) not in self.weapon_positions
+                    and (x, y) not in self.molotov_positions
                     and (x, y) not in self.supplies_positions
                     and all((z.x, z.y) != (x, y) for z in self.zombies)
                 ):
@@ -506,6 +524,7 @@ class Game:
                     and (x, y) not in self.barricade_positions
                     and (x, y) not in self.medkit_positions
                     and (x, y) not in self.weapon_positions
+                    and (x, y) not in self.molotov_positions
                 ):
                     self.supplies_positions.add((x, y))
                     break
@@ -522,6 +541,7 @@ class Game:
                 and (x, y) not in self.barricade_positions
                 and (x, y) not in self.medkit_positions
                 and (x, y) not in self.weapon_positions
+                and (x, y) not in self.molotov_positions
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
                 self.antidote_pos = (x, y)
@@ -539,6 +559,7 @@ class Game:
                 and (x, y) not in self.barricade_positions
                 and (x, y) not in self.medkit_positions
                 and (x, y) not in self.weapon_positions
+                and (x, y) not in self.molotov_positions
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
                 self.keys_pos = (x, y)
@@ -557,6 +578,7 @@ class Game:
                 and (x, y) not in self.barricade_positions
                 and (x, y) not in self.medkit_positions
                 and (x, y) not in self.weapon_positions
+                and (x, y) not in self.molotov_positions
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
                 self.fuel_pos = (x, y)
@@ -576,6 +598,7 @@ class Game:
                     and (x, y) not in self.barricade_positions
                     and (x, y) not in self.medkit_positions
                     and (x, y) not in self.weapon_positions
+                    and (x, y) not in self.molotov_positions
                     and all((z.x, z.y) != (x, y) for z in self.zombies)
                 ):
                     self.radio_positions.add((x, y))
@@ -593,6 +616,7 @@ class Game:
                 and (x, y) not in self.barricade_positions
                 and (x, y) not in self.medkit_positions
                 and (x, y) not in self.weapon_positions
+                and (x, y) not in self.molotov_positions
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
                 self.radio_tower_pos = (x, y)
@@ -649,17 +673,21 @@ class Game:
         for x, y in self.weapon_positions:
             if (x, y) in self.revealed:
                 board[y][x] = WEAPON_SYMBOL
+        for x, y in self.molotov_positions:
+            if (x, y) in self.revealed:
+                board[y][x] = MOLOTOV_SYMBOL
         for z in self.zombies:
             if (z.x, z.y) in self.revealed:
                 board[z.y][z.x] = z.symbol
 
         print(
-            "Health: {}    Hunger: {}/{}    Medkits: {}    Supplies: {}    Inventory: {}/{}    Tokens: {}    Weapon: {}".format(
+            "Health: {}    Hunger: {}/{}    Medkits: {}    Supplies: {}    Molotovs: {}    Inventory: {}/{}    Tokens: {}    Weapon: {}".format(
                 self.player.health,
                 self.player.hunger,
                 self.player.max_hunger,
                 self.player.medkits,
                 self.player.supplies,
+                self.player.molotovs,
                 self.player.inventory_size,
                 INVENTORY_LIMIT,
                 self.double_move_tokens,
@@ -801,6 +829,15 @@ class Game:
                 print("You already have a weapon.")
             return
 
+        if pos in self.molotov_positions:
+            if self.player.inventory_size < INVENTORY_LIMIT:
+                self.molotov_positions.remove(pos)
+                self.player.molotovs += 1
+                print("You pick up a molotov cocktail.")
+            else:
+                print("Your pack is full. You leave the molotov behind.")
+            return
+
         if pos in self.medkit_positions:
             if self.player.inventory_size < INVENTORY_LIMIT:
                 self.medkit_positions.remove(pos)
@@ -876,10 +913,62 @@ class Game:
         print("Not enough supplies to build a barricade.")
         return False
 
+    def craft_item(self) -> bool:
+        """Craft a medkit or molotov using supplies (and fuel)."""
+        choice = input(
+            "Craft [m]edkit (cost {0} supplies) or [l]molotov (cost {1} supply + fuel): ".format(
+                MEDKIT_CRAFT_COST, MOLOTOV_SUPPLY_COST
+            )
+        ).strip().lower()
+        if choice == "m":
+            if self.player.supplies >= MEDKIT_CRAFT_COST:
+                if self.player.inventory_size < INVENTORY_LIMIT:
+                    self.player.supplies -= MEDKIT_CRAFT_COST
+                    self.player.medkits += 1
+                    print("You craft a makeshift medkit.")
+                    return True
+                print("Your pack is full.")
+            else:
+                print("Not enough supplies to craft a medkit.")
+        elif choice == "l":
+            if (
+                self.player.supplies >= MOLOTOV_SUPPLY_COST
+                and self.player.has_fuel
+                and self.player.inventory_size < INVENTORY_LIMIT
+            ):
+                self.player.supplies -= MOLOTOV_SUPPLY_COST
+                self.player.has_fuel = False
+                self.player.molotovs += 1
+                print("You assemble a molotov cocktail.")
+                return True
+            print("You lack the materials to craft a molotov.")
+        return False
+
+    def throw_molotov(self) -> bool:
+        """Throw a molotov, burning adjacent zombies."""
+        if self.player.molotovs <= 0:
+            return False
+        self.player.molotovs -= 1
+        removed = 0
+        for z in list(self.zombies):
+            if abs(z.x - self.player.x) <= 1 and abs(z.y - self.player.y) <= 1:
+                self.zombies.remove(z)
+                removed += 1
+        if removed:
+            self.zombies_killed += removed
+            print(f"The molotov explodes, burning {removed} zombie{'s' if removed != 1 else ''}!")
+        else:
+            print("The molotov explodes harmlessly.")
+        self.spawn_zombie_near(
+            self.player.x, self.player.y, MOLOTOV_NOISE_ZOMBIE_CHANCE
+        )
+        print("The fiery blast draws more undead!")
+        return True
+
     def drop_item(self) -> bool:
         pos = (self.player.x, self.player.y)
         choice = input(
-            "Drop item [s]upply, [m]edkit, [w]eapon, [k]eys, [f]uel, [a]ntidote: "
+            "Drop item [s]upply, [m]edkit, [w]eapon, [k]eys, [f]uel, [a]ntidote, [l]molotov: "
         ).strip().lower()
         if choice == "s" and self.player.supplies > 0:
             self.player.supplies -= 1
@@ -910,6 +999,11 @@ class Game:
             self.player.has_antidote = False
             self.antidote_pos = pos
             print("You drop the antidote.")
+            return True
+        if choice == "l" and self.player.molotovs > 0:
+            self.player.molotovs -= 1
+            self.molotov_positions.add(pos)
+            print("You drop a molotov.")
             return True
         print("Nothing dropped.")
         return False
@@ -949,6 +1043,7 @@ class Game:
                 and 0 <= ny < self.board_size
                 and (nx, ny) != (x, y)
                 and (nx, ny) not in self.barricade_positions
+                and (nx, ny) not in self.molotov_positions
                 and all((z.x, z.y) != (nx, ny) for z in self.zombies)
                 and not self.is_player_at(nx, ny)
             ]
@@ -970,6 +1065,7 @@ class Game:
                 "adrenaline",
                 "survivors",
                 "fog",
+                "firebomb",
             ]
         )
         if event == "heal":
@@ -1008,6 +1104,16 @@ class Game:
         elif event == "fog":
             self.reveal_random_tiles(5)
             print("A gust of wind lifts the fog, revealing more of the area.")
+        elif event == "firebomb":
+            given = False
+            for p in self.players:
+                if p.inventory_size < INVENTORY_LIMIT:
+                    p.molotovs += 1
+                    print(f"Player {p.symbol} discovers a hidden molotov cache!")
+                    given = True
+                    break
+            if not given:
+                print("You find a firebomb cache but can't carry any.")
 
     def handle_player_death(self, player: Player) -> None:
         """Remove a dead player and spawn a zombie at their location."""
@@ -1146,7 +1252,7 @@ class Game:
         while actions_left > 0 and self.player.health > 0:
             self.draw_board()
             cmd = input(
-                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, e=eat, b=barricade, t=drop, p=pass, q=save]: "
+                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, e=eat, b=barricade, c=craft, m=molotov, t=drop, p=pass, q=save]: "
             ).strip().lower()
 
             if cmd in {"w", "a", "s", "d"}:
@@ -1188,6 +1294,14 @@ class Game:
             elif cmd == "b":
                 if self.build_barricade():
                     actions_left -= 1
+            elif cmd == "c":
+                if self.craft_item():
+                    actions_left -= 1
+            elif cmd == "m":
+                if self.throw_molotov():
+                    actions_left -= 1
+                else:
+                    print("No molotovs ready!")
             elif cmd == "t":
                 if self.drop_item():
                     actions_left -= 1
