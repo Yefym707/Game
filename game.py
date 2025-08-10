@@ -20,6 +20,8 @@ Features
 * Loud actions leave behind noise tokens that can draw zombies at the
   end of each round, mirroring board-game noise markers.
 * Achievements track scenario victories and feats across campaigns.
+* Experience points from kills and wins allow survivors to level up and
+  gain permanent max health.
 * Attempt to steal items from survivors sharing your tile; failure
   results in a scuffle and health loss.
 
@@ -56,6 +58,9 @@ STARTING_HUNGER = 10
 HUNGER_DECAY = 1
 HUNGER_EAT_AMOUNT = 4
 HUNGER_STARVE_DAMAGE = 1
+XP_PER_ZOMBIE = 1
+XP_SCENARIO_WIN = 5
+LEVEL_XP_BASE = 10
 
 CAMPAIGN_FILE = "campaign_save.json"
 SAVE_FILE = "savegame.json"
@@ -170,6 +175,8 @@ def load_campaign() -> dict:
         "zombies_killed": 0,
         "completed_scenarios": [],
         "achievements": [],
+        "xp": 0,
+        "level": 1,
     }
     if os.path.exists(CAMPAIGN_FILE):
         with open(CAMPAIGN_FILE, "r", encoding="utf-8") as fh:
@@ -293,6 +300,8 @@ class Game:
         self.scenario = scenario
         self.cooperative = cooperative
         self.campaign = load_campaign()
+        self.level = self.campaign.get("level", 1)
+        self.xp_gained = 0
         self.double_move_tokens = self.campaign.get("double_move_tokens", 0)
         self.has_signal_device = bool(self.campaign.get("signal_device"))
         self.total_players = max(1, num_players)
@@ -417,6 +426,7 @@ class Game:
             "event_deck": list(self.event_deck),
             "loot_deck": list(self.loot_deck),
             "noise_markers": [list(n) for n in self.noise_markers],
+            "xp_gained": self.xp_gained,
         }
 
     @classmethod
@@ -476,6 +486,7 @@ class Game:
         game.has_signal_device = data.get("has_signal_device", False)
         game.actions_per_turn = data.get("actions_per_turn", ACTIONS_PER_TURN)
         game.zombies_killed = data.get("zombies_killed", 0)
+        game.xp_gained = data.get("xp_gained", 0)
         game.event_deck = deque(data.get("event_deck", []))
         game.loot_deck = deque(data.get("loot_deck", []))
         game.noise_markers = [
@@ -780,7 +791,7 @@ class Game:
                 board[z.y][z.x] = z.symbol
 
         print(
-            "Health: {}    Hunger: {}/{}    Medkits: {}    Supplies: {}    Molotovs: {}    Inventory: {}/{}    Tokens: {}    Weapon: {}".format(
+            "Health: {}    Hunger: {}/{}    Medkits: {}    Supplies: {}    Molotovs: {}    Inventory: {}/{}    Tokens: {}    Weapon: {}    Level: {}    XP: {}".format(
                 self.player.health,
                 self.player.hunger,
                 self.player.max_hunger,
@@ -791,6 +802,8 @@ class Game:
                 INVENTORY_LIMIT,
                 self.double_move_tokens,
                 "Y" if self.player.has_weapon else "N",
+                self.level,
+                self.campaign.get("xp", 0) + self.xp_gained,
             )
         )
         header = "   " + " ".join(str(i) for i in range(self.board_size))
@@ -833,6 +846,7 @@ class Game:
                 if random.random() < hit_chance:
                     self.zombies.remove(z)
                     self.zombies_killed += 1
+                    self.xp_gained += XP_PER_ZOMBIE
                     print("You slay a zombie!")
                 else:
                     self.player.health -= 1
@@ -1069,6 +1083,7 @@ class Game:
                 removed += 1
         if removed:
             self.zombies_killed += removed
+            self.xp_gained += XP_PER_ZOMBIE * removed
             print(f"The molotov explodes, burning {removed} zombie{'s' if removed != 1 else ''}!")
         else:
             print("The molotov explodes harmlessly.")
@@ -1689,6 +1704,7 @@ class Game:
             )
         if self.cooperative:
             print("Cooperative mode: all survivors must reach the start to escape together.")
+        print(f"Campaign level {self.level}, XP {self.campaign.get('xp', 0)}")
         if self.campaign.get("hp_bonus"):
             print(f"Campaign bonus: +{self.campaign['hp_bonus']} max health")
         if self.double_move_tokens:
@@ -1769,6 +1785,8 @@ class Game:
                         print("The rescue helicopter arrives and lifts everyone to safety. You win!")
                     else:
                         print("The rescue helicopter arrives and lifts you to safety. You win!")
+                self.xp_gained += XP_SCENARIO_WIN
+                print(f"You gain {XP_SCENARIO_WIN} XP for surviving the scenario!")
                 completed = self.campaign.setdefault("completed_scenarios", [])
                 if self.scenario not in completed:
                     completed.append(self.scenario)
@@ -1781,6 +1799,16 @@ class Game:
             self.campaign["double_move_tokens"] = self.double_move_tokens
             self.campaign["signal_device"] = 1 if self.has_signal_device else 0
             self.campaign["zombies_killed"] = self.campaign.get("zombies_killed", 0) + self.zombies_killed
+            xp_total = self.campaign.get("xp", 0) + self.xp_gained
+            level = self.campaign.get("level", 1)
+            while xp_total >= LEVEL_XP_BASE * level:
+                xp_total -= LEVEL_XP_BASE * level
+                level += 1
+                self.campaign["hp_bonus"] = self.campaign.get("hp_bonus", 0) + 1
+                print("Campaign level up! Max health permanently increased by 1.")
+            self.campaign["xp"] = xp_total
+            self.campaign["level"] = level
+            self.level = level
             if self.lowest_survivor_hp is not None:
                 self.campaign["last_victory_lowest_hp"] = self.lowest_survivor_hp
                 self.campaign["last_victory_zombies_killed"] = self.zombies_killed
