@@ -916,12 +916,24 @@ class Game:
             self.reveal_random_tiles(5)
             print("A gust of wind lifts the fog, revealing more of the area.")
 
+    def handle_player_death(self, player: Player) -> None:
+        """Remove a dead player and spawn a zombie at their location."""
+        print(f"Player {player.symbol} has fallen to the zombies...")
+        if player in self.players:
+            self.players.remove(player)
+        if not any(z.x == player.x and z.y == player.y for z in self.zombies):
+            self.zombies.append(Zombie(player.x, player.y))
+            if (player.x, player.y) in self.revealed:
+                print("Their corpse rises again as a zombie!")
+
     def apply_hunger(self) -> None:
-        for p in self.players:
+        for p in list(self.players):
             p.hunger = max(0, p.hunger - HUNGER_DECAY)
             if p.hunger == 0:
                 p.health -= HUNGER_STARVE_DAMAGE
                 print(f"Player {p.symbol} is starving! -1 health")
+            if p.health <= 0:
+                self.handle_player_death(p)
 
     def check_achievements(self) -> None:
         """Unlock achievements based on campaign stats."""
@@ -1123,16 +1135,14 @@ class Game:
                         winner = pl
                         break
                     if self.check_defeat():
-                        print(f"Player {pl.symbol} has fallen to the zombies...")
-                        self.players.remove(pl)
+                        self.handle_player_death(pl)
                 if winner or not self.players:
                     break
                 self.move_zombies()
                 for pl in list(self.players):
                     self.player = pl
                     if self.check_defeat():
-                        print(f"Player {pl.symbol} has fallen to the zombies...")
-                        self.players.remove(pl)
+                        self.handle_player_death(pl)
                 if winner or not self.players:
                     break
                 self.spawn_random_zombie()
