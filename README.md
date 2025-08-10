@@ -5,6 +5,8 @@ The player roams a fog-covered 10×10 grid searching for objectives while
 avoiding zombies. Inventory space is limited so choose carefully what to carry.
 Players may also spend an action to scout an adjacent tile, peeking through the
 fog before committing to a move.
+Survivors sharing a tile can steal from or even brawl with each other, though
+such skirmishes are noisy and dangerous.
 Each turn your hunger drops – eat supplies to keep from starving. Zombie
 numbers scale with the size of your group to keep larger teams on edge.
 Scavenging pulls from a finite loot deck so items won't repeat until the deck
@@ -57,6 +59,7 @@ During your turn you have two actions. Enter:
 - `C` – craft items (3 supplies → medkit, supply + fuel → molotov).
 - `M` – throw a molotov to burn adjacent zombies.
 - `R` – attempt to steal an item from another player sharing your tile; roll a d10 (≤5 succeeds, failure costs 1 HP).
+- `K` – attack another player on your tile; roll a d10 (≤5 hits, failure hurts you. The brawl creates noise.)
 - `X` – trade an item with another player on your tile.
 - `T` – drop the item of your choice on the current tile.
 - `P` – pass the remaining actions.

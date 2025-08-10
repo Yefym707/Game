@@ -24,6 +24,8 @@ Features
   gain permanent max health.
 * Attempt to steal items from survivors sharing your tile; failure
   results in a scuffle and health loss.
+* Survivors may brawl with each other, but fights are risky and attract
+  additional zombies through noise tokens.
 
 The code is intentionally compact and uses only the Python standard
 library so it can run in any environment with Python 3.12 or newer.
@@ -100,6 +102,10 @@ MOLOTOV_NOISE_ZOMBIE_CHANCE = 0.6
 
 # PvP stealing settings
 STEAL_SUCCESS_CHANCE = 0.5
+
+# PvP attack settings
+PVP_ATTACK_HIT_CHANCE = 0.5
+PVP_ATTACK_NOISE_CHANCE = 0.8
 
 # End-of-round event deck configuration. The game now draws from a finite
 # deck of event cards so the same event will not repeat until the deck is
@@ -875,6 +881,36 @@ class Game:
                 return True
         return False
 
+    def attack_player(self) -> bool:
+        """Attempt to injure another survivor on the same tile.
+
+        Fighting other players is risky and attracts the dead. A successful
+        attack deals 1 damage to the target. On a miss the attacker takes
+        the damage instead. Either way the scuffle leaves behind a noise
+        marker that may spawn zombies later.
+        """
+        others = [
+            p
+            for p in self.players
+            if p is not self.player and p.health > 0 and (p.x, p.y) == (self.player.x, self.player.y)
+        ]
+        if not others:
+            return False
+        target = random.choice(others)
+        if roll_check(PVP_ATTACK_HIT_CHANCE, label="Skirmish"):
+            target.health -= 1
+            print(f"You strike player {target.symbol}! -1 HP")
+            if target.health <= 0:
+                self.handle_player_death(target)
+        else:
+            self.player.health -= 1
+            print("The fight backfires! You take 1 damage.")
+            if self.player.health <= 0:
+                self.handle_player_death(self.player)
+        self.add_noise(self.player.x, self.player.y, PVP_ATTACK_NOISE_CHANCE)
+        print("The commotion may draw more zombies...")
+        return True
+
     def scavenge(self) -> None:
         pos = (self.player.x, self.player.y)
         if pos == self.antidote_pos:
@@ -1614,7 +1650,7 @@ class Game:
         while actions_left > 0 and self.player.health > 0:
             self.draw_board()
             cmd = input(
-                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, e=eat, b=barricade, o=scout, c=craft, m=molotov, r=steal, x=trade, t=drop, p=pass, q=save]: "
+                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, e=eat, b=barricade, o=scout, c=craft, m=molotov, r=steal, k=fight, x=trade, t=drop, p=pass, q=save]: "
             ).strip().lower()
 
             if cmd in {"w", "a", "s", "d"}:
@@ -1670,6 +1706,11 @@ class Game:
                     actions_left -= 1
                 else:
                     print("No one here to steal from or pack is full.")
+            elif cmd == "k":
+                if self.attack_player():
+                    actions_left -= 1
+                else:
+                    print("No one here to attack!")
             elif cmd == "x":
                 if self.trade_item():
                     actions_left -= 1
