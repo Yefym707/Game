@@ -88,6 +88,10 @@ reaches zero.
 Dropped items remain on the board: supplies show as `R`, medkits as `H`, weapons as `G` and molotovs as `L` once the tile is revealed.
 Noise markers from loud actions appear as `!` until they attract or fade.
 
+Experience points accumulate across the campaign. Killing zombies and
+surviving scenarios grant XP; each level reached permanently adds +1 to
+maximum health for future runs.
+
 ### Achievements
 
 Progress across games unlocks simple achievements that persist between runs:
