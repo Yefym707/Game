@@ -100,6 +100,11 @@ PHARMACY_MEDKIT_CHANCE = 0.8
 ARMORY_WEAPON_CHANCE = 0.6
 ARMORY_SUPPLY_CHANCE = 0.4
 
+# Shelter settings
+SHELTER_SYMBOL = "U"
+SHELTER_COUNT = 2
+
+
 # Barricade settings
 BARRICADE_SYMBOL = "B"
 BARRICADE_SUPPLY_COST = 2
@@ -449,6 +454,7 @@ class Game:
         self.trap_positions: Set[Tuple[int, int]] = set()
         self.pharmacy_positions: Set[Tuple[int, int]] = set()
         self.armory_positions: Set[Tuple[int, int]] = set()
+        self.shelter_positions: Set[Tuple[int, int]] = set()
         self.barricade_positions: Set[Tuple[int, int]] = set()
         self.campfires: Dict[Tuple[int, int], int] = {}
         self.noise_markers: List[Tuple[int, int, float, int]] = []
@@ -456,6 +462,7 @@ class Game:
         self.visibility_penalty_turns = 0
         self.hunger_penalty_turns = 0
         self.revealed: Set[Tuple[int, int]] = set()
+        self.spawn_shelters(SHELTER_COUNT)
         self.spawn_zombies(settings["starting_zombies"] + extra_players)
         self.spawn_pharmacies(PHARMACY_COUNT)
         self.spawn_armories(ARMORY_COUNT)
@@ -526,6 +533,7 @@ class Game:
             "trap_positions": list(self.trap_positions),
             "pharmacy_positions": list(self.pharmacy_positions),
             "armory_positions": list(self.armory_positions),
+            "shelter_positions": list(self.shelter_positions),
             "barricade_positions": list(self.barricade_positions),
             "campfires": [[x, y, t] for (x, y), t in self.campfires.items()],
             "revealed": list(self.revealed),
@@ -600,6 +608,9 @@ class Game:
         }
         game.armory_positions = {
             tuple(pos) for pos in data.get("armory_positions", [])
+        }
+        game.shelter_positions = {
+            tuple(pos) for pos in data.get("shelter_positions", [])
         }
         game.barricade_positions = {
             tuple(pos) for pos in data.get("barricade_positions", [])
@@ -708,6 +719,7 @@ class Game:
                             and (nx, ny) != self.radio_tower_pos
                             and (nx, ny) not in self.pharmacy_positions
                             and (nx, ny) not in self.armory_positions
+                            and (nx, ny) not in self.shelter_positions
                             and (nx, ny) not in self.barricade_positions
                             and (nx, ny) not in self.campfires
                             and all((z.x, z.y) != (nx, ny) for z in self.zombies)
@@ -757,6 +769,7 @@ class Game:
                     and (x, y) not in self.molotov_positions
                     and (x, y) not in self.trap_positions
                     and (x, y) not in self.campfires
+                    and (x, y) not in self.shelter_positions
                 ):
                     self.zombies.append(Zombie(x, y))
                     break
@@ -770,6 +783,7 @@ class Game:
                 if (
                     (x, y) not in self.pharmacy_positions
                     and (x, y) not in self.armory_positions
+                    and (x, y) not in self.shelter_positions
                     and not self.is_player_at(x, y)
                     and (x, y) not in self.barricade_positions
                     and (x, y) not in self.trap_positions
@@ -792,6 +806,7 @@ class Game:
                 if (
                     (x, y) not in self.pharmacy_positions
                     and (x, y) not in self.armory_positions
+                    and (x, y) not in self.shelter_positions
                     and not self.is_player_at(x, y)
                     and (x, y) not in self.barricade_positions
                     and (x, y) not in self.trap_positions
@@ -805,6 +820,28 @@ class Game:
                     self.armory_positions.add((x, y))
                     break
 
+    def spawn_shelters(self, count: int) -> None:
+        for _ in range(count):
+            while True:
+                x, y = random.randrange(self.board_size), random.randrange(self.board_size)
+                if (
+                    (x, y) not in self.shelter_positions
+                    and (x, y) not in self.pharmacy_positions
+                    and (x, y) not in self.armory_positions
+                    and not self.is_player_at(x, y)
+                    and (x, y) != self.start_pos
+                    and (x, y) not in self.barricade_positions
+                    and (x, y) not in self.trap_positions
+                    and (x, y) not in self.campfires
+                    and (x, y) not in self.medkit_positions
+                    and (x, y) not in self.weapon_positions
+                    and (x, y) not in self.molotov_positions
+                    and (x, y) not in self.supplies_positions
+                    and all((z.x, z.y) != (x, y) for z in self.zombies)
+                ):
+                    self.shelter_positions.add((x, y))
+                    break
+
     def spawn_supplies(self, count: int) -> None:
         for _ in range(count):
             while True:
@@ -815,6 +852,7 @@ class Game:
                     (x, y) not in self.supplies_positions
                     and (x, y) not in self.pharmacy_positions
                     and (x, y) not in self.armory_positions
+                    and (x, y) not in self.shelter_positions
                     and not self.is_player_at(x, y)
                     and (x, y) != self.antidote_pos
                     and (x, y) not in self.barricade_positions
@@ -834,6 +872,7 @@ class Game:
                 (x, y) not in self.supplies_positions
                 and (x, y) not in self.pharmacy_positions
                 and (x, y) not in self.armory_positions
+                and (x, y) not in self.shelter_positions
                 and (x, y) != self.start_pos
                 and not self.is_player_at(x, y)
                 and (x, y) not in self.barricade_positions
@@ -854,6 +893,7 @@ class Game:
                 (x, y) not in self.supplies_positions
                 and (x, y) not in self.pharmacy_positions
                 and (x, y) not in self.armory_positions
+                and (x, y) not in self.shelter_positions
                 and (x, y) != self.start_pos
                 and not self.is_player_at(x, y)
                 and (x, y) not in self.barricade_positions
@@ -874,6 +914,7 @@ class Game:
                 (x, y) not in self.supplies_positions
                 and (x, y) not in self.pharmacy_positions
                 and (x, y) not in self.armory_positions
+                and (x, y) not in self.shelter_positions
                 and (x, y) != self.start_pos
                 and (x, y) != self.keys_pos
                 and not self.is_player_at(x, y)
@@ -896,6 +937,7 @@ class Game:
                     (x, y) not in self.supplies_positions
                     and (x, y) not in self.pharmacy_positions
                     and (x, y) not in self.armory_positions
+                    and (x, y) not in self.shelter_positions
                     and (x, y) != self.start_pos
                     and (x, y) not in self.radio_positions
                     and not self.is_player_at(x, y)
@@ -917,6 +959,7 @@ class Game:
                 (x, y) not in self.supplies_positions
                 and (x, y) not in self.pharmacy_positions
                 and (x, y) not in self.armory_positions
+                and (x, y) not in self.shelter_positions
                 and (x, y) != self.start_pos
                 and not self.is_player_at(x, y)
                 and (x, y) not in self.barricade_positions
@@ -969,6 +1012,9 @@ class Game:
         for x, y in self.armory_positions:
             if (x, y) in self.revealed:
                 board[y][x] = ARMORY_SYMBOL
+        for x, y in self.shelter_positions:
+            if (x, y) in self.revealed and not self.is_player_at(x, y):
+                board[y][x] = SHELTER_SYMBOL
         for x, y in self.barricade_positions:
             if (x, y) in self.revealed and not self.is_player_at(x, y):
                 board[y][x] = BARRICADE_SYMBOL
@@ -1054,7 +1100,7 @@ class Game:
             "  S start    . explored    ? unexplored\n"
             "  1-6 players    Z zombie    R supply    H medkit\n"
             "  G weapon    L molotov    I flashlight    B barricade\n"
-            f"  {CAMPFIRE_SYMBOL} campfire (rest bonus)    ! trap    A antidote    K keys    F fuel\n"
+            f"  {CAMPFIRE_SYMBOL} campfire    {SHELTER_SYMBOL} shelter (rest bonus)    ! trap    A antidote    K keys    F fuel\n"
             "  P radio part    T radio tower    numbers noise timers"
         )
 
@@ -1334,12 +1380,21 @@ class Game:
     def rest(self) -> bool:
         """Spend an action to recover hunger or a bit of health."""
         pos = (self.player.x, self.player.y)
-        bonus = 1 if pos in self.campfires else 0
+        bonus = 0
+        if pos in self.shelter_positions:
+            bonus += 1
+        if pos in self.campfires:
+            bonus += 1
         if self.player.hunger < self.player.max_hunger:
             gain = 1 + bonus
             self.player.hunger = min(self.player.max_hunger, self.player.hunger + gain)
             if bonus:
-                print("The campfire warms you as you regain stamina.")
+                if pos in self.shelter_positions and pos in self.campfires:
+                    print("The shelter and fire bolster you as you regain stamina.")
+                elif pos in self.shelter_positions:
+                    print("The shelter lets you recover extra stamina.")
+                else:
+                    print("The campfire warms you as you regain stamina.")
             else:
                 print("You catch your breath and regain some stamina.")
             return True
@@ -1347,7 +1402,12 @@ class Game:
             heal = (2 if self.player.role == "medic" else 1) + bonus
             self.player.health = min(self.player.max_health, self.player.health + heal)
             if bonus:
-                print(f"You rest by the fire and heal {heal} health.")
+                if pos in self.shelter_positions and pos in self.campfires:
+                    print(f"You rest in a lit shelter and heal {heal} health.")
+                elif pos in self.shelter_positions:
+                    print(f"You rest safely and heal {heal} health.")
+                else:
+                    print(f"You rest by the fire and heal {heal} health.")
             else:
                 print(f"You take a moment to rest and heal {heal} health.")
             return True
@@ -1730,6 +1790,7 @@ class Game:
                 and (nx, ny) not in self.molotov_positions
                 and (nx, ny) not in self.trap_positions
                 and (nx, ny) not in self.campfires
+                and (nx, ny) not in self.shelter_positions
                 and all((z.x, z.y) != (nx, ny) for z in self.zombies)
                 and not self.is_player_at(nx, ny)
             ]
