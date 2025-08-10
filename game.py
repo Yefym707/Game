@@ -783,9 +783,9 @@ class Game:
         for x, y in self.molotov_positions:
             if (x, y) in self.revealed and not self.is_player_at(x, y):
                 board[y][x] = MOLOTOV_SYMBOL
-        for x, y, _, _ in self.noise_markers:
+        for x, y, _, turns in self.noise_markers:
             if (x, y) in self.revealed and not self.is_player_at(x, y):
-                board[y][x] = "!"
+                board[y][x] = str(turns)
         for z in self.zombies:
             if (z.x, z.y) in self.revealed:
                 board[z.y][z.x] = z.symbol
@@ -1315,6 +1315,25 @@ class Game:
                 return True
         return False
 
+    def find_free_tile_near(self, x: int, y: int) -> Optional[Tuple[int, int]]:
+        """Return a random free tile adjacent to (x, y) or None if blocked."""
+        candidates = [
+            (nx, ny)
+            for nx in range(x - 1, x + 2)
+            for ny in range(y - 1, y + 2)
+            if 0 <= nx < self.board_size
+            and 0 <= ny < self.board_size
+            and (nx, ny) != (x, y)
+            and not self.is_player_at(nx, ny)
+            and (nx, ny) not in self.barricade_positions
+            and (nx, ny) not in self.supplies_positions
+            and (nx, ny) not in self.medkit_positions
+            and (nx, ny) not in self.weapon_positions
+            and (nx, ny) not in self.molotov_positions
+            and all((z.x, z.y) != (nx, ny) for z in self.zombies)
+        ]
+        return random.choice(candidates) if candidates else None
+
     def add_noise(self, x: int, y: int, chance: float) -> None:
         """Record a noisy action that may attract zombies later."""
         self.noise_markers.append((x, y, chance, NOISE_DURATION))
@@ -1356,18 +1375,33 @@ class Game:
             self.actions_per_turn = ACTIONS_PER_TURN + 1
             print("Adrenaline surges through you! You gain an extra action next turn.")
         elif event == "survivors":
-            given = False
-            for p in self.players:
-                if p.inventory_size < INVENTORY_LIMIT:
-                    if random.random() < 0.5:
-                        p.supplies += 1
-                        print(f"Friendly survivors toss supplies to player {p.symbol}!")
-                    else:
-                        p.medkits += 1
-                        print(f"Friendly survivors share a medkit with player {p.symbol}!")
-                    given = True
-            if not given:
-                print("Friendly survivors pass by but everyone's packs are full.")
+            joined = False
+            if len(self.players) < 4:
+                spot = self.find_free_tile_near(*self.start_pos)
+                if spot is None and not self.is_player_at(*self.start_pos):
+                    spot = self.start_pos
+                if spot is not None:
+                    used = {p.symbol for p in self.players}
+                    symbol = next(str(i) for i in range(1, 5) if str(i) not in used)
+                    new_p = Player(spot[0], spot[1], self.players[0].max_health, symbol, is_ai=True)
+                    self.players.append(new_p)
+                    self.reveal_area(new_p.x, new_p.y)
+                    self.zombie_spawn_chance += 0.05
+                    print(f"A grateful survivor joins as player {symbol}!")
+                    joined = True
+            if not joined:
+                given = False
+                for p in self.players:
+                    if p.inventory_size < INVENTORY_LIMIT:
+                        if random.random() < 0.5:
+                            p.supplies += 1
+                            print(f"Friendly survivors toss supplies to player {p.symbol}!")
+                        else:
+                            p.medkits += 1
+                            print(f"Friendly survivors share a medkit with player {p.symbol}!")
+                        given = True
+                if not given:
+                    print("Friendly survivors pass by but everyone's packs are full.")
         elif event == "fog":
             self.reveal_random_tiles(5)
             print("A gust of wind lifts the fog, revealing more of the area.")
