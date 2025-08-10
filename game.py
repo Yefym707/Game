@@ -6,7 +6,7 @@ safety.
 
 Features
 --------
-* 10x10 board with up to four players, zombies and supply tokens.
+* 10x10 board with up to six players, zombies and supply tokens.
 * Each player has two actions per turn: move, scout, attack, scavenge or pass.
 * Resting lets survivors regain hunger or a point of health.
 * Melee combat with a chance to hit. Failed attacks cost health.
@@ -51,6 +51,7 @@ from collections import deque
 
 BOARD_SIZE = 10
 ACTIONS_PER_TURN = 2
+MAX_PLAYERS = 6
 STARTING_HEALTH = 10
 STARTING_ZOMBIES = 5
 STARTING_SUPPLIES = 5
@@ -390,7 +391,7 @@ class Game:
         self.xp_gained = 0
         self.double_move_tokens = self.campaign.get("double_move_tokens", 0)
         self.has_signal_device = bool(self.campaign.get("signal_device"))
-        self.total_players = max(1, num_players)
+        self.total_players = max(1, min(MAX_PLAYERS, num_players))
         extra_players = max(0, self.total_players - 1)
         self.zombie_spawn_chance = settings["zombie_spawn_chance"] + 0.05 * extra_players
         self.base_zombie_spawn_chance = self.zombie_spawn_chance
@@ -401,7 +402,7 @@ class Game:
         self.evacuation_turns = EVACUATION_TURNS + extra_players
         starting_health = settings["starting_health"] + self.campaign.get("hp_bonus", 0)
         center = self.board_size // 2
-        offsets = [(0, 0), (0, 1), (1, 0), (-1, 0), (0, -1)]
+        offsets = [(0, 0), (0, 1), (1, 0), (-1, 0), (0, -1), (1, 1)]
         self.players: List[Player] = []
         total_players = self.total_players
         num_ai = max(0, min(num_ai, total_players - 1))
@@ -1027,7 +1028,7 @@ class Game:
         print(
             "Legend:\n"
             "  S start    . explored    ? unexplored\n"
-            "  1-4 players    Z zombie    R supply    H medkit\n"
+            "  1-6 players    Z zombie    R supply    H medkit\n"
             "  G weapon    L molotov    I flashlight    B barricade\n"
             "  ! trap    A antidote    K keys    F fuel\n"
             "  P radio part    T radio tower    numbers noise timers"
@@ -1761,14 +1762,22 @@ class Game:
             print("Adrenaline surges through you! You gain an extra action next turn.")
         elif event == "survivors":
             joined = False
-            if len(self.players) < 4:
+            if len(self.players) < MAX_PLAYERS:
                 spot = self.find_free_tile_near(*self.start_pos)
                 if spot is None and not self.is_player_at(*self.start_pos):
                     spot = self.start_pos
                 if spot is not None:
                     used = {p.symbol for p in self.players}
-                    symbol = next(str(i) for i in range(1, 5) if str(i) not in used)
-                    new_p = Player(spot[0], spot[1], self.players[0].max_health, symbol, is_ai=True)
+                    symbol = next(
+                        str(i) for i in range(1, MAX_PLAYERS + 1) if str(i) not in used
+                    )
+                    new_p = Player(
+                        spot[0],
+                        spot[1],
+                        self.players[0].max_health,
+                        symbol,
+                        is_ai=True,
+                    )
                     self.players.append(new_p)
                     self.reveal_area(new_p.x, new_p.y, player=new_p)
                     self.zombie_spawn_chance += 0.05
@@ -2328,7 +2337,7 @@ if __name__ == "__main__":
         Game.load_game().run()
     else:
         diff = input("Choose difficulty [easy/normal/hard]: ").strip().lower() or "normal"
-        players = input("Number of players [1-4]: ").strip() or "1"
+        players = input("Number of players [1-6]: ").strip() or "1"
         scen = (
             input("Choose scenario [1/2/3/4 or 0 for campaign]: ").strip() or "1"
         )
@@ -2337,7 +2346,7 @@ if __name__ == "__main__":
         except ValueError:
             scen_num = 1
         try:
-            num_players = max(1, min(4, int(players)))
+            num_players = max(1, min(MAX_PLAYERS, int(players)))
         except ValueError:
             num_players = 1
         bots = input(f"AI players [0-{max(0, num_players - 1)}]: ").strip() or "0"
