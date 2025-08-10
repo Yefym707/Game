@@ -8,8 +8,9 @@ numbers scale with the size of your group to keep larger teams on edge.
 Scavenging pulls from a finite loot deck so items won't repeat until the deck
 is reshuffled, reinforcing the tabletop feel.
 Loud actions such as gunfire or revving an engine place noise tokens on the
-board. At the end of each round these markers may spawn new zombies,
-capturing the tension of physical board games that track noise.
+board. These markers linger for a couple of rounds and at the end of each
+round may spawn new zombies, capturing the tension of physical board games
+that track noise.
 
 ## Requirements
 - Python 3.12+
@@ -73,7 +74,8 @@ survivor. Starving costs health. The scenario ends after 20 rounds. Win scenario
 2 is won by bringing both keys and fuel back to the start. You can carry at most
 eight items (supplies and medkits combined). Weapons and scenario objectives
 don't take space. Gunfire, engines and molotov blasts leave noise tokens that
-may attract additional zombies when the round ends. Each victory in scenario 1
+linger for several rounds and may attract additional zombies when the round
+ends. Each victory in scenario 1
 grants +1 max health for future runs. Winning scenario 2 awards five double-move
 tokens that let you move two tiles in a single action on subsequent games. All
 campaign progress is stored in `campaign_save.json`. A save file is also written
