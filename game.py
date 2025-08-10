@@ -8,6 +8,7 @@ Features
 --------
 * 10x10 board with up to four players, zombies and supply tokens.
 * Each player has two actions per turn: move, scout, attack, scavenge or pass.
+* Resting lets survivors regain hunger or a point of health.
 * Melee combat with a chance to hit. Failed attacks cost health.
 * Scavenging draws from a finite loot deck to mimic board-game card draws.
 * Zombies pursue the player and new ones may spawn each round. Counts scale
@@ -1063,6 +1064,19 @@ class Game:
             return True
         return False
 
+    def rest(self) -> bool:
+        """Spend an action to recover hunger or a bit of health."""
+        if self.player.hunger < self.player.max_hunger:
+            self.player.hunger += 1
+            print("You catch your breath and regain some stamina.")
+            return True
+        if self.player.health < self.player.max_health:
+            self.player.health += 1
+            print("You take a moment to rest and heal 1 health.")
+            return True
+        print("You feel fully rested already.")
+        return False
+
     def build_barricade(self) -> bool:
         pos = (self.player.x, self.player.y)
         if pos in self.barricade_positions:
@@ -1554,6 +1568,17 @@ class Game:
                 self.eat_food()
                 actions_left -= 1
                 continue
+            # Rest if hurt or hungry with no supplies
+            if player.medkits == 0 and player.health < player.max_health:
+                print(f"Player {player.symbol} rests to recover.")
+                self.rest()
+                actions_left -= 1
+                continue
+            if player.supplies == 0 and player.hunger < player.max_hunger:
+                print(f"Player {player.symbol} rests to regain hunger.")
+                self.rest()
+                actions_left -= 1
+                continue
             # Attack if a zombie is adjacent
             if any(
                 abs(z.x - player.x) + abs(z.y - player.y) == 1 for z in self.zombies
@@ -1650,7 +1675,7 @@ class Game:
         while actions_left > 0 and self.player.health > 0:
             self.draw_board()
             cmd = input(
-                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, e=eat, b=barricade, o=scout, c=craft, m=molotov, r=steal, k=fight, x=trade, t=drop, p=pass, q=save]: "
+                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, e=eat, b=barricade, o=scout, c=craft, m=molotov, r=steal, k=fight, x=trade, t=drop, z=rest, p=pass, q=save]: "
             ).strip().lower()
 
             if cmd in {"w", "a", "s", "d"}:
@@ -1716,6 +1741,9 @@ class Game:
                     actions_left -= 1
             elif cmd == "t":
                 if self.drop_item():
+                    actions_left -= 1
+            elif cmd == "z":
+                if self.rest():
                     actions_left -= 1
             elif cmd == "p":
                 break
