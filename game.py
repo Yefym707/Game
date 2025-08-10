@@ -1443,27 +1443,72 @@ class Game:
                 if self.attack():
                     actions_left -= 1
                     continue
-            # Scavenge if inventory not full
+
+            # Always interact with scenario objectives even if packs are full.
+            pos = (player.x, player.y)
+            objective_here = False
+            if self.scenario == 1 and not player.has_antidote and pos == self.antidote_pos:
+                objective_here = True
+            elif self.scenario == 2 and (
+                (not player.has_keys and pos == self.keys_pos)
+                or (not player.has_fuel and pos == self.fuel_pos)
+            ):
+                objective_here = True
+            elif self.scenario == 3 and pos in self.radio_positions:
+                objective_here = True
+            elif (
+                self.scenario == 4
+                and not self.called_rescue
+                and (pos == self.start_pos or pos == self.radio_tower_pos)
+            ):
+                # Calling for rescue uses the scavenge action.
+                objective_here = True
+
+            if objective_here:
+                self.scavenge()
+                actions_left -= 1
+                continue
+
+            # Scavenge regular tiles only if there's room to carry loot.
             if player.inventory_size < INVENTORY_LIMIT:
                 self.scavenge()
                 actions_left -= 1
                 continue
+
             targets: Set[Tuple[int, int]] = set()
-            if self.scenario == 1 and not player.has_antidote and self.antidote_pos:
-                targets.add(self.antidote_pos)
+            heading_home = False
+            if self.scenario == 1:
+                if not player.has_antidote and self.antidote_pos:
+                    targets.add(self.antidote_pos)
+                else:
+                    targets.add(self.start_pos)
+                    heading_home = True
             elif self.scenario == 2:
                 if not player.has_keys and self.keys_pos:
                     targets.add(self.keys_pos)
-                if not player.has_fuel and self.fuel_pos:
+                elif not player.has_fuel and self.fuel_pos:
                     targets.add(self.fuel_pos)
-            elif self.scenario == 3 and self.radio_parts_collected < RADIO_PARTS_REQUIRED:
-                targets.update(self.radio_positions)
-            elif self.scenario == 4 and not self.called_rescue:
-                if self.has_signal_device:
+                else:
                     targets.add(self.start_pos)
-                if self.radio_tower_pos:
-                    targets.add(self.radio_tower_pos)
-            targets.update(self.supplies_positions)
+                    heading_home = True
+            elif self.scenario == 3:
+                if self.radio_parts_collected < RADIO_PARTS_REQUIRED:
+                    targets.update(self.radio_positions)
+                else:
+                    targets.add(self.start_pos)
+                    heading_home = True
+            elif self.scenario == 4:
+                if not self.called_rescue:
+                    if self.has_signal_device:
+                        targets.add(self.start_pos)
+                    if self.radio_tower_pos:
+                        targets.add(self.radio_tower_pos)
+                else:
+                    targets.add(self.start_pos)
+                    heading_home = True
+
+            if not heading_home:
+                targets.update(self.supplies_positions)
             direction = self.find_step_towards((player.x, player.y), targets)
             if direction and self.move_player(direction):
                 actions_left -= 1
