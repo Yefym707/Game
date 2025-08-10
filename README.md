@@ -136,6 +136,9 @@ Noise markers from loud actions show their remaining turns as numbers until they
 Experience points accumulate across the campaign. Killing zombies and
 surviving scenarios grant XP; each level reached permanently adds +1 to
 maximum health for future runs.
+Higher campaign levels also nudge up the zombie spawn rate to keep the
+challenge growing. If no survivors escape a scenario, a small cache of
+supplies carries over to your next attempt as a catch-up boost.
 
 ### Achievements
 
