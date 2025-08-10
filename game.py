@@ -18,6 +18,8 @@ Features
 * Simple crafting allows turning supplies into medkits or noisy
   molotov cocktails that burn adjacent zombies.
 * Achievements track scenario victories and feats across campaigns.
+* Attempt to steal items from survivors sharing your tile; failure
+  results in a scuffle and health loss.
 
 The code is intentionally compact and uses only the Python standard
 library so it can run in any environment with Python 3.12 or newer.
@@ -88,6 +90,9 @@ MEDKIT_CRAFT_COST = 3
 MOLOTOV_SYMBOL = "L"
 MOLOTOV_SUPPLY_COST = 1
 MOLOTOV_NOISE_ZOMBIE_CHANCE = 0.6
+
+# PvP stealing settings
+STEAL_SUCCESS_CHANCE = 0.5
 
 # Simple achievement definitions evaluated against the persistent campaign
 # data. Additional achievements can be added here without touching the game
@@ -1038,6 +1043,60 @@ class Game:
         print("Nothing dropped.")
         return False
 
+    def steal_item(self) -> bool:
+        """Attempt to steal an item from another player on the same tile."""
+        # find other players on same position
+        others = [p for p in self.players if p is not self.player and p.x == self.player.x and p.y == self.player.y]
+        if not others:
+            return False
+        target = random.choice(others)
+        stealable = []
+        if target.supplies > 0 and self.player.inventory_size < INVENTORY_LIMIT:
+            stealable.append("supply")
+        if target.medkits > 0 and self.player.inventory_size < INVENTORY_LIMIT:
+            stealable.append("medkit")
+        if target.molotovs > 0 and self.player.inventory_size < INVENTORY_LIMIT:
+            stealable.append("molotov")
+        if target.has_weapon and not self.player.has_weapon:
+            stealable.append("weapon")
+        if target.has_keys:
+            stealable.append("keys")
+        if target.has_fuel:
+            stealable.append("fuel")
+        if target.has_antidote:
+            stealable.append("antidote")
+        if not stealable:
+            print(f"Player {target.symbol} has nothing you can take.")
+            return False
+        if random.random() < STEAL_SUCCESS_CHANCE:
+            item = random.choice(stealable)
+            if item == "supply":
+                target.supplies -= 1
+                self.player.supplies += 1
+            elif item == "medkit":
+                target.medkits -= 1
+                self.player.medkits += 1
+            elif item == "molotov":
+                target.molotovs -= 1
+                self.player.molotovs += 1
+            elif item == "weapon":
+                target.has_weapon = False
+                self.player.has_weapon = True
+            elif item == "keys":
+                target.has_keys = False
+                self.player.has_keys = True
+            elif item == "fuel":
+                target.has_fuel = False
+                self.player.has_fuel = True
+            elif item == "antidote":
+                target.has_antidote = False
+                self.player.has_antidote = True
+            print(f"You steal a {item} from player {target.symbol}!")
+        else:
+            self.player.health -= 1
+            print(f"Player {target.symbol} fends you off! You take 1 damage.")
+        return True
+
     # ------------------------------------------------------------------
     # Zombie behaviour
     def move_zombies(self) -> None:
@@ -1332,6 +1391,11 @@ class Game:
                     actions_left -= 1
                 else:
                     print("No molotovs ready!")
+            elif cmd == "r":
+                if self.steal_item():
+                    actions_left -= 1
+                else:
+                    print("No one here to steal from or pack is full.")
             elif cmd == "t":
                 if self.drop_item():
                     actions_left -= 1
