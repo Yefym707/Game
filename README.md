@@ -38,6 +38,7 @@ During your turn you have two actions. Enter:
 - `H` – use a found medkit to recover health.
 - `E` – consume one supply to restore hunger.
 - `B` – spend two supplies to barricade the current tile, blocking zombies once.
+- `T` – drop the item of your choice on the current tile.
 - `P` – pass the remaining actions.
 - `Q` – save the game and quit.
 
@@ -63,6 +64,8 @@ tokens that let you move two tiles in a single action on subsequent games. All
 campaign progress is stored in `campaign_save.json`. A save file is also written
 so you can resume a run later. Survive as long as you can before your health
 reaches zero.
+
+Dropped items remain on the board: supplies show as `R`, medkits as `H` and weapons as `G` once the tile is revealed.
 
 ### Achievements
 

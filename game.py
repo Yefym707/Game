@@ -58,6 +58,8 @@ KEYS_SYMBOL = "K"
 FUEL_SYMBOL = "F"
 RADIO_PART_SYMBOL = "P"
 RADIO_TOWER_SYMBOL = "T"
+MEDKIT_SYMBOL = "H"
+WEAPON_SYMBOL = "G"
 RADIO_PARTS_REQUIRED = 3
 EVACUATION_TURNS = 5
 DOUBLE_MOVE_REWARD = 5
@@ -235,6 +237,8 @@ class Game:
         self.rescue_timer: Optional[int] = None
         self.zombies: List[Zombie] = []
         self.supplies_positions: Set[Tuple[int, int]] = set()
+        self.medkit_positions: Set[Tuple[int, int]] = set()
+        self.weapon_positions: Set[Tuple[int, int]] = set()
         self.pharmacy_positions: Set[Tuple[int, int]] = set()
         self.armory_positions: Set[Tuple[int, int]] = set()
         self.barricade_positions: Set[Tuple[int, int]] = set()
@@ -295,6 +299,8 @@ class Game:
             ],
             "zombies": [(z.x, z.y) for z in self.zombies],
             "supplies_positions": list(self.supplies_positions),
+            "medkit_positions": list(self.medkit_positions),
+            "weapon_positions": list(self.weapon_positions),
             "pharmacy_positions": list(self.pharmacy_positions),
             "armory_positions": list(self.armory_positions),
             "barricade_positions": list(self.barricade_positions),
@@ -344,6 +350,8 @@ class Game:
         game.player = game.players[data.get("current_player", 0)]
         game.zombies = [Zombie(x, y) for x, y in data["zombies"]]
         game.supplies_positions = {tuple(pos) for pos in data["supplies_positions"]}
+        game.medkit_positions = {tuple(pos) for pos in data.get("medkit_positions", [])}
+        game.weapon_positions = {tuple(pos) for pos in data.get("weapon_positions", [])}
         game.pharmacy_positions = {
             tuple(pos) for pos in data.get("pharmacy_positions", [])
         }
@@ -393,6 +401,8 @@ class Game:
                         self.revealed.add((nx, ny))
                         if (
                             (nx, ny) not in self.supplies_positions
+                            and (nx, ny) not in self.medkit_positions
+                            and (nx, ny) not in self.weapon_positions
                             and (nx, ny) != self.antidote_pos
                             and (nx, ny) != self.keys_pos
                             and (nx, ny) != self.fuel_pos
@@ -437,6 +447,8 @@ class Game:
                     not self.is_player_at(x, y)
                     and (x, y) not in {(z.x, z.y) for z in self.zombies}
                     and (x, y) not in self.barricade_positions
+                    and (x, y) not in self.medkit_positions
+                    and (x, y) not in self.weapon_positions
                 ):
                     self.zombies.append(Zombie(x, y))
                     break
@@ -452,6 +464,9 @@ class Game:
                     and (x, y) not in self.armory_positions
                     and not self.is_player_at(x, y)
                     and (x, y) not in self.barricade_positions
+                    and (x, y) not in self.medkit_positions
+                    and (x, y) not in self.weapon_positions
+                    and (x, y) not in self.supplies_positions
                     and all((z.x, z.y) != (x, y) for z in self.zombies)
                 ):
                     self.pharmacy_positions.add((x, y))
@@ -468,6 +483,9 @@ class Game:
                     and (x, y) not in self.armory_positions
                     and not self.is_player_at(x, y)
                     and (x, y) not in self.barricade_positions
+                    and (x, y) not in self.medkit_positions
+                    and (x, y) not in self.weapon_positions
+                    and (x, y) not in self.supplies_positions
                     and all((z.x, z.y) != (x, y) for z in self.zombies)
                 ):
                     self.armory_positions.add((x, y))
@@ -486,6 +504,8 @@ class Game:
                     and not self.is_player_at(x, y)
                     and (x, y) != self.antidote_pos
                     and (x, y) not in self.barricade_positions
+                    and (x, y) not in self.medkit_positions
+                    and (x, y) not in self.weapon_positions
                 ):
                     self.supplies_positions.add((x, y))
                     break
@@ -500,6 +520,8 @@ class Game:
                 and (x, y) != self.start_pos
                 and not self.is_player_at(x, y)
                 and (x, y) not in self.barricade_positions
+                and (x, y) not in self.medkit_positions
+                and (x, y) not in self.weapon_positions
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
                 self.antidote_pos = (x, y)
@@ -515,6 +537,8 @@ class Game:
                 and (x, y) != self.start_pos
                 and not self.is_player_at(x, y)
                 and (x, y) not in self.barricade_positions
+                and (x, y) not in self.medkit_positions
+                and (x, y) not in self.weapon_positions
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
                 self.keys_pos = (x, y)
@@ -531,6 +555,8 @@ class Game:
                 and (x, y) != self.keys_pos
                 and not self.is_player_at(x, y)
                 and (x, y) not in self.barricade_positions
+                and (x, y) not in self.medkit_positions
+                and (x, y) not in self.weapon_positions
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
                 self.fuel_pos = (x, y)
@@ -548,6 +574,8 @@ class Game:
                     and (x, y) not in self.radio_positions
                     and not self.is_player_at(x, y)
                     and (x, y) not in self.barricade_positions
+                    and (x, y) not in self.medkit_positions
+                    and (x, y) not in self.weapon_positions
                     and all((z.x, z.y) != (x, y) for z in self.zombies)
                 ):
                     self.radio_positions.add((x, y))
@@ -563,6 +591,8 @@ class Game:
                 and (x, y) != self.start_pos
                 and not self.is_player_at(x, y)
                 and (x, y) not in self.barricade_positions
+                and (x, y) not in self.medkit_positions
+                and (x, y) not in self.weapon_positions
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
                 self.radio_tower_pos = (x, y)
@@ -613,6 +643,12 @@ class Game:
         for x, y in self.supplies_positions:
             if (x, y) in self.revealed:
                 board[y][x] = "R"
+        for x, y in self.medkit_positions:
+            if (x, y) in self.revealed:
+                board[y][x] = MEDKIT_SYMBOL
+        for x, y in self.weapon_positions:
+            if (x, y) in self.revealed:
+                board[y][x] = WEAPON_SYMBOL
         for z in self.zombies:
             if (z.x, z.y) in self.revealed:
                 board[z.y][z.x] = z.symbol
@@ -756,6 +792,24 @@ class Game:
                 print("You activate the tower and call for rescue! Hold out!")
                 return
 
+        if pos in self.weapon_positions:
+            if not self.player.has_weapon:
+                self.weapon_positions.remove(pos)
+                self.player.has_weapon = True
+                print("You pick up a weapon.")
+            else:
+                print("You already have a weapon.")
+            return
+
+        if pos in self.medkit_positions:
+            if self.player.inventory_size < INVENTORY_LIMIT:
+                self.medkit_positions.remove(pos)
+                self.player.medkits += 1
+                print("You pick up a medkit.")
+            else:
+                print("Your pack is full. You leave the medkit behind.")
+            return
+
         if pos in self.supplies_positions:
             if self.player.inventory_size < INVENTORY_LIMIT:
                 self.supplies_positions.remove(pos)
@@ -820,6 +874,44 @@ class Game:
             print("You hastily build a barricade.")
             return True
         print("Not enough supplies to build a barricade.")
+        return False
+
+    def drop_item(self) -> bool:
+        pos = (self.player.x, self.player.y)
+        choice = input(
+            "Drop item [s]upply, [m]edkit, [w]eapon, [k]eys, [f]uel, [a]ntidote: "
+        ).strip().lower()
+        if choice == "s" and self.player.supplies > 0:
+            self.player.supplies -= 1
+            self.supplies_positions.add(pos)
+            print("You drop a supply.")
+            return True
+        if choice == "m" and self.player.medkits > 0:
+            self.player.medkits -= 1
+            self.medkit_positions.add(pos)
+            print("You drop a medkit.")
+            return True
+        if choice == "w" and self.player.has_weapon:
+            self.player.has_weapon = False
+            self.weapon_positions.add(pos)
+            print("You drop your weapon.")
+            return True
+        if choice == "k" and self.player.has_keys:
+            self.player.has_keys = False
+            self.keys_pos = pos
+            print("You drop the keys.")
+            return True
+        if choice == "f" and self.player.has_fuel:
+            self.player.has_fuel = False
+            self.fuel_pos = pos
+            print("You drop the fuel.")
+            return True
+        if choice == "a" and self.player.has_antidote:
+            self.player.has_antidote = False
+            self.antidote_pos = pos
+            print("You drop the antidote.")
+            return True
+        print("Nothing dropped.")
         return False
 
     # ------------------------------------------------------------------
@@ -1054,7 +1146,7 @@ class Game:
         while actions_left > 0 and self.player.health > 0:
             self.draw_board()
             cmd = input(
-                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, e=eat, b=barricade, p=pass, q=save]: "
+                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, e=eat, b=barricade, t=drop, p=pass, q=save]: "
             ).strip().lower()
 
             if cmd in {"w", "a", "s", "d"}:
@@ -1095,6 +1187,9 @@ class Game:
                     print("Nothing to eat!")
             elif cmd == "b":
                 if self.build_barricade():
+                    actions_left -= 1
+            elif cmd == "t":
+                if self.drop_item():
                     actions_left -= 1
             elif cmd == "p":
                 break
