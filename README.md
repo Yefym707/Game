@@ -15,8 +15,9 @@ Loud actions such as gunfire or revving an engine place noise tokens on the
 board. These markers linger for a couple of rounds and at the end of each
 round may spawn new zombies, capturing the tension of physical board games
 that track noise.
-Simple crafting lets survivors convert supplies into medkits, traps and
-molotov cocktails for a tactical edge.
+Simple crafting lets survivors convert supplies into medkits, traps,
+flashlights and molotov cocktails for a tactical edge. A day/night cycle
+reduces visibility after dark unless a survivor carries a flashlight.
 Combat and other risky actions explicitly roll dice, displaying the result so
 you can cheer or lament the luck of the draw just like at a real table.
 
@@ -58,7 +59,7 @@ During your turn you have two actions. Enter:
 - `E` – consume one supply to restore hunger.
 - `B` – spend two supplies to barricade the current tile, blocking zombies once.
 - `O` – scout an adjacent tile to reveal more of the map.
-- `C` – craft items (3 supplies → medkit, supply + fuel → molotov, 2 supplies → trap).
+- `C` – craft items (3 supplies → medkit, supply + fuel → molotov, 2 supplies → trap, 2 supplies → flashlight).
 - `M` – throw a molotov to burn adjacent zombies.
 - `R` – attempt to steal an item from another player sharing your tile; roll a d10 (≤5 succeeds, failure costs 1 HP).
 - `K` – attack another player on your tile; roll a d10 (≤5 hits, failure hurts you. The brawl creates noise.)
