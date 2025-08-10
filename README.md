@@ -50,13 +50,14 @@ During your turn you have two actions. Enter:
 
 Players are shown on the board as numbers `1`–`4`.
 
-Zombies move after all players finish their actions, then a random event may
-occur. Fallen survivors do not stay down—any player who dies will rise again as
-a zombie at that spot. Events can alter the next round’s pace – a storm might
-reduce everyone to one action while an adrenaline rush grants an extra move.
-Friendly survivors may appear with supplies or medkits and the wind can
-momentarily lift the fog to reveal unexplored tiles. Exploring may also uncover
-special locations. Pharmacies
+Zombies move after all players finish their actions, then an event card is drawn
+from a shuffled deck. Cards are not returned until the deck is exhausted,
+mirroring a physical board game's event system. Fallen survivors do not stay
+down—any player who dies will rise again as a zombie at that spot. Events can
+alter the next round’s pace – a storm might reduce everyone to one action while
+an adrenaline rush grants an extra move. Friendly survivors may appear with
+supplies or medkits and the wind can momentarily lift the fog to reveal
+unexplored tiles. Exploring may also uncover special locations. Pharmacies
 (`M`) have a high chance of yielding medkits while armories (`W`) are the best
 spots to find weapons. Once revealed, their symbols remain on the board. Each round hunger decreases for every
 survivor. Starving costs health. The scenario ends after 20 rounds. Win scenario
