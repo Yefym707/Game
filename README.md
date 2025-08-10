@@ -15,6 +15,8 @@ Loud actions such as gunfire or revving an engine place noise tokens on the
 board. These markers linger for a couple of rounds and at the end of each
 round may spawn new zombies, capturing the tension of physical board games
 that track noise.
+Simple crafting lets survivors convert supplies into medkits, traps and
+molotov cocktails for a tactical edge.
 Combat and other risky actions explicitly roll dice, displaying the result so
 you can cheer or lament the luck of the draw just like at a real table.
 
@@ -56,7 +58,7 @@ During your turn you have two actions. Enter:
 - `E` – consume one supply to restore hunger.
 - `B` – spend two supplies to barricade the current tile, blocking zombies once.
 - `O` – scout an adjacent tile to reveal more of the map.
-- `C` – craft items (3 supplies → medkit, supply + fuel → molotov).
+- `C` – craft items (3 supplies → medkit, supply + fuel → molotov, 2 supplies → trap).
 - `M` – throw a molotov to burn adjacent zombies.
 - `R` – attempt to steal an item from another player sharing your tile; roll a d10 (≤5 succeeds, failure costs 1 HP).
 - `K` – attack another player on your tile; roll a d10 (≤5 hits, failure hurts you. The brawl creates noise.)
@@ -77,9 +79,10 @@ an adrenaline rush grants an extra move. Friendly survivors may appear with
 supplies or medkits and, if there’s room, may even join your group. The wind
 can momentarily lift the fog to reveal unexplored tiles. Exploring may also
 uncover special locations. Pharmacies (`M`) have a high chance of yielding
-medkits while armories (`W`) are the best spots to find weapons. Hidden traps
-(`!`) may also appear and will injure any survivor that triggers them, though
-they can destroy zombies as well. Once revealed, their symbols remain on the board.
+  medkits while armories (`W`) are the best spots to find weapons. Hidden traps
+  (`!`) may also appear and will injure any survivor that triggers them, though
+  they can destroy zombies as well. Survivors can also rig traps of their own to
+  snare the unwary. Once revealed, their symbols remain on the board.
 Each round hunger decreases for every
 survivor. Starving costs health. The scenario ends after 20 rounds. Win scenario
 1 by finding the antidote and returning to the `S` marked starting tile. Scenario
