@@ -103,6 +103,8 @@ MOLOTOV_SYMBOL = "L"
 MOLOTOV_SUPPLY_COST = 1
 MOLOTOV_NOISE_ZOMBIE_CHANCE = 0.6
 TRAP_CRAFT_COST = 2
+FLASHLIGHT_SYMBOL = "I"
+FLASHLIGHT_CRAFT_COST = 2
 
 # Trap settings
 TRAP_SYMBOL = "!"
@@ -137,6 +139,7 @@ LOOT_CARD_COUNTS = {
     "supply": 8,
     "medkit": 4,
     "weapon": 2,
+    "flashlight": 1,
     "nothing": 10,
 }
 
@@ -301,6 +304,7 @@ class Player(Entity):
         self.has_keys: bool = False
         self.has_fuel: bool = False
         self.has_weapon: bool = False
+        self.has_flashlight: bool = False
 
     @property
     def inventory_size(self) -> int:
@@ -375,6 +379,7 @@ class Game:
         self.medkit_positions: Set[Tuple[int, int]] = set()
         self.weapon_positions: Set[Tuple[int, int]] = set()
         self.molotov_positions: Set[Tuple[int, int]] = set()
+        self.flashlight_positions: Set[Tuple[int, int]] = set()
         self.trap_positions: Set[Tuple[int, int]] = set()
         self.pharmacy_positions: Set[Tuple[int, int]] = set()
         self.armory_positions: Set[Tuple[int, int]] = set()
@@ -398,7 +403,7 @@ class Game:
         else:
             self.spawn_antidote()
         for p in self.players:
-            self.reveal_area(p.x, p.y)
+            self.reveal_area(p.x, p.y, player=p)
         self.turn: int = 0
         self.actions_per_turn: int = ACTIONS_PER_TURN
         self.keep_save = False
@@ -434,6 +439,7 @@ class Game:
                     "has_keys": p.has_keys,
                     "has_fuel": p.has_fuel,
                     "has_weapon": p.has_weapon,
+                    "has_flashlight": p.has_flashlight,
                     "symbol": p.symbol,
                     "is_ai": getattr(p, "is_ai", False),
                 }
@@ -444,6 +450,7 @@ class Game:
             "medkit_positions": list(self.medkit_positions),
             "weapon_positions": list(self.weapon_positions),
             "molotov_positions": list(self.molotov_positions),
+            "flashlight_positions": list(self.flashlight_positions),
             "trap_positions": list(self.trap_positions),
             "pharmacy_positions": list(self.pharmacy_positions),
             "armory_positions": list(self.armory_positions),
@@ -499,6 +506,7 @@ class Game:
             p.has_keys = pdata["has_keys"]
             p.has_fuel = pdata["has_fuel"]
             p.has_weapon = pdata["has_weapon"]
+            p.has_flashlight = pdata.get("has_flashlight", False)
             p.symbol = pdata.get("symbol", p.symbol)
             p.is_ai = pdata.get("is_ai", False)
         game.player = game.players[data.get("current_player", 0)]
@@ -507,6 +515,7 @@ class Game:
         game.medkit_positions = {tuple(pos) for pos in data.get("medkit_positions", [])}
         game.weapon_positions = {tuple(pos) for pos in data.get("weapon_positions", [])}
         game.molotov_positions = {tuple(pos) for pos in data.get("molotov_positions", [])}
+        game.flashlight_positions = {tuple(pos) for pos in data.get("flashlight_positions", [])}
         game.trap_positions = {tuple(pos) for pos in data.get("trap_positions", [])}
         game.pharmacy_positions = {
             tuple(pos) for pos in data.get("pharmacy_positions", [])
@@ -571,10 +580,22 @@ class Game:
             data = json.load(fh)
         return cls.from_dict(data)
 
-    def reveal_area(self, x: int, y: int, radius: Optional[int] = None) -> None:
-        """Reveal tiles around ``(x, y)`` within ``radius``."""
+    def reveal_area(
+        self,
+        x: int,
+        y: int,
+        radius: Optional[int] = None,
+        player: Optional[Player] = None,
+    ) -> None:
+        """Reveal tiles around ``(x, y)`` within ``radius``.
+
+        If ``player`` has a flashlight, the night visibility penalty is
+        ignored.
+        """
         if radius is None:
             radius = self.reveal_radius
+        if self.is_night and player and getattr(player, "has_flashlight", False):
+            radius = max(radius, REVEAL_RADIUS)
         for dx in range(-radius, radius + 1):
             for dy in range(-radius, radius + 1):
                 nx, ny = x + dx, y + dy
@@ -586,6 +607,7 @@ class Game:
                             and (nx, ny) not in self.medkit_positions
                             and (nx, ny) not in self.weapon_positions
                             and (nx, ny) not in self.molotov_positions
+                            and (nx, ny) not in self.flashlight_positions
                             and (nx, ny) not in self.trap_positions
                             and (nx, ny) != self.antidote_pos
                             and (nx, ny) != self.keys_pos
@@ -860,6 +882,9 @@ class Game:
         for x, y in self.molotov_positions:
             if (x, y) in self.revealed and not self.is_player_at(x, y):
                 board[y][x] = MOLOTOV_SYMBOL
+        for x, y in self.flashlight_positions:
+            if (x, y) in self.revealed and not self.is_player_at(x, y):
+                board[y][x] = FLASHLIGHT_SYMBOL
         for x, y in self.trap_positions:
             if (x, y) in self.revealed and not self.is_player_at(x, y):
                 board[y][x] = TRAP_SYMBOL
@@ -871,7 +896,7 @@ class Game:
                 board[z.y][z.x] = z.symbol
 
         print(
-            "Health: {}    Hunger: {}/{}    Medkits: {}    Supplies: {}    Molotovs: {}    Inventory: {}/{}    Tokens: {}    Weapon: {}    Level: {}    XP: {}".format(
+            "Health: {}    Hunger: {}/{}    Medkits: {}    Supplies: {}    Molotovs: {}    Inventory: {}/{}    Tokens: {}    Weapon: {}    Flashlight: {}    Level: {}    XP: {}".format(
                 self.player.health,
                 self.player.hunger,
                 self.player.max_hunger,
@@ -882,6 +907,7 @@ class Game:
                 INVENTORY_LIMIT,
                 self.double_move_tokens,
                 "Y" if self.player.has_weapon else "N",
+                "Y" if self.player.has_flashlight else "N",
                 self.level,
                 self.campaign.get("xp", 0) + self.xp_gained,
             )
@@ -913,11 +939,11 @@ class Game:
             nx, ny = self.player.x + dx, self.player.y + dy
             if 0 <= nx < self.board_size and 0 <= ny < self.board_size:
                 self.player.x, self.player.y = nx, ny
-                self.reveal_area(nx, ny)
+                self.reveal_area(nx, ny, player=self.player)
                 self.check_for_trap(nx, ny)
             else:
                 self.player.x, self.player.y = original
-                self.reveal_area(*original)
+                self.reveal_area(*original, player=self.player)
                 return False
         return True
 
@@ -1073,6 +1099,15 @@ class Game:
                 print("Your pack is full. You leave the molotov behind.")
             return
 
+        if pos in self.flashlight_positions:
+            if not self.player.has_flashlight:
+                self.flashlight_positions.remove(pos)
+                self.player.has_flashlight = True
+                print("You pick up a flashlight.")
+            else:
+                print("You already have a flashlight.")
+            return
+
         if pos in self.medkit_positions:
             if self.player.inventory_size < INVENTORY_LIMIT:
                 self.medkit_positions.remove(pos)
@@ -1112,6 +1147,12 @@ class Game:
                 print("You find a medkit!")
             else:
                 print("You find a medkit but your pack is full.")
+        elif card == "flashlight":
+            if not self.player.has_flashlight:
+                self.player.has_flashlight = True
+                print("You find a flashlight!")
+            else:
+                print("You find a flashlight but already have one.")
         else:
             print("You find nothing of use.")
 
@@ -1171,15 +1212,18 @@ class Game:
         if not (0 <= nx < self.board_size and 0 <= ny < self.board_size):
             print("You can't scout past the edge of the board.")
             return False
-        self.reveal_area(nx, ny, radius=SCOUT_RADIUS)
+        self.reveal_area(nx, ny, radius=SCOUT_RADIUS, player=self.player)
         print("You scout ahead, revealing more of the surroundings.")
         return True
 
     def craft_item(self) -> bool:
         """Craft a medkit, molotov or trap using supplies (and fuel)."""
         choice = input(
-            "Craft [m]edkit (cost {0} supplies), [l]molotov (cost {1} supply + fuel) or [t]rap (cost {2} supplies): ".format(
-                MEDKIT_CRAFT_COST, MOLOTOV_SUPPLY_COST, TRAP_CRAFT_COST
+            "Craft [m]edkit (cost {0} supplies), [l]molotov (cost {1} supply + fuel), [t]rap (cost {2} supplies) or [f]lashlight (cost {3} supplies): ".format(
+                MEDKIT_CRAFT_COST,
+                MOLOTOV_SUPPLY_COST,
+                TRAP_CRAFT_COST,
+                FLASHLIGHT_CRAFT_COST,
             )
         ).strip().lower()
         if choice == "m":
@@ -1216,6 +1260,16 @@ class Game:
                     return True
             else:
                 print("Not enough supplies to craft a trap.")
+        elif choice == "f":
+            if self.player.has_flashlight:
+                print("You already have a flashlight.")
+            elif self.player.supplies >= FLASHLIGHT_CRAFT_COST:
+                self.player.supplies -= FLASHLIGHT_CRAFT_COST
+                self.player.has_flashlight = True
+                print("You craft a simple flashlight.")
+                return True
+            else:
+                print("Not enough supplies to craft a flashlight.")
         return False
 
     def throw_molotov(self) -> bool:
@@ -1241,7 +1295,7 @@ class Game:
     def drop_item(self) -> bool:
         pos = (self.player.x, self.player.y)
         choice = input(
-            "Drop item [s]upply, [m]edkit, [w]eapon, [k]eys, [f]uel, [a]ntidote, [l]molotov: "
+            "Drop item [s]upply, [m]edkit, [w]eapon, [k]eys, [f]uel, [a]ntidote, [l]molotov, [i]flashlight: "
         ).strip().lower()
         if choice == "s" and self.player.supplies > 0:
             self.player.supplies -= 1
@@ -1278,6 +1332,11 @@ class Game:
             self.molotov_positions.add(pos)
             print("You drop a molotov.")
             return True
+        if choice == "i" and self.player.has_flashlight:
+            self.player.has_flashlight = False
+            self.flashlight_positions.add(pos)
+            print("You drop the flashlight.")
+            return True
         print("Nothing dropped.")
         return False
 
@@ -1312,6 +1371,8 @@ class Game:
             options.append("fuel")
         if self.player.has_antidote:
             options.append("antidote")
+        if self.player.has_flashlight:
+            options.append("flashlight")
         if not options:
             print("You have nothing to trade.")
             return False
@@ -1355,6 +1416,12 @@ class Game:
                 return False
             self.player.has_antidote = False
             target.has_antidote = True
+        elif item == "flashlight":
+            if target.has_flashlight:
+                print(f"Player {target.symbol} already has a flashlight.")
+                return False
+            self.player.has_flashlight = False
+            target.has_flashlight = True
         print(f"You trade a {item} to player {target.symbol}.")
         return True
 
@@ -1380,6 +1447,8 @@ class Game:
             stealable.append("fuel")
         if target.has_antidote:
             stealable.append("antidote")
+        if target.has_flashlight and not self.player.has_flashlight:
+            stealable.append("flashlight")
         if not stealable:
             print(f"Player {target.symbol} has nothing you can take.")
             return False
@@ -1406,6 +1475,9 @@ class Game:
             elif item == "antidote":
                 target.has_antidote = False
                 self.player.has_antidote = True
+            elif item == "flashlight":
+                target.has_flashlight = False
+                self.player.has_flashlight = True
             print(f"You steal a {item} from player {target.symbol}!")
         else:
             self.player.health -= 1
@@ -1540,7 +1612,7 @@ class Game:
                     symbol = next(str(i) for i in range(1, 5) if str(i) not in used)
                     new_p = Player(spot[0], spot[1], self.players[0].max_health, symbol, is_ai=True)
                     self.players.append(new_p)
-                    self.reveal_area(new_p.x, new_p.y)
+                    self.reveal_area(new_p.x, new_p.y, player=new_p)
                     self.zombie_spawn_chance += 0.05
                     self.base_zombie_spawn_chance += 0.05
                     print(f"A grateful survivor joins as player {symbol}!")
@@ -1760,6 +1832,7 @@ class Game:
 
             if not heading_home:
                 targets.update(self.supplies_positions)
+                targets.update(self.flashlight_positions)
             direction = self.find_step_towards((player.x, player.y), targets)
             if direction and self.move_player(direction):
                 actions_left -= 1
