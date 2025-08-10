@@ -49,7 +49,9 @@ chapter after each victory. Scenario **1** tasks you with finding an antidote
 and returning to the starting tile. Scenario **2** requires locating both car
 keys and fuel before escaping. Scenario **3** asks you to gather three radio
 parts then retreat to the start. Scenario **4** is a final stand: call for
-rescue and survive until it arrives.
+rescue and survive until it arrives. Only two seats are available on the
+rescue craft, so in competitive games the survivors with the highest zombie
+kill counts board first.
 
 In cooperative mode the group shares victory conditions – once the objective is
 met all surviving players must regroup on the starting tile to win together.
