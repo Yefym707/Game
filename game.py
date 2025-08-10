@@ -166,6 +166,20 @@ ACHIEVEMENT_DEFS = {
 }
 
 
+def roll_check(chance: float, sides: int = 10, label: str = "Roll", log: bool = True) -> bool:
+    """Return True if a dice roll succeeds against ``chance``.
+
+    The function rolls a ``sides``-sided die, optionally prints the result,
+    and compares it against ``chance`` (0.0–1.0). This mirrors the tactile
+    randomness of tabletop games by surfacing the die roll to the player.
+    """
+    threshold = max(1, int(chance * sides))
+    roll = random.randint(1, sides)
+    if log:
+        print(f"{label} d{sides}: {roll} (need <= {threshold})")
+    return roll <= threshold
+
+
 def load_campaign() -> dict:
     """Load persistent campaign data from disk."""
     data = {
@@ -842,8 +856,10 @@ class Game:
         # Find adjacent zombie (4-directional)
         for z in list(self.zombies):
             if abs(z.x - self.player.x) + abs(z.y - self.player.y) == 1:
-                hit_chance = WEAPON_HIT_CHANCE if self.player.has_weapon else ATTACK_HIT_CHANCE
-                if random.random() < hit_chance:
+                hit_chance = (
+                    WEAPON_HIT_CHANCE if self.player.has_weapon else ATTACK_HIT_CHANCE
+                )
+                if roll_check(hit_chance, label="Attack"):
                     self.zombies.remove(z)
                     self.zombies_killed += 1
                     self.xp_gained += XP_PER_ZOMBIE
@@ -887,11 +903,11 @@ class Game:
             self.pharmacy_positions.remove(pos)
             if self.player.inventory_size < INVENTORY_LIMIT:
                 found = False
-                if random.random() < PHARMACY_MEDKIT_CHANCE:
+                if roll_check(PHARMACY_MEDKIT_CHANCE, label="Pharmacy"):
                     self.player.medkits += 1
                     found = True
                     print("You raid the pharmacy and find a medkit!")
-                if random.random() < SCAVENGE_FIND_CHANCE:
+                if roll_check(SCAVENGE_FIND_CHANCE, label="Pharmacy"):
                     self.player.supplies += 1
                     found = True
                     print("You grab some supplies.")
@@ -903,12 +919,12 @@ class Game:
         if pos in self.armory_positions:
             self.armory_positions.remove(pos)
             found = False
-            if not self.player.has_weapon and random.random() < ARMORY_WEAPON_CHANCE:
+            if not self.player.has_weapon and roll_check(ARMORY_WEAPON_CHANCE, label="Armory"):
                 self.player.has_weapon = True
                 found = True
                 print("You find a weapon in the armory!")
             if self.player.inventory_size < INVENTORY_LIMIT:
-                if random.random() < ARMORY_SUPPLY_CHANCE:
+                if roll_check(ARMORY_SUPPLY_CHANCE, label="Armory"):
                     self.player.supplies += 1
                     found = True
                     print("You scavenge some useful gear.")
@@ -1236,7 +1252,7 @@ class Game:
         if not stealable:
             print(f"Player {target.symbol} has nothing you can take.")
             return False
-        if random.random() < STEAL_SUCCESS_CHANCE:
+        if roll_check(STEAL_SUCCESS_CHANCE, label="Steal"):
             item = random.choice(stealable)
             if item == "supply":
                 target.supplies -= 1
