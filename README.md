@@ -1,7 +1,7 @@
 # Survival Board Game
 
-This repository contains a small prototype of a turn-based survival board game.
-The player roams a fog-covered 10×10 grid searching for objectives while
+This repository contains a small prototype of a turn-based survival board game
+for one to six players. The player roams a fog-covered 10×10 grid searching for objectives while
 avoiding zombies. Inventory space is limited so choose carefully what to carry.
 Players may also spend an action to scout an adjacent tile, peeking through the
 fog before committing to a move.
@@ -34,7 +34,7 @@ python game.py
 ```
 
 At launch you'll be prompted to choose a difficulty level, number of players
-–1–4 in hot-seat mode–and a scenario. You may also add simple AI-controlled
+–1–6 in hot-seat mode–and a scenario. You may also add simple AI-controlled
 survivors to fill any empty slots. More players mean extra starting zombies and
 a higher spawn rate, and in scenario four the rescue takes longer to arrive.
 These bots heal, eat, scavenge and pathfind toward revealed objectives and
@@ -90,7 +90,7 @@ During your turn you have two actions. Enter:
 - `Q` – save the game and quit.
 - `?` – show a quick reference of controls and board symbols.
 
-Players are shown on the board as numbers `1`–`4`.
+Players are shown on the board as numbers `1`–`6`.
 
 Zombies move after all players finish their actions, then an event card is drawn
 from a shuffled deck. Cards are not returned until the deck is exhausted,
