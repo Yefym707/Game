@@ -122,6 +122,17 @@ STEAL_SUCCESS_CHANCE = 0.5
 PVP_ATTACK_HIT_CHANCE = 0.5
 PVP_ATTACK_NOISE_CHANCE = 0.8
 
+# Player role definitions
+# These light touches give each survivor a distinct flavor similar to
+# character cards in a tabletop game. Roles grant small passive bonuses
+# but keep the overall ruleset simple.
+ROLE_DEFS = {
+    "fighter": "Improved attack rolls",
+    "medic": "Better healing from medkits and rest",
+    "scout": "Wider vision and superior scavenging",
+    "engineer": "Cheaper barricades and crafted gear",
+}
+
 # End-of-round event deck configuration. The game now draws from a finite
 # deck of event cards so the same event will not repeat until the deck is
 # exhausted and reshuffled, mimicking the feel of a physical board game.
@@ -295,9 +306,11 @@ class Player(Entity):
         starting_health: int,
         symbol: str = "@",
         is_ai: bool = False,
+        role: str = "fighter",
     ) -> None:
         super().__init__(x, y, symbol)
         self.is_ai: bool = is_ai
+        self.role: str = role
         self.max_health: int = starting_health
         self.health: int = starting_health
         self.max_hunger: int = STARTING_HUNGER
@@ -336,6 +349,7 @@ class Game:
         num_players: int = 1,
         num_ai: int = 0,
         cooperative: bool = False,
+        roles: Optional[List[str]] = None,
     ) -> None:
         settings = DIFFICULTY_SETTINGS.get(difficulty.lower())
         if settings is None:
@@ -363,11 +377,24 @@ class Game:
         self.players: List[Player] = []
         total_players = self.total_players
         num_ai = max(0, min(num_ai, total_players - 1))
+        role_list = roles or []
         for i in range(total_players):
             dx, dy = offsets[i % len(offsets)]
             is_ai = i >= total_players - num_ai
+            role = (
+                role_list[i]
+                if i < len(role_list)
+                else random.choice(list(ROLE_DEFS.keys()))
+            )
             self.players.append(
-                Player(center + dx, center + dy, starting_health, str(i + 1), is_ai)
+                Player(
+                    center + dx,
+                    center + dy,
+                    starting_health,
+                    str(i + 1),
+                    is_ai,
+                    role,
+                )
             )
         self.player: Player = self.players[0]
         self.start_pos = (center, center)
@@ -448,6 +475,7 @@ class Game:
                     "has_flashlight": p.has_flashlight,
                     "symbol": p.symbol,
                     "is_ai": getattr(p, "is_ai", False),
+                    "role": p.role,
                 }
                 for p in self.players
             ],
@@ -516,6 +544,7 @@ class Game:
             p.has_flashlight = pdata.get("has_flashlight", False)
             p.symbol = pdata.get("symbol", p.symbol)
             p.is_ai = pdata.get("is_ai", False)
+            p.role = pdata.get("role", "fighter")
         game.player = game.players[data.get("current_player", 0)]
         game.zombies = [Zombie(x, y) for x, y in data["zombies"]]
         game.supplies_positions = {tuple(pos) for pos in data["supplies_positions"]}
@@ -602,8 +631,13 @@ class Game:
         """
         if radius is None:
             radius = self.reveal_radius
-        if self.is_night and player and getattr(player, "has_flashlight", False):
-            radius = max(radius, REVEAL_RADIUS)
+        if player and getattr(player, "role", "") == "scout":
+            radius += 1
+        if self.is_night:
+            if player and getattr(player, "has_flashlight", False):
+                radius = max(radius, REVEAL_RADIUS)
+            else:
+                radius = max(0, radius - NIGHT_REVEAL_PENALTY)
         for dx in range(-radius, radius + 1):
             for dy in range(-radius, radius + 1):
                 nx, ny = x + dx, y + dy
@@ -1001,6 +1035,8 @@ class Game:
                 hit_chance = (
                     WEAPON_HIT_CHANCE if self.player.has_weapon else ATTACK_HIT_CHANCE
                 )
+                if self.player.role == "fighter":
+                    hit_chance = min(1.0, hit_chance + 0.1)
                 if roll_check(hit_chance, label="Attack"):
                     self.zombies.remove(z)
                     self.zombies_killed += 1
@@ -1169,6 +1205,8 @@ class Game:
         if not self.loot_deck:
             self.loot_deck = create_loot_deck()
         card = self.loot_deck.popleft()
+        if self.player.role == "scout" and card == "nothing" and self.loot_deck:
+            card = self.loot_deck.popleft()
         if card == "weapon":
             if not self.player.has_weapon:
                 self.player.has_weapon = True
@@ -1199,8 +1237,9 @@ class Game:
     def use_medkit(self) -> bool:
         if self.player.medkits > 0 and self.player.health < self.player.max_health:
             self.player.medkits -= 1
-            self.player.health = min(self.player.max_health, self.player.health + MEDKIT_HEAL)
-            print("You use a medkit and recover health.")
+            heal = MEDKIT_HEAL + (1 if self.player.role == "medic" else 0)
+            self.player.health = min(self.player.max_health, self.player.health + heal)
+            print(f"You use a medkit and recover {heal} health.")
             return True
         return False
 
@@ -1221,8 +1260,9 @@ class Game:
             print("You catch your breath and regain some stamina.")
             return True
         if self.player.health < self.player.max_health:
-            self.player.health += 1
-            print("You take a moment to rest and heal 1 health.")
+            heal = 2 if self.player.role == "medic" else 1
+            self.player.health = min(self.player.max_health, self.player.health + heal)
+            print(f"You take a moment to rest and heal {heal} health.")
             return True
         print("You feel fully rested already.")
         return False
@@ -1232,8 +1272,9 @@ class Game:
         if pos in self.barricade_positions:
             print("There's already a barricade here.")
             return False
-        if self.player.supplies >= BARRICADE_SUPPLY_COST:
-            self.player.supplies -= BARRICADE_SUPPLY_COST
+        cost = max(1, BARRICADE_SUPPLY_COST - (1 if self.player.role == "engineer" else 0))
+        if self.player.supplies >= cost:
+            self.player.supplies -= cost
             self.barricade_positions.add(pos)
             print("You hastily build a barricade.")
             return True
@@ -1269,18 +1310,21 @@ class Game:
 
     def craft_item(self) -> bool:
         """Craft a medkit, molotov or trap using supplies (and fuel)."""
+        cost_medkit = MEDKIT_CRAFT_COST
+        cost_trap = max(1, TRAP_CRAFT_COST - (1 if self.player.role == "engineer" else 0))
+        cost_flash = max(1, FLASHLIGHT_CRAFT_COST - (1 if self.player.role == "engineer" else 0))
         choice = input(
             "Craft [m]edkit (cost {0} supplies), [l]molotov (cost {1} supply + fuel), [t]rap (cost {2} supplies) or [f]lashlight (cost {3} supplies): ".format(
-                MEDKIT_CRAFT_COST,
+                cost_medkit,
                 MOLOTOV_SUPPLY_COST,
-                TRAP_CRAFT_COST,
-                FLASHLIGHT_CRAFT_COST,
+                cost_trap,
+                cost_flash,
             )
         ).strip().lower()
         if choice == "m":
-            if self.player.supplies >= MEDKIT_CRAFT_COST:
+            if self.player.supplies >= cost_medkit:
                 if self.player.inventory_size < INVENTORY_LIMIT:
-                    self.player.supplies -= MEDKIT_CRAFT_COST
+                    self.player.supplies -= cost_medkit
                     self.player.medkits += 1
                     print("You craft a makeshift medkit.")
                     return True
@@ -1301,11 +1345,11 @@ class Game:
             print("You lack the materials to craft a molotov.")
         elif choice == "t":
             pos = (self.player.x, self.player.y)
-            if self.player.supplies >= TRAP_CRAFT_COST:
+            if self.player.supplies >= cost_trap:
                 if pos in self.trap_positions:
                     print("There's already a trap here.")
                 else:
-                    self.player.supplies -= TRAP_CRAFT_COST
+                    self.player.supplies -= cost_trap
                     self.trap_positions.add(pos)
                     print("You rig a crude trap.")
                     return True
@@ -1314,8 +1358,8 @@ class Game:
         elif choice == "f":
             if self.player.has_flashlight:
                 print("You already have a flashlight.")
-            elif self.player.supplies >= FLASHLIGHT_CRAFT_COST:
-                self.player.supplies -= FLASHLIGHT_CRAFT_COST
+            elif self.player.supplies >= cost_flash:
+                self.player.supplies -= cost_flash
                 self.player.has_flashlight = True
                 print("You craft a simple flashlight.")
                 return True
@@ -2215,10 +2259,20 @@ if __name__ == "__main__":
         except ValueError:
             num_ai = 0
         coop = input("Cooperative mode? [y/N]: ").strip().lower() == "y"
+        role_names = "/".join(ROLE_DEFS.keys())
+        roles = []
+        for i in range(num_players):
+            if i >= num_players - num_ai:
+                roles.append(random.choice(list(ROLE_DEFS.keys())))
+            else:
+                r = input(f"Role for player {i+1} ({role_names}): ").strip().lower() or "fighter"
+                while r not in ROLE_DEFS:
+                    r = input(f"Role for player {i+1} ({role_names}): ").strip().lower() or "fighter"
+                roles.append(r)
         if scen_num == 0:
             current = 1
             while current <= 4:
-                game = Game(diff, current, num_players, num_ai, cooperative=coop)
+                game = Game(diff, current, num_players, num_ai, cooperative=coop, roles=roles)
                 game.run()
                 if current >= 4:
                     break
@@ -2229,6 +2283,6 @@ if __name__ == "__main__":
                     break
                 current += 1
         else:
-            game = Game(diff, scen_num, num_players, num_ai, cooperative=coop)
+            game = Game(diff, scen_num, num_players, num_ai, cooperative=coop, roles=roles)
             game.run()
 
