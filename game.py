@@ -138,6 +138,12 @@ LOOT_CARD_COUNTS = {
     "nothing": 10,
 }
 
+# Day/night cycle settings
+DAY_LENGTH = 3  # rounds of daylight
+NIGHT_LENGTH = 2  # rounds of night
+NIGHT_SPAWN_MULTIPLIER = 1.5
+NIGHT_REVEAL_PENALTY = 1  # visibility penalty at night
+
 # Simple achievement definitions evaluated against the persistent campaign
 # data. Additional achievements can be added here without touching the game
 # logic.
@@ -334,6 +340,10 @@ class Game:
         self.total_players = max(1, num_players)
         extra_players = max(0, self.total_players - 1)
         self.zombie_spawn_chance = settings["zombie_spawn_chance"] + 0.05 * extra_players
+        self.base_zombie_spawn_chance = self.zombie_spawn_chance
+        self.reveal_radius = REVEAL_RADIUS
+        self.is_night = False
+        self.phase_turns = DAY_LENGTH
         self.turn_limit = settings["turn_limit"]
         self.evacuation_turns = EVACUATION_TURNS + extra_players
         starting_health = settings["starting_health"] + self.campaign.get("hp_bonus", 0)
@@ -456,6 +466,11 @@ class Game:
             "loot_deck": list(self.loot_deck),
             "noise_markers": [list(n) for n in self.noise_markers],
             "xp_gained": self.xp_gained,
+            "zombie_spawn_chance": self.zombie_spawn_chance,
+            "base_zombie_spawn_chance": self.base_zombie_spawn_chance,
+            "is_night": self.is_night,
+            "phase_turns": self.phase_turns,
+            "reveal_radius": self.reveal_radius,
         }
 
     @classmethod
@@ -528,6 +543,18 @@ class Game:
             )
             for n in data.get("noise_markers", [])
         ]
+        game.zombie_spawn_chance = data.get("zombie_spawn_chance", game.zombie_spawn_chance)
+        game.base_zombie_spawn_chance = data.get(
+            "base_zombie_spawn_chance", game.zombie_spawn_chance
+        )
+        game.is_night = data.get("is_night", False)
+        game.phase_turns = data.get(
+            "phase_turns", NIGHT_LENGTH if game.is_night else DAY_LENGTH
+        )
+        game.reveal_radius = data.get(
+            "reveal_radius",
+            REVEAL_RADIUS if not game.is_night else max(0, REVEAL_RADIUS - NIGHT_REVEAL_PENALTY),
+        )
         return game
 
     def save_game(self, filename: str = SAVE_FILE) -> None:
@@ -542,8 +569,10 @@ class Game:
             data = json.load(fh)
         return cls.from_dict(data)
 
-    def reveal_area(self, x: int, y: int, radius: int = REVEAL_RADIUS) -> None:
+    def reveal_area(self, x: int, y: int, radius: Optional[int] = None) -> None:
         """Reveal tiles around ``(x, y)`` within ``radius``."""
+        if radius is None:
+            radius = self.reveal_radius
         for dx in range(-radius, radius + 1):
             for dy in range(-radius, radius + 1):
                 nx, ny = x + dx, y + dy
@@ -855,6 +884,8 @@ class Game:
                 self.campaign.get("xp", 0) + self.xp_gained,
             )
         )
+        phase = "Night" if self.is_night else "Day"
+        print(f"Turn {self.turn} - {phase} ({self.phase_turns} turns remaining)")
         header = "   " + " ".join(str(i) for i in range(self.board_size))
         print(header)
         for idx, row in enumerate(board):
@@ -1497,6 +1528,7 @@ class Game:
                     self.players.append(new_p)
                     self.reveal_area(new_p.x, new_p.y)
                     self.zombie_spawn_chance += 0.05
+                    self.base_zombie_spawn_chance += 0.05
                     print(f"A grateful survivor joins as player {symbol}!")
                     joined = True
             if not joined:
@@ -1544,6 +1576,23 @@ class Game:
                 print(f"Player {p.symbol} is starving! -1 health")
             if p.health <= 0:
                 self.handle_player_death(p)
+
+    def advance_time_of_day(self) -> None:
+        """Advance the day/night cycle and update related modifiers."""
+        self.phase_turns -= 1
+        if self.phase_turns <= 0:
+            self.is_night = not self.is_night
+            self.phase_turns = NIGHT_LENGTH if self.is_night else DAY_LENGTH
+            if self.is_night:
+                self.reveal_radius = max(0, REVEAL_RADIUS - NIGHT_REVEAL_PENALTY)
+                self.zombie_spawn_chance = (
+                    self.base_zombie_spawn_chance * NIGHT_SPAWN_MULTIPLIER
+                )
+                print("Night falls. Zombies grow bolder and visibility shrinks.")
+            else:
+                self.reveal_radius = REVEAL_RADIUS
+                self.zombie_spawn_chance = self.base_zombie_spawn_chance
+                print("Dawn breaks. You can see further again.")
 
     def check_achievements(self) -> None:
         """Unlock achievements based on campaign stats."""
@@ -1912,6 +1961,7 @@ class Game:
                     if winner:
                         break
                 self.turn += 1
+                self.advance_time_of_day()
                 if self.turn >= self.turn_limit:
                     print("Time runs out and the area is overrun. You perish...")
                     break
