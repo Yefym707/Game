@@ -68,10 +68,11 @@ mirroring a physical board game's event system. Fallen survivors do not stay
 down—any player who dies will rise again as a zombie at that spot. Events can
 alter the next round’s pace – a storm might reduce everyone to one action while
 an adrenaline rush grants an extra move. Friendly survivors may appear with
-supplies or medkits and the wind can momentarily lift the fog to reveal
-unexplored tiles. Exploring may also uncover special locations. Pharmacies
-(`M`) have a high chance of yielding medkits while armories (`W`) are the best
-spots to find weapons. Once revealed, their symbols remain on the board. Each round hunger decreases for every
+supplies or medkits and, if there’s room, may even join your group. The wind
+can momentarily lift the fog to reveal unexplored tiles. Exploring may also
+uncover special locations. Pharmacies (`M`) have a high chance of yielding
+medkits while armories (`W`) are the best spots to find weapons. Once revealed,
+their symbols remain on the board. Each round hunger decreases for every
 survivor. Starving costs health. The scenario ends after 20 rounds. Win scenario
 1 by finding the antidote and returning to the `S` marked starting tile. Scenario
 2 is won by bringing both keys and fuel back to the start. You can carry at most
@@ -86,7 +87,7 @@ so you can resume a run later. Survive as long as you can before your health
 reaches zero.
 
 Dropped items remain on the board: supplies show as `R`, medkits as `H`, weapons as `G` and molotovs as `L` once the tile is revealed.
-Noise markers from loud actions appear as `!` until they attract or fade.
+Noise markers from loud actions show their remaining turns as numbers until they attract or fade.
 
 Experience points accumulate across the campaign. Killing zombies and
 surviving scenarios grant XP; each level reached permanently adds +1 to
