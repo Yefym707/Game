@@ -62,6 +62,7 @@ During your turn you have two actions. Enter:
 - `K` – attack another player on your tile; roll a d10 (≤5 hits, failure hurts you. The brawl creates noise.)
 - `X` – trade an item with another player on your tile.
 - `T` – drop the item of your choice on the current tile.
+- `Z` – rest to recover 1 hunger or heal 1 HP if already well fed.
 - `P` – pass the remaining actions.
 - `Q` – save the game and quit.
 
