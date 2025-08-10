@@ -86,6 +86,7 @@ MEDKIT_SYMBOL = "H"
 WEAPON_SYMBOL = "G"
 RADIO_PARTS_REQUIRED = 3
 EVACUATION_TURNS = 5
+EVACUATION_CAPACITY = 2  # rescue seats available in final scenario
 DOUBLE_MOVE_REWARD = 5
 WEAPON_NOISE_ZOMBIE_CHANCE = 0.3
 VEHICLE_NOISE_ZOMBIE_CHANCE = 0.5
@@ -364,6 +365,7 @@ class Player(Entity):
         self.has_fuel: bool = False
         self.has_weapon: bool = False
         self.has_flashlight: bool = False
+        self.kills: int = 0
         self.infection_turns: int = 0
 
     @property
@@ -448,6 +450,8 @@ class Game:
         self.radio_parts_collected = 0
         self.called_rescue = False
         self.rescue_timer: Optional[int] = None
+        self.evacuation_capacity = EVACUATION_CAPACITY
+        self.evacuated_players: List[Player] = []
         self.zombies: List[Zombie] = []
         self.supplies_positions: Set[Tuple[int, int]] = set()
         self.medkit_positions: Set[Tuple[int, int]] = set()
@@ -515,6 +519,7 @@ class Game:
                     "supplies": p.supplies,
                     "medkits": p.medkits,
                     "molotovs": p.molotovs,
+                    "kills": p.kills,
                     "has_antidote": p.has_antidote,
                     "has_keys": p.has_keys,
                     "has_fuel": p.has_fuel,
@@ -589,6 +594,7 @@ class Game:
             p.supplies = pdata["supplies"]
             p.medkits = pdata["medkits"]
             p.molotovs = pdata.get("molotovs", 0)
+            p.kills = pdata.get("kills", 0)
             p.has_antidote = pdata["has_antidote"]
             p.has_keys = pdata["has_keys"]
             p.has_fuel = pdata["has_fuel"]
@@ -1154,6 +1160,7 @@ class Game:
                 if roll_check(hit_chance, label="Attack"):
                     self.zombies.remove(z)
                     self.zombies_killed += 1
+                    self.player.kills += 1
                     self.xp_gained += XP_PER_ZOMBIE
                     print("You slay a zombie!")
                 else:
@@ -1543,6 +1550,7 @@ class Game:
                 removed += 1
         if removed:
             self.zombies_killed += removed
+            self.player.kills += removed
             self.xp_gained += XP_PER_ZOMBIE * removed
             print(f"The molotov explodes, burning {removed} zombie{'s' if removed != 1 else ''}!")
         else:
@@ -1980,6 +1988,31 @@ class Game:
         if self.hunger_penalty_turns > 0:
             self.hunger_penalty_turns -= 1
 
+    def process_evacuation(self) -> List[Player]:
+        """Determine which survivors escape when rescue arrives."""
+        survivors = [p for p in self.players if p.health > 0]
+        at_start = [p for p in survivors if (p.x, p.y) == self.start_pos]
+        if not at_start:
+            print("No survivors are at the evacuation point when rescue arrives!")
+            return []
+        if self.cooperative:
+            if len(at_start) == len(survivors) and len(at_start) <= self.evacuation_capacity:
+                for p in at_start:
+                    print(f"Player {p.symbol} boards the rescue craft.")
+                return at_start
+            if len(at_start) < len(survivors):
+                print("Some survivors fail to reach the extraction zone in time!")
+            else:
+                print("There aren't enough seats for everyone. Some are left behind!")
+            return []
+        at_start.sort(key=lambda p: p.kills, reverse=True)
+        evacuated = at_start[: self.evacuation_capacity]
+        for p in evacuated:
+            print(f"Player {p.symbol} boards the rescue craft.")
+        for p in at_start[self.evacuation_capacity :]:
+            print(f"Player {p.symbol} is left behind as the craft departs!")
+        return evacuated
+
     def advance_time_of_day(self) -> None:
         """Advance the day/night cycle and update related modifiers."""
         self.phase_turns -= 1
@@ -2377,15 +2410,11 @@ class Game:
                 self.apply_hunger()
                 if self.called_rescue and self.rescue_timer is not None:
                     self.rescue_timer -= 1
-                    for pl in self.players:
-                        self.player = pl
-                        if self.check_victory():
-                            winner = pl
-                            print(
-                                "The rescue helicopter arrives and lifts you to safety. You win!"
-                            )
-                            break
-                    if winner:
+                    if self.rescue_timer <= 0:
+                        self.evacuated_players = self.process_evacuation()
+                        self.players = self.evacuated_players
+                        if self.evacuated_players:
+                            winner = self.evacuated_players[0]
                         break
                 self.turn += 1
                 self.advance_time_of_day()
@@ -2419,20 +2448,22 @@ class Game:
                     self.has_signal_device = True
                     self.campaign["signal_device"] = 1
                     print("A portable radio will aid you in the final escape!")
-                elif self.scenario == 4 and not (
-                    self.called_rescue and self.rescue_timer is not None and self.rescue_timer <= 0
-                ):
+                elif self.scenario == 4:
                     if self.cooperative:
                         print("The rescue helicopter arrives and lifts everyone to safety. You win!")
                     else:
-                        print("The rescue helicopter arrives and lifts you to safety. You win!")
+                        names = ", ".join(p.symbol for p in self.evacuated_players)
+                        if len(self.evacuated_players) > 1:
+                            print(f"{names} escape on the rescue craft!")
+                        else:
+                            print("The rescue helicopter arrives and lifts you to safety. You win!")
                 self.xp_gained += XP_SCENARIO_WIN
                 print(f"You gain {XP_SCENARIO_WIN} XP for surviving the scenario!")
                 completed = self.campaign.setdefault("completed_scenarios", [])
                 if self.scenario not in completed:
                     completed.append(self.scenario)
             elif not self.players:
-                print("All players have fallen to the zombies...")
+                print("No survivors escape the outbreak...")
         except (KeyboardInterrupt, EOFError):
             print("\nThanks for playing!")
         finally:
