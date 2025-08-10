@@ -94,6 +94,21 @@ MOLOTOV_NOISE_ZOMBIE_CHANCE = 0.6
 # PvP stealing settings
 STEAL_SUCCESS_CHANCE = 0.5
 
+# End-of-round event deck configuration. The game now draws from a finite
+# deck of event cards so the same event will not repeat until the deck is
+# exhausted and reshuffled, mimicking the feel of a physical board game.
+EVENT_CARD_COUNTS = {
+    "nothing": 3,
+    "heal": 1,
+    "supply": 1,
+    "horde": 1,
+    "storm": 1,
+    "adrenaline": 1,
+    "survivors": 1,
+    "fog": 1,
+    "firebomb": 1,
+}
+
 # Simple achievement definitions evaluated against the persistent campaign
 # data. Additional achievements can be added here without touching the game
 # logic.
@@ -160,6 +175,15 @@ def save_campaign(data: dict) -> None:
     """Persist campaign data to disk."""
     with open(CAMPAIGN_FILE, "w", encoding="utf-8") as fh:
         json.dump(data, fh)
+
+
+def create_event_deck() -> deque[str]:
+    """Return a shuffled deck of event cards based on EVENT_CARD_COUNTS."""
+    deck: List[str] = []
+    for name, count in EVENT_CARD_COUNTS.items():
+        deck.extend([name] * count)
+    random.shuffle(deck)
+    return deque(deck)
 
 
 DIFFICULTY_SETTINGS = {
@@ -310,6 +334,7 @@ class Game:
         self.keep_save = False
         self.zombies_killed: int = 0
         self.lowest_survivor_hp: Optional[int] = None
+        self.event_deck: deque[str] = create_event_deck()
 
     def is_player_at(self, x: int, y: int) -> bool:
         """Return True if any player occupies (x, y)."""
@@ -367,6 +392,7 @@ class Game:
             "actions_per_turn": self.actions_per_turn,
             "zombies_killed": self.zombies_killed,
             "cooperative": self.cooperative,
+            "event_deck": list(self.event_deck),
         }
 
     @classmethod
@@ -426,6 +452,7 @@ class Game:
         game.has_signal_device = data.get("has_signal_device", False)
         game.actions_per_turn = data.get("actions_per_turn", ACTIONS_PER_TURN)
         game.zombies_killed = data.get("zombies_killed", 0)
+        game.event_deck = deque(data.get("event_deck", []))
         return game
 
     def save_game(self, filename: str = SAVE_FILE) -> None:
@@ -1143,21 +1170,13 @@ class Game:
                     print("Noise draws a zombie nearby!")
 
     def random_event(self) -> None:
-        """Trigger a random event at the end of the round."""
-        event = random.choice(
-            [
-                "nothing",
-                "heal",
-                "supply",
-                "horde",
-                "storm",
-                "adrenaline",
-                "survivors",
-                "fog",
-                "firebomb",
-            ]
-        )
-        if event == "heal":
+        """Trigger an end-of-round event by drawing from the event deck."""
+        if not self.event_deck:
+            self.event_deck = create_event_deck()
+        event = self.event_deck.popleft()
+        if event == "nothing":
+            print("The night is quiet...")
+        elif event == "heal":
             healed = False
             for p in self.players:
                 if p.health < p.max_health:
