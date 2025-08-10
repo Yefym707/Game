@@ -17,8 +17,8 @@ Loud actions such as gunfire or revving an engine place noise tokens on the
 board. These markers linger for a couple of rounds and at the end of each
 round may spawn new zombies, capturing the tension of physical board games
 that track noise.
-Simple crafting lets survivors convert supplies into medkits, traps,
-flashlights and molotov cocktails for a tactical edge. A day/night cycle
+  Simple crafting lets survivors convert supplies into medkits, traps,
+  campfires, flashlights and molotov cocktails for a tactical edge. A day/night cycle
 reduces visibility after dark unless a survivor carries a flashlight.
 Combat and other risky actions explicitly roll dice, displaying the result so
 you can cheer or lament the luck of the draw just like at a real table.
@@ -61,7 +61,7 @@ ability reminiscent of character cards in a physical board game:
 - **Medic** – medkits and resting restore an extra point of health.
 - **Scout** – reveals one additional tile and draws a second loot card if the
   first is empty.
-- **Engineer** – barricades, traps and flashlights cost one less supply.
+  - **Engineer** – barricades, traps, campfires and flashlights cost one less supply.
 
 These asymmetrical perks encourage different play styles while keeping the
 rules light.
@@ -79,13 +79,13 @@ During your turn you have two actions. Enter:
 - `B` – spend two supplies to barricade the current tile, blocking zombies once.
 - `U` – disarm a trap on your tile, salvaging a supply.
 - `O` – scout an adjacent tile to reveal more of the map.
-- `C` – craft items (3 supplies → medkit, supply + fuel → molotov, 2 supplies → trap, 2 supplies → flashlight).
+  - `C` – craft items (3 supplies → medkit, supply + fuel → molotov, 2 supplies → trap, 2 supplies → flashlight, 2 supplies → campfire).
 - `M` – throw a molotov to burn adjacent zombies.
 - `R` – attempt to steal an item from another player sharing your tile; roll a d10 (≤5 succeeds, failure costs 1 HP).
 - `K` – attack another player on your tile; roll a d10 (≤5 hits, failure hurts you. The brawl creates noise.)
 - `X` – trade an item with another player on your tile.
 - `T` – drop the item of your choice on the current tile.
-- `Z` – rest to recover 1 hunger or heal 1 HP if already well fed.
+  - `Z` – rest to recover 1 hunger or heal 1 HP if already well fed (bonuses when on a campfire).
 - `P` – pass the remaining actions.
 - `Q` – save the game and quit.
 - `?` – show a quick reference of controls and board symbols.
@@ -106,9 +106,10 @@ visibility on the next turn. Exploring may also
 uncover special locations. Pharmacies (`M`) have a high chance of yielding
   medkits while armories (`W`) are the best spots to find weapons. Hidden traps
   (`!`) may also appear and will injure any survivor that triggers them, though
-  they can destroy zombies as well. Survivors can also rig traps of their own to
-  snare the unwary or disarm discovered traps to recover supplies. Once revealed,
-  their symbols remain on the board.
+  they can destroy zombies as well. Survivors can also rig traps or build
+  temporary campfires (`C`) of their own; fires grant extra healing when resting
+  but fade after a few rounds. Traps may be disarmed to recover supplies. Once
+  revealed, their symbols remain on the board.
 Each round hunger decreases for every
 survivor. Starving costs health. The scenario ends after 20 rounds. Win scenario
 1 by finding the antidote and returning to the `S` marked starting tile. Scenario
@@ -123,7 +124,7 @@ campaign progress is stored in `campaign_save.json`. A save file is also written
 so you can resume a run later. Survive as long as you can before your health
 reaches zero.
 
-Dropped items remain on the board: supplies show as `R`, medkits as `H`, weapons as `G` and molotovs as `L` once the tile is revealed.
+  Dropped items remain on the board: supplies show as `R`, medkits as `H`, weapons as `G` and molotovs as `L` once the tile is revealed. Built campfires appear as `C` and burn out after a few rounds but provide better rest while lit.
 Noise markers from loud actions show their remaining turns as numbers until they attract or fade.
 
 Experience points accumulate across the campaign. Killing zombies and

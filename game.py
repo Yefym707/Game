@@ -16,8 +16,8 @@ Features
 * Player wins by finding the antidote and returning to the starting tile.
   Victory grants +1 max health for the next run, saved to disk.
 * Hunger mechanic – eat supplies to avoid starving each round.
-* Simple crafting allows turning supplies into medkits, traps or noisy
-  molotov cocktails that burn adjacent zombies.
+* Simple crafting allows turning supplies into medkits, traps, campfires or
+  noisy molotov cocktails that burn adjacent zombies.
 * Loud actions leave behind noise tokens that can draw zombies at the
   end of each round, mirroring board-game noise markers.
 * Achievements track scenario victories and feats across campaigns.
@@ -45,7 +45,7 @@ import json
 import os
 import random
 from dataclasses import dataclass
-from typing import List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 from collections import deque
 
 
@@ -112,6 +112,11 @@ MOLOTOV_NOISE_ZOMBIE_CHANCE = 0.6
 TRAP_CRAFT_COST = 2
 FLASHLIGHT_SYMBOL = "I"
 FLASHLIGHT_CRAFT_COST = 2
+
+# Campfire settings
+CAMPFIRE_SYMBOL = "C"
+CAMPFIRE_CRAFT_COST = 2
+CAMPFIRE_DURATION = 5
 
 # Trap settings
 TRAP_SYMBOL = "!"
@@ -445,6 +450,7 @@ class Game:
         self.pharmacy_positions: Set[Tuple[int, int]] = set()
         self.armory_positions: Set[Tuple[int, int]] = set()
         self.barricade_positions: Set[Tuple[int, int]] = set()
+        self.campfires: Dict[Tuple[int, int], int] = {}
         self.noise_markers: List[Tuple[int, int, float, int]] = []
         self.noise_dampener_turns = 0
         self.visibility_penalty_turns = 0
@@ -521,6 +527,7 @@ class Game:
             "pharmacy_positions": list(self.pharmacy_positions),
             "armory_positions": list(self.armory_positions),
             "barricade_positions": list(self.barricade_positions),
+            "campfires": [[x, y, t] for (x, y), t in self.campfires.items()],
             "revealed": list(self.revealed),
             "antidote_pos": self.antidote_pos,
             "keys_pos": self.keys_pos,
@@ -596,6 +603,10 @@ class Game:
         }
         game.barricade_positions = {
             tuple(pos) for pos in data.get("barricade_positions", [])
+        }
+        game.campfires = {
+            (pos[0], pos[1]): pos[2]
+            for pos in data.get("campfires", [])
         }
         game.revealed = {tuple(pos) for pos in data["revealed"]}
         game.antidote_pos = tuple(data["antidote_pos"]) if data["antidote_pos"] else None
@@ -698,6 +709,7 @@ class Game:
                             and (nx, ny) not in self.pharmacy_positions
                             and (nx, ny) not in self.armory_positions
                             and (nx, ny) not in self.barricade_positions
+                            and (nx, ny) not in self.campfires
                             and all((z.x, z.y) != (nx, ny) for z in self.zombies)
                         ):
                             roll = random.random()
@@ -744,6 +756,7 @@ class Game:
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
                     and (x, y) not in self.trap_positions
+                    and (x, y) not in self.campfires
                 ):
                     self.zombies.append(Zombie(x, y))
                     break
@@ -760,6 +773,7 @@ class Game:
                     and not self.is_player_at(x, y)
                     and (x, y) not in self.barricade_positions
                     and (x, y) not in self.trap_positions
+                    and (x, y) not in self.campfires
                     and (x, y) not in self.medkit_positions
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
@@ -781,6 +795,7 @@ class Game:
                     and not self.is_player_at(x, y)
                     and (x, y) not in self.barricade_positions
                     and (x, y) not in self.trap_positions
+                    and (x, y) not in self.campfires
                     and (x, y) not in self.medkit_positions
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
@@ -804,6 +819,7 @@ class Game:
                     and (x, y) != self.antidote_pos
                     and (x, y) not in self.barricade_positions
                     and (x, y) not in self.trap_positions
+                    and (x, y) not in self.campfires
                     and (x, y) not in self.medkit_positions
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
@@ -822,6 +838,7 @@ class Game:
                 and not self.is_player_at(x, y)
                 and (x, y) not in self.barricade_positions
                 and (x, y) not in self.trap_positions
+                and (x, y) not in self.campfires
                 and (x, y) not in self.medkit_positions
                 and (x, y) not in self.weapon_positions
                 and (x, y) not in self.molotov_positions
@@ -841,6 +858,7 @@ class Game:
                 and not self.is_player_at(x, y)
                 and (x, y) not in self.barricade_positions
                 and (x, y) not in self.trap_positions
+                and (x, y) not in self.campfires
                 and (x, y) not in self.medkit_positions
                 and (x, y) not in self.weapon_positions
                 and (x, y) not in self.molotov_positions
@@ -861,6 +879,7 @@ class Game:
                 and not self.is_player_at(x, y)
                 and (x, y) not in self.barricade_positions
                 and (x, y) not in self.trap_positions
+                and (x, y) not in self.campfires
                 and (x, y) not in self.medkit_positions
                 and (x, y) not in self.weapon_positions
                 and (x, y) not in self.molotov_positions
@@ -882,6 +901,7 @@ class Game:
                     and not self.is_player_at(x, y)
                     and (x, y) not in self.barricade_positions
                     and (x, y) not in self.trap_positions
+                    and (x, y) not in self.campfires
                     and (x, y) not in self.medkit_positions
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
@@ -901,6 +921,7 @@ class Game:
                 and not self.is_player_at(x, y)
                 and (x, y) not in self.barricade_positions
                 and (x, y) not in self.trap_positions
+                and (x, y) not in self.campfires
                 and (x, y) not in self.medkit_positions
                 and (x, y) not in self.weapon_positions
                 and (x, y) not in self.molotov_positions
@@ -951,6 +972,9 @@ class Game:
         for x, y in self.barricade_positions:
             if (x, y) in self.revealed and not self.is_player_at(x, y):
                 board[y][x] = BARRICADE_SYMBOL
+        for (x, y), _ in self.campfires.items():
+            if (x, y) in self.revealed and not self.is_player_at(x, y):
+                board[y][x] = CAMPFIRE_SYMBOL
         for x, y in self.supplies_positions:
             if (x, y) in self.revealed and not self.is_player_at(x, y):
                 board[y][x] = "R"
@@ -1030,7 +1054,7 @@ class Game:
             "  S start    . explored    ? unexplored\n"
             "  1-6 players    Z zombie    R supply    H medkit\n"
             "  G weapon    L molotov    I flashlight    B barricade\n"
-            "  ! trap    A antidote    K keys    F fuel\n"
+            f"  {CAMPFIRE_SYMBOL} campfire (rest bonus)    ! trap    A antidote    K keys    F fuel\n"
             "  P radio part    T radio tower    numbers noise timers"
         )
 
@@ -1309,14 +1333,23 @@ class Game:
 
     def rest(self) -> bool:
         """Spend an action to recover hunger or a bit of health."""
+        pos = (self.player.x, self.player.y)
+        bonus = 1 if pos in self.campfires else 0
         if self.player.hunger < self.player.max_hunger:
-            self.player.hunger += 1
-            print("You catch your breath and regain some stamina.")
+            gain = 1 + bonus
+            self.player.hunger = min(self.player.max_hunger, self.player.hunger + gain)
+            if bonus:
+                print("The campfire warms you as you regain stamina.")
+            else:
+                print("You catch your breath and regain some stamina.")
             return True
         if self.player.health < self.player.max_health:
-            heal = 2 if self.player.role == "medic" else 1
+            heal = (2 if self.player.role == "medic" else 1) + bonus
             self.player.health = min(self.player.max_health, self.player.health + heal)
-            print(f"You take a moment to rest and heal {heal} health.")
+            if bonus:
+                print(f"You rest by the fire and heal {heal} health.")
+            else:
+                print(f"You take a moment to rest and heal {heal} health.")
             return True
         print("You feel fully rested already.")
         return False
@@ -1367,12 +1400,14 @@ class Game:
         cost_medkit = MEDKIT_CRAFT_COST
         cost_trap = max(1, TRAP_CRAFT_COST - (1 if self.player.role == "engineer" else 0))
         cost_flash = max(1, FLASHLIGHT_CRAFT_COST - (1 if self.player.role == "engineer" else 0))
+        cost_camp = max(1, CAMPFIRE_CRAFT_COST - (1 if self.player.role == "engineer" else 0))
         choice = input(
-            "Craft [m]edkit (cost {0} supplies), [l]molotov (cost {1} supply + fuel), [t]rap (cost {2} supplies) or [f]lashlight (cost {3} supplies): ".format(
+            "Craft [m]edkit (cost {0} supplies), [l]molotov (cost {1} supply + fuel), [t]rap (cost {2} supplies), [f]lashlight (cost {3} supplies) or [c]ampfire (cost {4} supplies): ".format(
                 cost_medkit,
                 MOLOTOV_SUPPLY_COST,
                 cost_trap,
                 cost_flash,
+                cost_camp,
             )
         ).strip().lower()
         if choice == "m":
@@ -1419,6 +1454,18 @@ class Game:
                 return True
             else:
                 print("Not enough supplies to craft a flashlight.")
+        elif choice == "c":
+            if self.player.supplies >= cost_camp:
+                pos = (self.player.x, self.player.y)
+                if pos in self.campfires:
+                    print("There's already a campfire here.")
+                else:
+                    self.player.supplies -= cost_camp
+                    self.campfires[pos] = CAMPFIRE_DURATION
+                    print("You build a campfire to rest by.")
+                    return True
+            else:
+                print("Not enough supplies to build a campfire.")
         return False
 
     def throw_molotov(self) -> bool:
@@ -1682,6 +1729,7 @@ class Game:
                 and (nx, ny) not in self.barricade_positions
                 and (nx, ny) not in self.molotov_positions
                 and (nx, ny) not in self.trap_positions
+                and (nx, ny) not in self.campfires
                 and all((z.x, z.y) != (nx, ny) for z in self.zombies)
                 and not self.is_player_at(nx, ny)
             ]
@@ -1732,6 +1780,18 @@ class Game:
             self.noise_dampener_turns -= 1
         if self.visibility_penalty_turns > 0:
             self.visibility_penalty_turns -= 1
+    def update_campfires(self) -> None:
+        """Reduce campfire timers and remove expired fires."""
+        expired = []
+        for pos, turns in list(self.campfires.items()):
+            if turns > 1:
+                self.campfires[pos] = turns - 1
+            else:
+                expired.append(pos)
+        for pos in expired:
+            del self.campfires[pos]
+            if pos in self.revealed:
+                print("A campfire burns out.")
 
     def random_event(self) -> None:
         """Trigger an end-of-round event by drawing from the event deck."""
@@ -2245,6 +2305,7 @@ class Game:
                     break
                 self.spawn_random_zombie()
                 self.resolve_noise()
+                self.update_campfires()
                 self.actions_per_turn = ACTIONS_PER_TURN
                 self.random_event()
                 self.apply_hunger()
