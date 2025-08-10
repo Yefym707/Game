@@ -30,6 +30,8 @@ Features
 * Hidden traps may injure careless survivors or destroy wandering zombies,
   and survivors can set their own snares. Traps can also be disarmed to
   recover useful supplies.
+* Campfires illuminate nearby tiles each round, granting shared visibility to
+  survivors huddled around the fire.
 * Rain events dampen noise, making zombies less likely to spawn from noise
   tokens in the following round.
 * Zombie bites may infect survivors; without an antidote they will turn
@@ -122,6 +124,7 @@ FLASHLIGHT_CRAFT_COST = 2
 CAMPFIRE_SYMBOL = "C"
 CAMPFIRE_CRAFT_COST = 2
 CAMPFIRE_DURATION = 5
+CAMPFIRE_LIGHT_RADIUS = 2  # tiles revealed around an active campfire
 
 # Trap settings
 TRAP_SYMBOL = "!"
@@ -1100,7 +1103,7 @@ class Game:
             "  S start    . explored    ? unexplored\n"
             "  1-6 players    Z zombie    R supply    H medkit\n"
             "  G weapon    L molotov    I flashlight    B barricade\n"
-            f"  {CAMPFIRE_SYMBOL} campfire    {SHELTER_SYMBOL} shelter (rest bonus)    ! trap    A antidote    K keys    F fuel\n"
+            f"  {CAMPFIRE_SYMBOL} campfire (light)    {SHELTER_SYMBOL} shelter (rest bonus)    ! trap    A antidote    K keys    F fuel\n"
             "  P radio part    T radio tower    numbers noise timers"
         )
 
@@ -1522,7 +1525,7 @@ class Game:
                 else:
                     self.player.supplies -= cost_camp
                     self.campfires[pos] = CAMPFIRE_DURATION
-                    print("You build a campfire to rest by.")
+                    print("You build a campfire to rest by. Its light reveals nearby tiles.")
                     return True
             else:
                 print("Not enough supplies to build a campfire.")
@@ -1842,13 +1845,15 @@ class Game:
         if self.visibility_penalty_turns > 0:
             self.visibility_penalty_turns -= 1
     def update_campfires(self) -> None:
-        """Reduce campfire timers and remove expired fires."""
-        expired = []
-        for pos, turns in list(self.campfires.items()):
+        """Reduce campfire timers, reveal their light and remove expired fires."""
+        expired: List[Tuple[int, int]] = []
+        for (x, y), turns in list(self.campfires.items()):
+            # Campfires act as light sources, revealing nearby tiles.
+            self.reveal_area(x, y, CAMPFIRE_LIGHT_RADIUS)
             if turns > 1:
-                self.campfires[pos] = turns - 1
+                self.campfires[(x, y)] = turns - 1
             else:
-                expired.append(pos)
+                expired.append((x, y))
         for pos in expired:
             del self.campfires[pos]
             if pos in self.revealed:
