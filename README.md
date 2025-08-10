@@ -15,7 +15,8 @@ python game.py
 
 At launch you'll be prompted to choose a difficulty level, number of players
 –1–4 in hot-seat mode–and a scenario. You may also add simple AI-controlled
-survivors to fill any empty slots. If a previous run was saved, you'll be
+survivors to fill any empty slots. These bots heal, eat, scavenge and pathfind
+toward revealed objectives and supplies. If a previous run was saved, you'll be
 offered to load it instead. Available difficulties are **easy**, **normal**, and
 **hard**. If unsure, press Enter for the defaults. You can optionally enable a
 cooperative mode where all survivors must escape together. Scenario **1** tasks you with

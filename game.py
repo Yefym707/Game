@@ -26,6 +26,7 @@ import os
 import random
 from dataclasses import dataclass
 from typing import List, Optional, Set, Tuple
+from collections import deque
 
 
 BOARD_SIZE = 10
@@ -947,6 +948,42 @@ class Game:
         if new:
             self.campaign["achievements"] = sorted(unlocked)
 
+    def find_step_towards(
+        self, start: Tuple[int, int], goals: Set[Tuple[int, int]]
+    ) -> Optional[str]:
+        """Return a direction that steps from start toward the nearest goal."""
+        if not goals:
+            return None
+        queue: deque[Tuple[Tuple[int, int], List[Tuple[int, int]]]] = deque()
+        queue.append((start, []))
+        visited = {start}
+        while queue:
+            (x, y), path = queue.popleft()
+            if (x, y) in goals:
+                if not path:
+                    return None
+                nx, ny = path[0]
+                if nx > start[0]:
+                    return "d"
+                if nx < start[0]:
+                    return "a"
+                if ny > start[1]:
+                    return "s"
+                if ny < start[1]:
+                    return "w"
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                nx, ny = x + dx, y + dy
+                if (
+                    0 <= nx < self.board_size
+                    and 0 <= ny < self.board_size
+                    and (nx, ny) not in visited
+                    and (nx, ny) not in self.barricade_positions
+                    and all((z.x, z.y) != (nx, ny) for z in self.zombies)
+                ):
+                    visited.add((nx, ny))
+                    queue.append(((nx, ny), path + [(nx, ny)]))
+        return None
+
     # ------------------------------------------------------------------
     # Turn handling and game state
     def ai_turn(self, player: Player) -> None:
@@ -978,16 +1015,33 @@ class Game:
                 self.scavenge()
                 actions_left -= 1
                 continue
-            # Otherwise move randomly
+            targets: Set[Tuple[int, int]] = set()
+            if self.scenario == 1 and not player.has_antidote and self.antidote_pos:
+                targets.add(self.antidote_pos)
+            elif self.scenario == 2:
+                if not player.has_keys and self.keys_pos:
+                    targets.add(self.keys_pos)
+                if not player.has_fuel and self.fuel_pos:
+                    targets.add(self.fuel_pos)
+            elif self.scenario == 3 and self.radio_parts_collected < RADIO_PARTS_REQUIRED:
+                targets.update(self.radio_positions)
+            elif self.scenario == 4 and not self.called_rescue:
+                if self.has_signal_device:
+                    targets.add(self.start_pos)
+                if self.radio_tower_pos:
+                    targets.add(self.radio_tower_pos)
+            targets.update(self.supplies_positions)
+            direction = self.find_step_towards((player.x, player.y), targets)
+            if direction and self.move_player(direction):
+                actions_left -= 1
+                continue
             dirs = ["w", "a", "s", "d"]
             random.shuffle(dirs)
-            moved = False
             for d in dirs:
                 if self.move_player(d):
-                    moved = True
                     actions_left -= 1
                     break
-            if not moved:
+            else:
                 break
 
     def player_turn(self, player: Player) -> None:
