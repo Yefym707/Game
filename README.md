@@ -48,6 +48,20 @@ rescue and survive until it arrives.
 In cooperative mode the group shares victory conditions – once the objective is
 met all surviving players must regroup on the starting tile to win together.
 
+### Roles
+
+Before play begins each survivor chooses a role, granting a small passive
+ability reminiscent of character cards in a physical board game:
+
+- **Fighter** – attacks are 10% more likely to hit.
+- **Medic** – medkits and resting restore an extra point of health.
+- **Scout** – reveals one additional tile and draws a second loot card if the
+  first is empty.
+- **Engineer** – barricades, traps and flashlights cost one less supply.
+
+These asymmetrical perks encourage different play styles while keeping the
+rules light.
+
 ### Controls
 
 During your turn you have two actions. Enter:
