@@ -58,6 +58,7 @@ During your turn you have two actions. Enter:
 - `H` – use a found medkit to recover health.
 - `E` – consume one supply to restore hunger.
 - `B` – spend two supplies to barricade the current tile, blocking zombies once.
+- `U` – disarm a trap on your tile, salvaging a supply.
 - `O` – scout an adjacent tile to reveal more of the map.
 - `C` – craft items (3 supplies → medkit, supply + fuel → molotov, 2 supplies → trap, 2 supplies → flashlight).
 - `M` – throw a molotov to burn adjacent zombies.
@@ -79,12 +80,14 @@ down—any player who dies will rise again as a zombie at that spot. Events can
 alter the next round’s pace – a storm might reduce everyone to one action while
 an adrenaline rush grants an extra move. Friendly survivors may appear with
 supplies or medkits and, if there’s room, may even join your group. The wind
-can momentarily lift the fog to reveal unexplored tiles. Exploring may also
+can momentarily lift the fog to reveal unexplored tiles. Rain muffles sound so
+noise tokens are less likely to draw zombies in the following round. Exploring may also
 uncover special locations. Pharmacies (`M`) have a high chance of yielding
   medkits while armories (`W`) are the best spots to find weapons. Hidden traps
   (`!`) may also appear and will injure any survivor that triggers them, though
   they can destroy zombies as well. Survivors can also rig traps of their own to
-  snare the unwary. Once revealed, their symbols remain on the board.
+  snare the unwary or disarm discovered traps to recover supplies. Once revealed,
+  their symbols remain on the board.
 Each round hunger decreases for every
 survivor. Starving costs health. The scenario ends after 20 rounds. Win scenario
 1 by finding the antidote and returning to the `S` marked starting tile. Scenario

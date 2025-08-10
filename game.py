@@ -28,7 +28,10 @@ Features
 * Survivors may brawl with each other, but fights are risky and attract
   additional zombies through noise tokens.
 * Hidden traps may injure careless survivors or destroy wandering zombies,
-  and survivors can set their own snares.
+  and survivors can set their own snares. Traps can also be disarmed to
+  recover useful supplies.
+* Rain events dampen noise, making zombies less likely to spawn from noise
+  tokens in the following round.
 
 The code is intentionally compact and uses only the Python standard
 library so it can run in any environment with Python 3.12 or newer.
@@ -83,6 +86,7 @@ WEAPON_NOISE_ZOMBIE_CHANCE = 0.3
 VEHICLE_NOISE_ZOMBIE_CHANCE = 0.5
 NOISE_DURATION = 2  # rounds noise tokens persist
 SCOUT_RADIUS = 2  # tiles revealed when scouting
+RAIN_NOISE_MULTIPLIER = 0.5  # noise chance multiplier during rain events
 
 # Special tile settings
 PHARMACY_SYMBOL = "M"
@@ -129,6 +133,7 @@ EVENT_CARD_COUNTS = {
     "storm": 1,
     "adrenaline": 1,
     "survivors": 1,
+    "rain": 1,
     "fog": 1,
     "firebomb": 1,
 }
@@ -385,6 +390,7 @@ class Game:
         self.armory_positions: Set[Tuple[int, int]] = set()
         self.barricade_positions: Set[Tuple[int, int]] = set()
         self.noise_markers: List[Tuple[int, int, float, int]] = []
+        self.noise_dampener_turns = 0
         self.revealed: Set[Tuple[int, int]] = set()
         self.spawn_zombies(settings["starting_zombies"] + extra_players)
         self.spawn_pharmacies(PHARMACY_COUNT)
@@ -474,6 +480,7 @@ class Game:
             "event_deck": list(self.event_deck),
             "loot_deck": list(self.loot_deck),
             "noise_markers": [list(n) for n in self.noise_markers],
+            "noise_dampener_turns": self.noise_dampener_turns,
             "xp_gained": self.xp_gained,
             "zombie_spawn_chance": self.zombie_spawn_chance,
             "base_zombie_spawn_chance": self.base_zombie_spawn_chance,
@@ -554,6 +561,7 @@ class Game:
             )
             for n in data.get("noise_markers", [])
         ]
+        game.noise_dampener_turns = data.get("noise_dampener_turns", 0)
         game.zombie_spawn_chance = data.get("zombie_spawn_chance", game.zombie_spawn_chance)
         game.base_zombie_spawn_chance = data.get(
             "base_zombie_spawn_chance", game.zombie_spawn_chance
@@ -929,6 +937,7 @@ class Game:
             "  H - use a medkit\n"
             "  E - eat supplies\n"
             "  B - build a barricade\n"
+            "  U - disarm a trap\n"
             "  O - scout without moving\n"
             "  C - craft items\n"
             "  M - throw a molotov\n"
@@ -1229,6 +1238,17 @@ class Game:
             print("You hastily build a barricade.")
             return True
         print("Not enough supplies to build a barricade.")
+        return False
+
+    def disarm_trap(self) -> bool:
+        """Remove a trap on the current tile, salvaging a supply."""
+        pos = (self.player.x, self.player.y)
+        if pos in self.trap_positions:
+            self.trap_positions.remove(pos)
+            self.player.supplies += 1
+            print("You carefully disarm the trap and salvage a supply.")
+            return True
+        print("No trap here to disarm.")
         return False
 
     def scout(self) -> bool:
@@ -1600,10 +1620,15 @@ class Game:
         """Spawn zombies for all accumulated noise markers."""
         remaining: List[Tuple[int, int, float, int]] = []
         for x, y, chance, turns in self.noise_markers:
-            spawned = self.spawn_zombie_near(x, y, chance)
+            effective = chance
+            if self.noise_dampener_turns > 0:
+                effective *= RAIN_NOISE_MULTIPLIER
+            spawned = self.spawn_zombie_near(x, y, effective)
             if not spawned and turns > 1:
                 remaining.append((x, y, chance, turns - 1))
         self.noise_markers = remaining
+        if self.noise_dampener_turns > 0:
+            self.noise_dampener_turns -= 1
 
     def random_event(self) -> None:
         """Trigger an end-of-round event by drawing from the event deck."""
@@ -1661,6 +1686,11 @@ class Game:
                         given = True
                 if not given:
                     print("Friendly survivors pass by but everyone's packs are full.")
+        elif event == "rain":
+            self.noise_dampener_turns = 1
+            print(
+                "Steady rain falls. Noise will attract fewer zombies next round."
+            )
         elif event == "fog":
             self.reveal_random_tiles(5)
             print("A gust of wind lifts the fog, revealing more of the area.")
@@ -1771,6 +1801,11 @@ class Game:
             if player.health <= player.max_health // 2 and player.medkits > 0:
                 print(f"Player {player.symbol} uses a medkit.")
                 self.use_medkit()
+                actions_left -= 1
+                continue
+            if (player.x, player.y) in self.trap_positions:
+                print(f"Player {player.symbol} disarms a trap.")
+                self.disarm_trap()
                 actions_left -= 1
                 continue
             # Eat if starving
@@ -1887,7 +1922,7 @@ class Game:
         while actions_left > 0 and self.player.health > 0:
             self.draw_board()
             cmd = input(
-                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, e=eat, b=barricade, o=scout, c=craft, m=molotov, r=steal, k=fight, x=trade, t=drop, z=rest, p=pass, q=save, ?=help]: "
+                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, e=eat, b=barricade, u=disarm, o=scout, c=craft, m=molotov, r=steal, k=fight, x=trade, t=drop, z=rest, p=pass, q=save, ?=help]: "
             ).strip().lower()
 
             if cmd == "?":
@@ -1930,6 +1965,9 @@ class Game:
                     print("Nothing to eat!")
             elif cmd == "b":
                 if self.build_barricade():
+                    actions_left -= 1
+            elif cmd == "u":
+                if self.disarm_trap():
                     actions_left -= 1
             elif cmd == "o":
                 if self.scout():
