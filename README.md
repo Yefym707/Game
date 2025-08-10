@@ -3,7 +3,8 @@
 This repository contains a small prototype of a turn-based survival board game.
 The player roams a fog-covered 10×10 grid searching for objectives while
 avoiding zombies. Inventory space is limited so choose carefully what to carry.
-Each turn your hunger drops – eat supplies to keep from starving.
+Each turn your hunger drops – eat supplies to keep from starving. Zombie
+numbers scale with the size of your group to keep larger teams on edge.
 
 ## Requirements
 - Python 3.12+
@@ -15,9 +16,11 @@ python game.py
 
 At launch you'll be prompted to choose a difficulty level, number of players
 –1–4 in hot-seat mode–and a scenario. You may also add simple AI-controlled
-survivors to fill any empty slots. These bots heal, eat, scavenge and pathfind
-toward revealed objectives and supplies. If a previous run was saved, you'll be
-offered to load it instead. Available difficulties are **easy**, **normal**, and
+survivors to fill any empty slots. More players mean extra starting zombies and
+a higher spawn rate, and in scenario four the rescue takes longer to arrive.
+These bots heal, eat, scavenge and pathfind toward revealed objectives and
+supplies. If a previous run was saved, you'll be offered to load it instead.
+Available difficulties are **easy**, **normal**, and
 **hard**. If unsure, press Enter for the defaults. You can optionally enable a
 cooperative mode where all survivors must escape together. Scenario **1** tasks you with
 finding an antidote and returning to the starting tile. Scenario **2** requires
@@ -75,6 +78,12 @@ Progress across games unlocks simple achievements that persist between runs:
 
 - **Zombie Hunter** – slay 10 zombies in total.
 - **Master Survivor** – complete all four scenarios.
+- **Scenario 1 Complete** – finish the antidote mission.
+- **Scenario 2 Complete** – escape with keys and fuel.
+- **Scenario 3 Complete** – assemble the radio.
+- **Scenario 4 Complete** – survive the final rescue.
+- **Last Breath** – win a scenario with only 1 HP remaining.
+- **Pacifist** – win a scenario without killing any zombies.
 
 Unlocked achievements are written to `campaign_save.json` together with other
 campaign data.
