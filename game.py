@@ -16,7 +16,7 @@ Features
 * Player wins by finding the antidote and returning to the starting tile.
   Victory grants +1 max health for the next run, saved to disk.
 * Hunger mechanic – eat supplies to avoid starving each round.
-* Simple crafting allows turning supplies into medkits or noisy
+* Simple crafting allows turning supplies into medkits, traps or noisy
   molotov cocktails that burn adjacent zombies.
 * Loud actions leave behind noise tokens that can draw zombies at the
   end of each round, mirroring board-game noise markers.
@@ -27,7 +27,8 @@ Features
   results in a scuffle and health loss.
 * Survivors may brawl with each other, but fights are risky and attract
   additional zombies through noise tokens.
-* Hidden traps may injure careless survivors or destroy wandering zombies.
+* Hidden traps may injure careless survivors or destroy wandering zombies,
+  and survivors can set their own snares.
 
 The code is intentionally compact and uses only the Python standard
 library so it can run in any environment with Python 3.12 or newer.
@@ -101,6 +102,7 @@ MEDKIT_CRAFT_COST = 3
 MOLOTOV_SYMBOL = "L"
 MOLOTOV_SUPPLY_COST = 1
 MOLOTOV_NOISE_ZOMBIE_CHANCE = 0.6
+TRAP_CRAFT_COST = 2
 
 # Trap settings
 TRAP_SYMBOL = "!"
@@ -1174,10 +1176,10 @@ class Game:
         return True
 
     def craft_item(self) -> bool:
-        """Craft a medkit or molotov using supplies (and fuel)."""
+        """Craft a medkit, molotov or trap using supplies (and fuel)."""
         choice = input(
-            "Craft [m]edkit (cost {0} supplies) or [l]molotov (cost {1} supply + fuel): ".format(
-                MEDKIT_CRAFT_COST, MOLOTOV_SUPPLY_COST
+            "Craft [m]edkit (cost {0} supplies), [l]molotov (cost {1} supply + fuel) or [t]rap (cost {2} supplies): ".format(
+                MEDKIT_CRAFT_COST, MOLOTOV_SUPPLY_COST, TRAP_CRAFT_COST
             )
         ).strip().lower()
         if choice == "m":
@@ -1202,6 +1204,18 @@ class Game:
                 print("You assemble a molotov cocktail.")
                 return True
             print("You lack the materials to craft a molotov.")
+        elif choice == "t":
+            pos = (self.player.x, self.player.y)
+            if self.player.supplies >= TRAP_CRAFT_COST:
+                if pos in self.trap_positions:
+                    print("There's already a trap here.")
+                else:
+                    self.player.supplies -= TRAP_CRAFT_COST
+                    self.trap_positions.add(pos)
+                    print("You rig a crude trap.")
+                    return True
+            else:
+                print("Not enough supplies to craft a trap.")
         return False
 
     def throw_molotov(self) -> bool:
