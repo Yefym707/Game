@@ -139,10 +139,12 @@ ROLE_DEFS = {
     "engineer": "Cheaper barricades and crafted gear",
 }
 
-# End-of-round event deck configuration. The game now draws from a finite
-# deck of event cards so the same event will not repeat until the deck is
-# exhausted and reshuffled, mimicking the feel of a physical board game.
-EVENT_CARD_COUNTS = {
+# End-of-round event and loot deck configuration is now loaded from an
+# external JSON file to ease modding. Defaults are provided here as
+# fallbacks if the file is missing or malformed.
+DECK_CONFIG_FILE = "decks.json"
+
+DEFAULT_EVENT_CARD_COUNTS = {
     "nothing": 3,
     "heal": 1,
     "supply": 1,
@@ -153,17 +155,35 @@ EVENT_CARD_COUNTS = {
     "rain": 1,
     "fog": 1,
     "firebomb": 1,
+    "blizzard": 1,
 }
 
-# Scavenge loot deck configuration used when searching ordinary tiles. Cards
-# are drawn without replacement to emulate a board game's finite loot supply.
-LOOT_CARD_COUNTS = {
+DEFAULT_LOOT_CARD_COUNTS = {
     "supply": 8,
     "medkit": 4,
     "weapon": 2,
     "flashlight": 1,
     "nothing": 10,
 }
+
+
+def load_deck_config(path: str) -> tuple[dict[str, int], dict[str, int]]:
+    """Load event and loot deck counts from *path* if it exists."""
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        events = {k: int(v) for k, v in data.get("events", {}).items()}
+        loot = {k: int(v) for k, v in data.get("loot", {}).items()}
+        if not events:
+            events = DEFAULT_EVENT_CARD_COUNTS.copy()
+        if not loot:
+            loot = DEFAULT_LOOT_CARD_COUNTS.copy()
+        return events, loot
+    except (OSError, ValueError):
+        return DEFAULT_EVENT_CARD_COUNTS.copy(), DEFAULT_LOOT_CARD_COUNTS.copy()
+
+
+EVENT_CARD_COUNTS, LOOT_CARD_COUNTS = load_deck_config(DECK_CONFIG_FILE)
 
 # Day/night cycle settings
 DAY_LENGTH = 3  # rounds of daylight
@@ -425,6 +445,7 @@ class Game:
         self.barricade_positions: Set[Tuple[int, int]] = set()
         self.noise_markers: List[Tuple[int, int, float, int]] = []
         self.noise_dampener_turns = 0
+        self.visibility_penalty_turns = 0
         self.revealed: Set[Tuple[int, int]] = set()
         self.spawn_zombies(settings["starting_zombies"] + extra_players)
         self.spawn_pharmacies(PHARMACY_COUNT)
@@ -517,6 +538,7 @@ class Game:
             "loot_deck": list(self.loot_deck),
             "noise_markers": [list(n) for n in self.noise_markers],
             "noise_dampener_turns": self.noise_dampener_turns,
+            "visibility_penalty_turns": self.visibility_penalty_turns,
             "xp_gained": self.xp_gained,
             "zombie_spawn_chance": self.zombie_spawn_chance,
             "base_zombie_spawn_chance": self.base_zombie_spawn_chance,
@@ -600,6 +622,7 @@ class Game:
             for n in data.get("noise_markers", [])
         ]
         game.noise_dampener_turns = data.get("noise_dampener_turns", 0)
+        game.visibility_penalty_turns = data.get("visibility_penalty_turns", 0)
         game.zombie_spawn_chance = data.get("zombie_spawn_chance", game.zombie_spawn_chance)
         game.base_zombie_spawn_chance = data.get(
             "base_zombie_spawn_chance", game.zombie_spawn_chance
@@ -647,6 +670,8 @@ class Game:
                 radius = max(radius, REVEAL_RADIUS)
             else:
                 radius = max(0, radius - NIGHT_REVEAL_PENALTY)
+        if self.visibility_penalty_turns > 0:
+            radius = max(0, radius - 1)
         for dx in range(-radius, radius + 1):
             for dy in range(-radius, radius + 1):
                 nx, ny = x + dx, y + dy
@@ -1700,6 +1725,8 @@ class Game:
         self.noise_markers = remaining
         if self.noise_dampener_turns > 0:
             self.noise_dampener_turns -= 1
+        if self.visibility_penalty_turns > 0:
+            self.visibility_penalty_turns -= 1
 
     def random_event(self) -> None:
         """Trigger an end-of-round event by drawing from the event deck."""
@@ -1765,6 +1792,13 @@ class Game:
         elif event == "fog":
             self.reveal_random_tiles(5)
             print("A gust of wind lifts the fog, revealing more of the area.")
+        elif event == "blizzard":
+            self.actions_per_turn = max(1, ACTIONS_PER_TURN - 1)
+            self.noise_dampener_turns = max(self.noise_dampener_turns, 1)
+            self.visibility_penalty_turns = 1
+            print(
+                "A blizzard howls! Next round you have one fewer action and reduced visibility."
+            )
         elif event == "firebomb":
             given = False
             for p in self.players:

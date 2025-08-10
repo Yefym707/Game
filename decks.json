@@ -1,0 +1,22 @@
+{
+  "events": {
+    "nothing": 3,
+    "heal": 1,
+    "supply": 1,
+    "horde": 1,
+    "storm": 1,
+    "adrenaline": 1,
+    "survivors": 1,
+    "rain": 1,
+    "fog": 1,
+    "firebomb": 1,
+    "blizzard": 1
+  },
+  "loot": {
+    "supply": 8,
+    "medkit": 4,
+    "weapon": 2,
+    "flashlight": 1,
+    "nothing": 10
+  }
+}
