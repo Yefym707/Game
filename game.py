@@ -32,6 +32,8 @@ Features
   recover useful supplies.
 * Rain events dampen noise, making zombies less likely to spawn from noise
   tokens in the following round.
+* Zombie bites may infect survivors; without an antidote they will turn
+  after a few rounds.
 
 The code is intentionally compact and uses only the Python standard
 library so it can run in any environment with Python 3.12 or newer.
@@ -117,6 +119,10 @@ REVEAL_TRAP_CHANCE = 0.03
 
 # PvP stealing settings
 STEAL_SUCCESS_CHANCE = 0.5
+
+# Infection settings
+INFECTION_CHANCE = 0.3  # chance a zombie bite causes infection
+INFECTION_TURNS = 5  # turns until an infected survivor turns
 
 # PvP attack settings
 PVP_ATTACK_HIT_CHANCE = 0.5
@@ -323,6 +329,7 @@ class Player(Entity):
         self.has_fuel: bool = False
         self.has_weapon: bool = False
         self.has_flashlight: bool = False
+        self.infection_turns: int = 0
 
     @property
     def inventory_size(self) -> int:
@@ -473,6 +480,7 @@ class Game:
                     "has_fuel": p.has_fuel,
                     "has_weapon": p.has_weapon,
                     "has_flashlight": p.has_flashlight,
+                    "infection_turns": p.infection_turns,
                     "symbol": p.symbol,
                     "is_ai": getattr(p, "is_ai", False),
                     "role": p.role,
@@ -542,6 +550,7 @@ class Game:
             p.has_fuel = pdata["has_fuel"]
             p.has_weapon = pdata["has_weapon"]
             p.has_flashlight = pdata.get("has_flashlight", False)
+            p.infection_turns = pdata.get("infection_turns", 0)
             p.symbol = pdata.get("symbol", p.symbol)
             p.is_ai = pdata.get("is_ai", False)
             p.role = pdata.get("role", "fighter")
@@ -938,7 +947,7 @@ class Game:
                 board[z.y][z.x] = z.symbol
 
         print(
-            "Health: {}    Hunger: {}/{}    Medkits: {}    Supplies: {}    Molotovs: {}    Inventory: {}/{}    Tokens: {}    Weapon: {}    Flashlight: {}    Level: {}    XP: {}".format(
+            "Health: {}    Hunger: {}/{}    Medkits: {}    Supplies: {}    Molotovs: {}    Inventory: {}/{}    Tokens: {}    Weapon: {}    Flashlight: {}    Infection: {}    Level: {}    XP: {}".format(
                 self.player.health,
                 self.player.hunger,
                 self.player.max_hunger,
@@ -950,6 +959,7 @@ class Game:
                 self.double_move_tokens,
                 "Y" if self.player.has_weapon else "N",
                 "Y" if self.player.has_flashlight else "N",
+                self.player.infection_turns if self.player.infection_turns > 0 else "-",
                 self.level,
                 self.campaign.get("xp", 0) + self.xp_gained,
             )
@@ -969,6 +979,7 @@ class Game:
             "  F - attack adjacent zombie\n"
             "  G - scavenge current tile\n"
             "  H - use a medkit\n"
+            "  V - use an antidote\n"
             "  E - eat supplies\n"
             "  B - build a barricade\n"
             "  U - disarm a trap\n"
@@ -1242,6 +1253,19 @@ class Game:
             print(f"You use a medkit and recover {heal} health.")
             return True
         return False
+
+    def use_antidote(self) -> bool:
+        """Cure infection using the carried antidote."""
+        if not self.player.has_antidote:
+            print("You don't have an antidote.")
+            return False
+        if self.player.infection_turns <= 0:
+            print("You aren't infected.")
+            return False
+        self.player.has_antidote = False
+        self.player.infection_turns = 0
+        print("You inject the antidote and purge the infection.")
+        return True
 
     def eat_food(self) -> bool:
         if self.player.supplies > 0 and self.player.hunger < self.player.max_hunger:
@@ -1603,6 +1627,9 @@ class Game:
                 if z.x == p.x and z.y == p.y:
                     p.health -= 1
                     print(f"Player {p.symbol} is bitten! -1 health")
+                    if p.health > 0 and p.infection_turns == 0 and random.random() < INFECTION_CHANCE:
+                        p.infection_turns = INFECTION_TURNS
+                        print(f"Player {p.symbol} is infected!")
 
     def spawn_random_zombie(self) -> None:
         if random.random() < self.zombie_spawn_chance:
@@ -1765,6 +1792,12 @@ class Game:
             if p.hunger == 0:
                 p.health -= HUNGER_STARVE_DAMAGE
                 print(f"Player {p.symbol} is starving! -1 health")
+            if p.infection_turns > 0:
+                p.infection_turns -= 1
+                if p.infection_turns == 0:
+                    print(f"Player {p.symbol} succumbs to infection!")
+                    self.handle_player_death(p)
+                    continue
             if p.health <= 0:
                 self.handle_player_death(p)
 
@@ -1841,6 +1874,11 @@ class Game:
         actions_left = self.actions_per_turn
         while actions_left > 0 and player.health > 0:
             self.draw_board()
+            if player.infection_turns > 0 and player.has_antidote:
+                print(f"Player {player.symbol} uses an antidote.")
+                self.use_antidote()
+                actions_left -= 1
+                continue
             # Heal if badly hurt
             if player.health <= player.max_health // 2 and player.medkits > 0:
                 print(f"Player {player.symbol} uses a medkit.")
@@ -1966,7 +2004,7 @@ class Game:
         while actions_left > 0 and self.player.health > 0:
             self.draw_board()
             cmd = input(
-                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, e=eat, b=barricade, u=disarm, o=scout, c=craft, m=molotov, r=steal, k=fight, x=trade, t=drop, z=rest, p=pass, q=save, ?=help]: "
+                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, v=antidote, e=eat, b=barricade, u=disarm, o=scout, c=craft, m=molotov, r=steal, k=fight, x=trade, t=drop, z=rest, p=pass, q=save, ?=help]: "
             ).strip().lower()
 
             if cmd == "?":
@@ -2002,6 +2040,11 @@ class Game:
                     actions_left -= 1
                 else:
                     print("No medkit to use!")
+            elif cmd == "v":
+                if self.use_antidote():
+                    actions_left -= 1
+                else:
+                    print("No antidote to use or not infected!")
             elif cmd == "e":
                 if self.eat_food():
                     actions_left -= 1
