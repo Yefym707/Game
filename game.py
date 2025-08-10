@@ -10,12 +10,14 @@ Features
 * Each player has two actions per turn: move, attack, scavenge or pass.
 * Melee combat with a chance to hit. Failed attacks cost health.
 * Random scavenge system for finding additional supplies and food.
-* Zombies pursue the player and new ones may spawn each round.
+* Zombies pursue the player and new ones may spawn each round. Counts scale
+  with how many survivors are in play.
 * Player wins by finding the antidote and returning to the starting tile.
   Victory grants +1 max health for the next run, saved to disk.
 * Hunger mechanic – eat supplies to avoid starving each round.
 * Simple crafting allows turning supplies into medkits or noisy
   molotov cocktails that burn adjacent zombies.
+* Achievements track scenario victories and feats across campaigns.
 
 The code is intentionally compact and uses only the Python standard
 library so it can run in any environment with Python 3.12 or newer.
@@ -100,6 +102,30 @@ ACHIEVEMENT_DEFS = {
         "check": lambda data: all(
             scen in data.get("completed_scenarios", []) for scen in (1, 2, 3, 4)
         ),
+    },
+    "scenario_1": {
+        "desc": "Complete scenario 1",
+        "check": lambda data: 1 in data.get("completed_scenarios", []),
+    },
+    "scenario_2": {
+        "desc": "Complete scenario 2",
+        "check": lambda data: 2 in data.get("completed_scenarios", []),
+    },
+    "scenario_3": {
+        "desc": "Complete scenario 3",
+        "check": lambda data: 3 in data.get("completed_scenarios", []),
+    },
+    "scenario_4": {
+        "desc": "Complete scenario 4",
+        "check": lambda data: 4 in data.get("completed_scenarios", []),
+    },
+    "last_breath": {
+        "desc": "Win a scenario with only 1 HP remaining",
+        "check": lambda data: data.get("last_victory_lowest_hp") == 1,
+    },
+    "pacifist": {
+        "desc": "Win a scenario without killing any zombies",
+        "check": lambda data: data.get("last_victory_zombies_killed", 1) == 0,
     },
 }
 
@@ -220,13 +246,16 @@ class Game:
         self.campaign = load_campaign()
         self.double_move_tokens = self.campaign.get("double_move_tokens", 0)
         self.has_signal_device = bool(self.campaign.get("signal_device"))
-        self.zombie_spawn_chance = settings["zombie_spawn_chance"]
+        self.total_players = max(1, num_players)
+        extra_players = max(0, self.total_players - 1)
+        self.zombie_spawn_chance = settings["zombie_spawn_chance"] + 0.05 * extra_players
         self.turn_limit = settings["turn_limit"]
+        self.evacuation_turns = EVACUATION_TURNS + extra_players
         starting_health = settings["starting_health"] + self.campaign.get("hp_bonus", 0)
         center = self.board_size // 2
         offsets = [(0, 0), (0, 1), (1, 0), (-1, 0), (0, -1)]
         self.players: List[Player] = []
-        total_players = max(1, num_players)
+        total_players = self.total_players
         num_ai = max(0, min(num_ai, total_players - 1))
         for i in range(total_players):
             dx, dy = offsets[i % len(offsets)]
@@ -253,7 +282,7 @@ class Game:
         self.armory_positions: Set[Tuple[int, int]] = set()
         self.barricade_positions: Set[Tuple[int, int]] = set()
         self.revealed: Set[Tuple[int, int]] = set()
-        self.spawn_zombies(settings["starting_zombies"])
+        self.spawn_zombies(settings["starting_zombies"] + extra_players)
         self.spawn_pharmacies(PHARMACY_COUNT)
         self.spawn_armories(ARMORY_COUNT)
         self.spawn_supplies(STARTING_SUPPLIES)
@@ -275,6 +304,7 @@ class Game:
         self.actions_per_turn: int = ACTIONS_PER_TURN
         self.keep_save = False
         self.zombies_killed: int = 0
+        self.lowest_survivor_hp: Optional[int] = None
 
     def is_player_at(self, x: int, y: int) -> bool:
         """Return True if any player occupies (x, y)."""
@@ -809,14 +839,14 @@ class Game:
             if pos == self.start_pos:
                 if self.has_signal_device:
                     self.called_rescue = True
-                    self.rescue_timer = EVACUATION_TURNS
+                    self.rescue_timer = self.evacuation_turns
                     print("You radio for rescue! Hold out!")
                 else:
                     print("You need a radio to signal for help.")
                 return
             if self.radio_tower_pos and pos == self.radio_tower_pos:
                 self.called_rescue = True
-                self.rescue_timer = EVACUATION_TURNS
+                self.rescue_timer = self.evacuation_turns
                 print("You activate the tower and call for rescue! Hold out!")
                 return
 
@@ -1430,6 +1460,7 @@ class Game:
                     break
             if winner:
                 self.player = winner
+                self.lowest_survivor_hp = min(p.health for p in self.players if p.health > 0)
                 if self.scenario == 1:
                     if self.cooperative:
                         print("The survivors return with the antidote and escape together. You win!")
@@ -1473,6 +1504,9 @@ class Game:
             self.campaign["double_move_tokens"] = self.double_move_tokens
             self.campaign["signal_device"] = 1 if self.has_signal_device else 0
             self.campaign["zombies_killed"] = self.campaign.get("zombies_killed", 0) + self.zombies_killed
+            if self.lowest_survivor_hp is not None:
+                self.campaign["last_victory_lowest_hp"] = self.lowest_survivor_hp
+                self.campaign["last_victory_zombies_killed"] = self.zombies_killed
             self.check_achievements()
             save_campaign(self.campaign)
             if not self.keep_save and os.path.exists(SAVE_FILE):
