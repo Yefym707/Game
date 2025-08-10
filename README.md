@@ -5,6 +5,8 @@ The player roams a fog-covered 10×10 grid searching for objectives while
 avoiding zombies. Inventory space is limited so choose carefully what to carry.
 Each turn your hunger drops – eat supplies to keep from starving. Zombie
 numbers scale with the size of your group to keep larger teams on edge.
+Scavenging pulls from a finite loot deck so items won't repeat until the deck
+is reshuffled, reinforcing the tabletop feel.
 
 ## Requirements
 - Python 3.12+

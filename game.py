@@ -9,7 +9,7 @@ Features
 * 10x10 board with up to four players, zombies and supply tokens.
 * Each player has two actions per turn: move, attack, scavenge or pass.
 * Melee combat with a chance to hit. Failed attacks cost health.
-* Random scavenge system for finding additional supplies and food.
+* Scavenging draws from a finite loot deck to mimic board-game card draws.
 * Zombies pursue the player and new ones may spawn each round. Counts scale
   with how many survivors are in play.
 * Player wins by finding the antidote and returning to the starting tile.
@@ -44,9 +44,7 @@ INVENTORY_LIMIT = 8
 ATTACK_HIT_CHANCE = 0.7
 SCAVENGE_FIND_CHANCE = 0.5
 ZOMBIE_SPAWN_CHANCE = 0.3
-MEDKIT_FIND_CHANCE = 0.2
 MEDKIT_HEAL = 3
-WEAPON_FIND_CHANCE = 0.1
 WEAPON_HIT_CHANCE = 0.9
 TURN_LIMIT = 20
 REVEAL_RADIUS = 1
@@ -107,6 +105,15 @@ EVENT_CARD_COUNTS = {
     "survivors": 1,
     "fog": 1,
     "firebomb": 1,
+}
+
+# Scavenge loot deck configuration used when searching ordinary tiles. Cards
+# are drawn without replacement to emulate a board game's finite loot supply.
+LOOT_CARD_COUNTS = {
+    "supply": 8,
+    "medkit": 4,
+    "weapon": 2,
+    "nothing": 10,
 }
 
 # Simple achievement definitions evaluated against the persistent campaign
@@ -181,6 +188,15 @@ def create_event_deck() -> deque[str]:
     """Return a shuffled deck of event cards based on EVENT_CARD_COUNTS."""
     deck: List[str] = []
     for name, count in EVENT_CARD_COUNTS.items():
+        deck.extend([name] * count)
+    random.shuffle(deck)
+    return deque(deck)
+
+
+def create_loot_deck() -> deque[str]:
+    """Return a shuffled deck of loot cards based on LOOT_CARD_COUNTS."""
+    deck: List[str] = []
+    for name, count in LOOT_CARD_COUNTS.items():
         deck.extend([name] * count)
     random.shuffle(deck)
     return deque(deck)
@@ -335,6 +351,7 @@ class Game:
         self.zombies_killed: int = 0
         self.lowest_survivor_hp: Optional[int] = None
         self.event_deck: deque[str] = create_event_deck()
+        self.loot_deck: deque[str] = create_loot_deck()
 
     def is_player_at(self, x: int, y: int) -> bool:
         """Return True if any player occupies (x, y)."""
@@ -393,6 +410,7 @@ class Game:
             "zombies_killed": self.zombies_killed,
             "cooperative": self.cooperative,
             "event_deck": list(self.event_deck),
+            "loot_deck": list(self.loot_deck),
         }
 
     @classmethod
@@ -453,6 +471,7 @@ class Game:
         game.actions_per_turn = data.get("actions_per_turn", ACTIONS_PER_TURN)
         game.zombies_killed = data.get("zombies_killed", 0)
         game.event_deck = deque(data.get("event_deck", []))
+        game.loot_deck = deque(data.get("loot_deck", []))
         return game
 
     def save_game(self, filename: str = SAVE_FILE) -> None:
@@ -918,30 +937,28 @@ class Game:
                 print("Your pack is full. You leave the supply behind.")
             return
 
-        weapon_found = False
-        if not self.player.has_weapon and random.random() < WEAPON_FIND_CHANCE:
-            weapon_found = True
-
-        if self.player.inventory_size >= INVENTORY_LIMIT and not weapon_found:
-            print("Your pack is full. You can't carry more.")
-            return
-
-        found = False
-        if weapon_found:
-            self.player.has_weapon = True
-            found = True
-            print("You find a weapon!")
-
-        if self.player.inventory_size < INVENTORY_LIMIT:
-            if random.random() < SCAVENGE_FIND_CHANCE:
+        if not self.loot_deck:
+            self.loot_deck = create_loot_deck()
+        card = self.loot_deck.popleft()
+        if card == "weapon":
+            if not self.player.has_weapon:
+                self.player.has_weapon = True
+                print("You find a weapon!")
+            else:
+                print("You find a weapon but already have one.")
+        elif card == "supply":
+            if self.player.inventory_size < INVENTORY_LIMIT:
                 self.player.supplies += 1
-                found = True
                 print("You find a supply!")
-            if random.random() < MEDKIT_FIND_CHANCE:
+            else:
+                print("You find a supply but your pack is full.")
+        elif card == "medkit":
+            if self.player.inventory_size < INVENTORY_LIMIT:
                 self.player.medkits += 1
-                found = True
                 print("You find a medkit!")
-        if not found:
+            else:
+                print("You find a medkit but your pack is full.")
+        else:
             print("You find nothing of use.")
 
     def use_medkit(self) -> bool:
