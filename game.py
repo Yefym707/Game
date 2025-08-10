@@ -7,7 +7,7 @@ safety.
 Features
 --------
 * 10x10 board with up to four players, zombies and supply tokens.
-* Each player has two actions per turn: move, attack, scavenge or pass.
+* Each player has two actions per turn: move, scout, attack, scavenge or pass.
 * Melee combat with a chance to hit. Failed attacks cost health.
 * Scavenging draws from a finite loot deck to mimic board-game card draws.
 * Zombies pursue the player and new ones may spawn each round. Counts scale
@@ -72,6 +72,7 @@ DOUBLE_MOVE_REWARD = 5
 WEAPON_NOISE_ZOMBIE_CHANCE = 0.3
 VEHICLE_NOISE_ZOMBIE_CHANCE = 0.5
 NOISE_DURATION = 2  # rounds noise tokens persist
+SCOUT_RADIUS = 2  # tiles revealed when scouting
 
 # Special tile settings
 PHARMACY_SYMBOL = "M"
@@ -500,10 +501,10 @@ class Game:
             data = json.load(fh)
         return cls.from_dict(data)
 
-    def reveal_area(self, x: int, y: int) -> None:
-        """Reveal tiles around (x, y) and trigger discovery events."""
-        for dx in range(-REVEAL_RADIUS, REVEAL_RADIUS + 1):
-            for dy in range(-REVEAL_RADIUS, REVEAL_RADIUS + 1):
+    def reveal_area(self, x: int, y: int, radius: int = REVEAL_RADIUS) -> None:
+        """Reveal tiles around ``(x, y)`` within ``radius``."""
+        for dx in range(-radius, radius + 1):
+            for dy in range(-radius, radius + 1):
                 nx, ny = x + dx, y + dy
                 if 0 <= nx < self.board_size and 0 <= ny < self.board_size:
                     if (nx, ny) not in self.revealed:
@@ -1008,6 +1009,22 @@ class Game:
             return True
         print("Not enough supplies to build a barricade.")
         return False
+
+    def scout(self) -> bool:
+        """Reveal tiles in an adjacent direction without moving."""
+        direction = input("Scout direction [w/a/s/d]: ").strip().lower()
+        offsets = {"w": (-1, 0), "a": (0, -1), "s": (1, 0), "d": (0, 1)}
+        if direction not in offsets:
+            print("Invalid direction.")
+            return False
+        dx, dy = offsets[direction]
+        nx, ny = self.player.x + dx, self.player.y + dy
+        if not (0 <= nx < self.board_size and 0 <= ny < self.board_size):
+            print("You can't scout past the edge of the board.")
+            return False
+        self.reveal_area(nx, ny, radius=SCOUT_RADIUS)
+        print("You scout ahead, revealing more of the surroundings.")
+        return True
 
     def craft_item(self) -> bool:
         """Craft a medkit or molotov using supplies (and fuel)."""
@@ -1532,7 +1549,7 @@ class Game:
         while actions_left > 0 and self.player.health > 0:
             self.draw_board()
             cmd = input(
-                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, e=eat, b=barricade, c=craft, m=molotov, r=steal, x=trade, t=drop, p=pass, q=save]: "
+                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, e=eat, b=barricade, o=scout, c=craft, m=molotov, r=steal, x=trade, t=drop, p=pass, q=save]: "
             ).strip().lower()
 
             if cmd in {"w", "a", "s", "d"}:
@@ -1571,6 +1588,9 @@ class Game:
                     print("Nothing to eat!")
             elif cmd == "b":
                 if self.build_barricade():
+                    actions_left -= 1
+            elif cmd == "o":
+                if self.scout():
                     actions_left -= 1
             elif cmd == "c":
                 if self.craft_item():

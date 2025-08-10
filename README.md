@@ -3,6 +3,8 @@
 This repository contains a small prototype of a turn-based survival board game.
 The player roams a fog-covered 10×10 grid searching for objectives while
 avoiding zombies. Inventory space is limited so choose carefully what to carry.
+Players may also spend an action to scout an adjacent tile, peeking through the
+fog before committing to a move.
 Each turn your hunger drops – eat supplies to keep from starving. Zombie
 numbers scale with the size of your group to keep larger teams on edge.
 Scavenging pulls from a finite loot deck so items won't repeat until the deck
@@ -49,6 +51,7 @@ During your turn you have two actions. Enter:
 - `H` – use a found medkit to recover health.
 - `E` – consume one supply to restore hunger.
 - `B` – spend two supplies to barricade the current tile, blocking zombies once.
+- `O` – scout an adjacent tile to reveal more of the map.
 - `C` – craft items (3 supplies → medkit, supply + fuel → molotov).
 - `M` – throw a molotov to burn adjacent zombies.
 - `R` – attempt to steal an item from another player sharing your tile (50% success, -1 HP on failure).
