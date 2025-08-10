@@ -71,6 +71,7 @@ EVACUATION_TURNS = 5
 DOUBLE_MOVE_REWARD = 5
 WEAPON_NOISE_ZOMBIE_CHANCE = 0.3
 VEHICLE_NOISE_ZOMBIE_CHANCE = 0.5
+NOISE_DURATION = 2  # rounds noise tokens persist
 
 # Special tile settings
 PHARMACY_SYMBOL = "M"
@@ -328,7 +329,7 @@ class Game:
         self.pharmacy_positions: Set[Tuple[int, int]] = set()
         self.armory_positions: Set[Tuple[int, int]] = set()
         self.barricade_positions: Set[Tuple[int, int]] = set()
-        self.noise_markers: List[Tuple[int, int, float]] = []
+        self.noise_markers: List[Tuple[int, int, float, int]] = []
         self.revealed: Set[Tuple[int, int]] = set()
         self.spawn_zombies(settings["starting_zombies"] + extra_players)
         self.spawn_pharmacies(PHARMACY_COUNT)
@@ -476,7 +477,15 @@ class Game:
         game.zombies_killed = data.get("zombies_killed", 0)
         game.event_deck = deque(data.get("event_deck", []))
         game.loot_deck = deque(data.get("loot_deck", []))
-        game.noise_markers = [tuple(n) for n in data.get("noise_markers", [])]
+        game.noise_markers = [
+            (
+                n[0],
+                n[1],
+                n[2],
+                n[3] if len(n) > 3 else NOISE_DURATION,
+            )
+            for n in data.get("noise_markers", [])
+        ]
         return game
 
     def save_game(self, filename: str = SAVE_FILE) -> None:
@@ -762,7 +771,7 @@ class Game:
         for x, y in self.molotov_positions:
             if (x, y) in self.revealed and not self.is_player_at(x, y):
                 board[y][x] = MOLOTOV_SYMBOL
-        for x, y, _ in self.noise_markers:
+        for x, y, _, _ in self.noise_markers:
             if (x, y) in self.revealed and not self.is_player_at(x, y):
                 board[y][x] = "!"
         for z in self.zombies:
@@ -783,8 +792,10 @@ class Game:
                 "Y" if self.player.has_weapon else "N",
             )
         )
-        for row in board:
-            print(" ".join(row))
+        header = "   " + " ".join(str(i) for i in range(self.board_size))
+        print(header)
+        for idx, row in enumerate(board):
+            print(f"{idx:2d} " + " ".join(row))
 
     # ------------------------------------------------------------------
     # Player actions
@@ -1274,13 +1285,16 @@ class Game:
 
     def add_noise(self, x: int, y: int, chance: float) -> None:
         """Record a noisy action that may attract zombies later."""
-        self.noise_markers.append((x, y, chance))
+        self.noise_markers.append((x, y, chance, NOISE_DURATION))
 
     def resolve_noise(self) -> None:
         """Spawn zombies for all accumulated noise markers."""
-        for x, y, chance in self.noise_markers:
-            self.spawn_zombie_near(x, y, chance)
-        self.noise_markers.clear()
+        remaining: List[Tuple[int, int, float, int]] = []
+        for x, y, chance, turns in self.noise_markers:
+            spawned = self.spawn_zombie_near(x, y, chance)
+            if not spawned and turns > 1:
+                remaining.append((x, y, chance, turns - 1))
+        self.noise_markers = remaining
 
     def random_event(self) -> None:
         """Trigger an end-of-round event by drawing from the event deck."""
