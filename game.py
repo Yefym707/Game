@@ -27,6 +27,7 @@ Features
   results in a scuffle and health loss.
 * Survivors may brawl with each other, but fights are risky and attract
   additional zombies through noise tokens.
+* Hidden traps may injure careless survivors or destroy wandering zombies.
 
 The code is intentionally compact and uses only the Python standard
 library so it can run in any environment with Python 3.12 or newer.
@@ -100,6 +101,11 @@ MEDKIT_CRAFT_COST = 3
 MOLOTOV_SYMBOL = "L"
 MOLOTOV_SUPPLY_COST = 1
 MOLOTOV_NOISE_ZOMBIE_CHANCE = 0.6
+
+# Trap settings
+TRAP_SYMBOL = "!"
+TRAP_DAMAGE = 2
+REVEAL_TRAP_CHANCE = 0.03
 
 # PvP stealing settings
 STEAL_SUCCESS_CHANCE = 0.5
@@ -357,6 +363,7 @@ class Game:
         self.medkit_positions: Set[Tuple[int, int]] = set()
         self.weapon_positions: Set[Tuple[int, int]] = set()
         self.molotov_positions: Set[Tuple[int, int]] = set()
+        self.trap_positions: Set[Tuple[int, int]] = set()
         self.pharmacy_positions: Set[Tuple[int, int]] = set()
         self.armory_positions: Set[Tuple[int, int]] = set()
         self.barricade_positions: Set[Tuple[int, int]] = set()
@@ -425,6 +432,7 @@ class Game:
             "medkit_positions": list(self.medkit_positions),
             "weapon_positions": list(self.weapon_positions),
             "molotov_positions": list(self.molotov_positions),
+            "trap_positions": list(self.trap_positions),
             "pharmacy_positions": list(self.pharmacy_positions),
             "armory_positions": list(self.armory_positions),
             "barricade_positions": list(self.barricade_positions),
@@ -482,6 +490,7 @@ class Game:
         game.medkit_positions = {tuple(pos) for pos in data.get("medkit_positions", [])}
         game.weapon_positions = {tuple(pos) for pos in data.get("weapon_positions", [])}
         game.molotov_positions = {tuple(pos) for pos in data.get("molotov_positions", [])}
+        game.trap_positions = {tuple(pos) for pos in data.get("trap_positions", [])}
         game.pharmacy_positions = {
             tuple(pos) for pos in data.get("pharmacy_positions", [])
         }
@@ -546,6 +555,7 @@ class Game:
                             and (nx, ny) not in self.medkit_positions
                             and (nx, ny) not in self.weapon_positions
                             and (nx, ny) not in self.molotov_positions
+                            and (nx, ny) not in self.trap_positions
                             and (nx, ny) != self.antidote_pos
                             and (nx, ny) != self.keys_pos
                             and (nx, ny) != self.fuel_pos
@@ -565,6 +575,12 @@ class Game:
                                 self.zombies.append(Zombie(nx, ny))
                                 if (nx, ny) == (x, y):
                                     print("A lurking zombie surprises you!")
+                            elif roll < (
+                                REVEAL_SUPPLY_CHANCE
+                                + REVEAL_ZOMBIE_CHANCE
+                                + REVEAL_TRAP_CHANCE
+                            ):
+                                self.trap_positions.add((nx, ny))
 
     def reveal_random_tiles(self, count: int) -> None:
         """Reveal up to *count* random hidden tiles."""
@@ -593,6 +609,7 @@ class Game:
                     and (x, y) not in self.medkit_positions
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
+                    and (x, y) not in self.trap_positions
                 ):
                     self.zombies.append(Zombie(x, y))
                     break
@@ -608,6 +625,7 @@ class Game:
                     and (x, y) not in self.armory_positions
                     and not self.is_player_at(x, y)
                     and (x, y) not in self.barricade_positions
+                    and (x, y) not in self.trap_positions
                     and (x, y) not in self.medkit_positions
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
@@ -628,6 +646,7 @@ class Game:
                     and (x, y) not in self.armory_positions
                     and not self.is_player_at(x, y)
                     and (x, y) not in self.barricade_positions
+                    and (x, y) not in self.trap_positions
                     and (x, y) not in self.medkit_positions
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
@@ -650,6 +669,7 @@ class Game:
                     and not self.is_player_at(x, y)
                     and (x, y) != self.antidote_pos
                     and (x, y) not in self.barricade_positions
+                    and (x, y) not in self.trap_positions
                     and (x, y) not in self.medkit_positions
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
@@ -667,6 +687,7 @@ class Game:
                 and (x, y) != self.start_pos
                 and not self.is_player_at(x, y)
                 and (x, y) not in self.barricade_positions
+                and (x, y) not in self.trap_positions
                 and (x, y) not in self.medkit_positions
                 and (x, y) not in self.weapon_positions
                 and (x, y) not in self.molotov_positions
@@ -685,6 +706,7 @@ class Game:
                 and (x, y) != self.start_pos
                 and not self.is_player_at(x, y)
                 and (x, y) not in self.barricade_positions
+                and (x, y) not in self.trap_positions
                 and (x, y) not in self.medkit_positions
                 and (x, y) not in self.weapon_positions
                 and (x, y) not in self.molotov_positions
@@ -704,6 +726,7 @@ class Game:
                 and (x, y) != self.keys_pos
                 and not self.is_player_at(x, y)
                 and (x, y) not in self.barricade_positions
+                and (x, y) not in self.trap_positions
                 and (x, y) not in self.medkit_positions
                 and (x, y) not in self.weapon_positions
                 and (x, y) not in self.molotov_positions
@@ -724,6 +747,7 @@ class Game:
                     and (x, y) not in self.radio_positions
                     and not self.is_player_at(x, y)
                     and (x, y) not in self.barricade_positions
+                    and (x, y) not in self.trap_positions
                     and (x, y) not in self.medkit_positions
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
@@ -742,6 +766,7 @@ class Game:
                 and (x, y) != self.start_pos
                 and not self.is_player_at(x, y)
                 and (x, y) not in self.barricade_positions
+                and (x, y) not in self.trap_positions
                 and (x, y) not in self.medkit_positions
                 and (x, y) not in self.weapon_positions
                 and (x, y) not in self.molotov_positions
@@ -804,6 +829,9 @@ class Game:
         for x, y in self.molotov_positions:
             if (x, y) in self.revealed and not self.is_player_at(x, y):
                 board[y][x] = MOLOTOV_SYMBOL
+        for x, y in self.trap_positions:
+            if (x, y) in self.revealed and not self.is_player_at(x, y):
+                board[y][x] = TRAP_SYMBOL
         for x, y, _, turns in self.noise_markers:
             if (x, y) in self.revealed and not self.is_player_at(x, y):
                 board[y][x] = str(turns)
@@ -853,11 +881,19 @@ class Game:
             if 0 <= nx < self.board_size and 0 <= ny < self.board_size:
                 self.player.x, self.player.y = nx, ny
                 self.reveal_area(nx, ny)
+                self.check_for_trap(nx, ny)
             else:
                 self.player.x, self.player.y = original
                 self.reveal_area(*original)
                 return False
         return True
+
+    def check_for_trap(self, x: int, y: int) -> None:
+        """Trigger a trap if the active player steps on one."""
+        if (x, y) in self.trap_positions:
+            self.trap_positions.remove((x, y))
+            self.player.health -= TRAP_DAMAGE
+            print(f"You trigger a trap! -{TRAP_DAMAGE} health")
 
     def attack(self) -> bool:
         # Find adjacent zombie (4-directional)
@@ -1343,6 +1379,12 @@ class Game:
                 self.barricade_positions.remove((nx, ny))
                 print("A zombie claws at a barricade, tearing it down!")
                 continue
+            if (nx, ny) in self.trap_positions:
+                self.trap_positions.remove((nx, ny))
+                self.zombies.remove(z)
+                self.zombies_killed += 1
+                print("A zombie stumbles into a trap and is destroyed!")
+                continue
             if not any((other.x, other.y) == (nx, ny) for other in self.zombies):
                 z.x, z.y = nx, ny
             for p in self.players:
@@ -1370,6 +1412,7 @@ class Game:
                 and (nx, ny) != (x, y)
                 and (nx, ny) not in self.barricade_positions
                 and (nx, ny) not in self.molotov_positions
+                and (nx, ny) not in self.trap_positions
                 and all((z.x, z.y) != (nx, ny) for z in self.zombies)
                 and not self.is_player_at(nx, ny)
             ]
@@ -1396,6 +1439,7 @@ class Game:
             and (nx, ny) not in self.medkit_positions
             and (nx, ny) not in self.weapon_positions
             and (nx, ny) not in self.molotov_positions
+            and (nx, ny) not in self.trap_positions
             and all((z.x, z.y) != (nx, ny) for z in self.zombies)
         ]
         return random.choice(candidates) if candidates else None
@@ -1543,6 +1587,7 @@ class Game:
                     and 0 <= ny < self.board_size
                     and (nx, ny) not in visited
                     and (nx, ny) not in self.barricade_positions
+                    and (nx, ny) not in self.trap_positions
                     and all((z.x, z.y) != (nx, ny) for z in self.zombies)
                 ):
                     visited.add((nx, ny))
