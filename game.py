@@ -403,12 +403,20 @@ class Game:
         self.cooperative = cooperative
         self.campaign = load_campaign()
         self.level = self.campaign.get("level", 1)
+        # Small consolation stash awarded after failed runs
+        bonus_supplies = self.campaign.pop("supply_bonus", 0)
+        if bonus_supplies:
+            save_campaign(self.campaign)
         self.xp_gained = 0
         self.double_move_tokens = self.campaign.get("double_move_tokens", 0)
         self.has_signal_device = bool(self.campaign.get("signal_device"))
         self.total_players = max(1, min(MAX_PLAYERS, num_players))
         extra_players = max(0, self.total_players - 1)
-        self.zombie_spawn_chance = settings["zombie_spawn_chance"] + 0.05 * extra_players
+        # Scale zombie spawns with campaign level to keep tension high
+        level_bonus = 0.02 * (self.level - 1)
+        self.zombie_spawn_chance = (
+            settings["zombie_spawn_chance"] + 0.05 * extra_players + level_bonus
+        )
         self.base_zombie_spawn_chance = self.zombie_spawn_chance
         self.reveal_radius = REVEAL_RADIUS
         self.is_night = False
@@ -440,6 +448,9 @@ class Game:
                     role,
                 )
             )
+        if bonus_supplies:
+            for p in self.players:
+                p.supplies = min(INVENTORY_LIMIT, p.supplies + bonus_supplies)
         self.player: Player = self.players[0]
         self.start_pos = (center, center)
         self.antidote_pos: Optional[Tuple[int, int]] = None
@@ -2464,6 +2475,8 @@ class Game:
                     completed.append(self.scenario)
             elif not self.players:
                 print("No survivors escape the outbreak...")
+                self.campaign["supply_bonus"] = self.campaign.get("supply_bonus", 0) + 1
+                print("A stash of supplies is set aside to help in the next run.")
         except (KeyboardInterrupt, EOFError):
             print("\nThanks for playing!")
         finally:
