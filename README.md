@@ -68,6 +68,7 @@ During your turn you have two actions. Enter:
 - `Z` – rest to recover 1 hunger or heal 1 HP if already well fed.
 - `P` – pass the remaining actions.
 - `Q` – save the game and quit.
+- `?` – show a quick reference of controls and board symbols.
 
 Players are shown on the board as numbers `1`–`4`.
 

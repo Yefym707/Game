@@ -919,6 +919,37 @@ class Game:
         for idx, row in enumerate(board):
             print(f"{idx:2d} " + " ".join(row))
 
+    def show_help(self) -> None:
+        """Display available controls and board legend."""
+        print(
+            "Controls:\n"
+            "  W/A/S/D - move\n"
+            "  F - attack adjacent zombie\n"
+            "  G - scavenge current tile\n"
+            "  H - use a medkit\n"
+            "  E - eat supplies\n"
+            "  B - build a barricade\n"
+            "  O - scout without moving\n"
+            "  C - craft items\n"
+            "  M - throw a molotov\n"
+            "  R - steal from another player\n"
+            "  K - attack another player\n"
+            "  X - trade with another player\n"
+            "  T - drop an item\n"
+            "  Z - rest\n"
+            "  P - pass\n"
+            "  Q - save and quit\n"
+            "  ? - show this help\n"
+        )
+        print(
+            "Legend:\n"
+            "  S start    . explored    ? unexplored\n"
+            "  1-4 players    Z zombie    R supply    H medkit\n"
+            "  G weapon    L molotov    I flashlight    B barricade\n"
+            "  ! trap    A antidote    K keys    F fuel\n"
+            "  P radio part    T radio tower    numbers noise timers"
+        )
+
     # ------------------------------------------------------------------
     # Player actions
     def move_player(self, direction: str, steps: int = 1) -> bool:
@@ -1856,8 +1887,12 @@ class Game:
         while actions_left > 0 and self.player.health > 0:
             self.draw_board()
             cmd = input(
-                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, e=eat, b=barricade, o=scout, c=craft, m=molotov, r=steal, k=fight, x=trade, t=drop, z=rest, p=pass, q=save]: "
+                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, e=eat, b=barricade, o=scout, c=craft, m=molotov, r=steal, k=fight, x=trade, t=drop, z=rest, p=pass, q=save, ?=help]: "
             ).strip().lower()
+
+            if cmd == "?":
+                self.show_help()
+                continue
 
             if cmd in {"w", "a", "s", "d"}:
                 steps = 1
