@@ -17,6 +17,8 @@ Features
 * Hunger mechanic – eat supplies to avoid starving each round.
 * Simple crafting allows turning supplies into medkits or noisy
   molotov cocktails that burn adjacent zombies.
+* Loud actions leave behind noise tokens that can draw zombies at the
+  end of each round, mirroring board-game noise markers.
 * Achievements track scenario victories and feats across campaigns.
 * Attempt to steal items from survivors sharing your tile; failure
   results in a scuffle and health loss.
@@ -326,6 +328,7 @@ class Game:
         self.pharmacy_positions: Set[Tuple[int, int]] = set()
         self.armory_positions: Set[Tuple[int, int]] = set()
         self.barricade_positions: Set[Tuple[int, int]] = set()
+        self.noise_markers: List[Tuple[int, int, float]] = []
         self.revealed: Set[Tuple[int, int]] = set()
         self.spawn_zombies(settings["starting_zombies"] + extra_players)
         self.spawn_pharmacies(PHARMACY_COUNT)
@@ -411,6 +414,7 @@ class Game:
             "cooperative": self.cooperative,
             "event_deck": list(self.event_deck),
             "loot_deck": list(self.loot_deck),
+            "noise_markers": [list(n) for n in self.noise_markers],
         }
 
     @classmethod
@@ -472,6 +476,7 @@ class Game:
         game.zombies_killed = data.get("zombies_killed", 0)
         game.event_deck = deque(data.get("event_deck", []))
         game.loot_deck = deque(data.get("loot_deck", []))
+        game.noise_markers = [tuple(n) for n in data.get("noise_markers", [])]
         return game
 
     def save_game(self, filename: str = SAVE_FILE) -> None:
@@ -746,17 +751,20 @@ class Game:
             if (x, y) in self.revealed and not self.is_player_at(x, y):
                 board[y][x] = BARRICADE_SYMBOL
         for x, y in self.supplies_positions:
-            if (x, y) in self.revealed:
+            if (x, y) in self.revealed and not self.is_player_at(x, y):
                 board[y][x] = "R"
         for x, y in self.medkit_positions:
-            if (x, y) in self.revealed:
+            if (x, y) in self.revealed and not self.is_player_at(x, y):
                 board[y][x] = MEDKIT_SYMBOL
         for x, y in self.weapon_positions:
-            if (x, y) in self.revealed:
+            if (x, y) in self.revealed and not self.is_player_at(x, y):
                 board[y][x] = WEAPON_SYMBOL
         for x, y in self.molotov_positions:
-            if (x, y) in self.revealed:
+            if (x, y) in self.revealed and not self.is_player_at(x, y):
                 board[y][x] = MOLOTOV_SYMBOL
+        for x, y, _ in self.noise_markers:
+            if (x, y) in self.revealed and not self.is_player_at(x, y):
+                board[y][x] = "!"
         for z in self.zombies:
             if (z.x, z.y) in self.revealed:
                 board[z.y][z.x] = z.symbol
@@ -818,10 +826,8 @@ class Game:
                     self.player.health -= 1
                     print("Your attack misses! You take 1 damage.")
                 if self.player.has_weapon:
-                    self.spawn_zombie_near(
-                        self.player.x,
-                        self.player.y,
-                        WEAPON_NOISE_ZOMBIE_CHANCE,
+                    self.add_noise(
+                        self.player.x, self.player.y, WEAPON_NOISE_ZOMBIE_CHANCE
                     )
                     print("The gunshot echoes...")
                 return True
@@ -1038,9 +1044,7 @@ class Game:
             print(f"The molotov explodes, burning {removed} zombie{'s' if removed != 1 else ''}!")
         else:
             print("The molotov explodes harmlessly.")
-        self.spawn_zombie_near(
-            self.player.x, self.player.y, MOLOTOV_NOISE_ZOMBIE_CHANCE
-        )
+        self.add_noise(self.player.x, self.player.y, MOLOTOV_NOISE_ZOMBIE_CHANCE)
         print("The fiery blast draws more undead!")
         return True
 
@@ -1165,8 +1169,11 @@ class Game:
             self.spawn_zombies(1)
             print("A zombie shambles in from the darkness...")
 
-    def spawn_zombie_near(self, x: int, y: int, chance: float) -> None:
-        """Spawn a zombie adjacent to (x, y) with the given chance."""
+    def spawn_zombie_near(self, x: int, y: int, chance: float) -> bool:
+        """Spawn a zombie adjacent to (x, y) with the given chance.
+
+        Returns True if a zombie was spawned.
+        """
         if random.random() < chance:
             candidates = [
                 (nx, ny)
@@ -1185,6 +1192,18 @@ class Game:
                 self.zombies.append(Zombie(zx, zy))
                 if (zx, zy) in self.revealed:
                     print("Noise draws a zombie nearby!")
+                return True
+        return False
+
+    def add_noise(self, x: int, y: int, chance: float) -> None:
+        """Record a noisy action that may attract zombies later."""
+        self.noise_markers.append((x, y, chance))
+
+    def resolve_noise(self) -> None:
+        """Spawn zombies for all accumulated noise markers."""
+        for x, y, chance in self.noise_markers:
+            self.spawn_zombie_near(x, y, chance)
+        self.noise_markers.clear()
 
     def random_event(self) -> None:
         """Trigger an end-of-round event by drawing from the event deck."""
@@ -1389,10 +1408,8 @@ class Game:
                         self.double_move_tokens -= 1
                 if self.move_player(cmd, steps):
                     if steps > 1:
-                        self.spawn_zombie_near(
-                            self.player.x,
-                            self.player.y,
-                            VEHICLE_NOISE_ZOMBIE_CHANCE,
+                        self.add_noise(
+                            self.player.x, self.player.y, VEHICLE_NOISE_ZOMBIE_CHANCE
                         )
                         print("The engine roar attracts the dead!")
                     actions_left -= 1
@@ -1539,6 +1556,7 @@ class Game:
                 if winner or not self.players:
                     break
                 self.spawn_random_zombie()
+                self.resolve_noise()
                 self.actions_per_turn = ACTIONS_PER_TURN
                 self.random_event()
                 self.apply_hunger()
