@@ -10,7 +10,9 @@ such skirmishes are noisy and dangerous.
 Each turn your hunger drops – eat supplies to keep from starving. Zombie
 numbers scale with the size of your group to keep larger teams on edge.
 Scavenging pulls from a finite loot deck so items won't repeat until the deck
-is reshuffled, reinforcing the tabletop feel.
+is reshuffled, reinforcing the tabletop feel. Both event and loot deck
+compositions are stored in `decks.json` so you can tweak card frequencies or
+add your own entries.
 Loud actions such as gunfire or revving an engine place noise tokens on the
 board. These markers linger for a couple of rounds and at the end of each
 round may spawn new zombies, capturing the tension of physical board games
@@ -98,7 +100,9 @@ alter the next round’s pace – a storm might reduce everyone to one action wh
 an adrenaline rush grants an extra move. Friendly survivors may appear with
 supplies or medkits and, if there’s room, may even join your group. The wind
 can momentarily lift the fog to reveal unexplored tiles. Rain muffles sound so
-noise tokens are less likely to draw zombies in the following round. Exploring may also
+noise tokens are less likely to draw zombies in the following round. A sudden
+blizzard both muffles noise and limits everyone to a single action with reduced
+visibility on the next turn. Exploring may also
 uncover special locations. Pharmacies (`M`) have a high chance of yielding
   medkits while armories (`W`) are the best spots to find weapons. Hidden traps
   (`!`) may also appear and will injure any survivor that triggers them, though
