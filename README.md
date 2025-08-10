@@ -77,8 +77,10 @@ an adrenaline rush grants an extra move. Friendly survivors may appear with
 supplies or medkits and, if there’s room, may even join your group. The wind
 can momentarily lift the fog to reveal unexplored tiles. Exploring may also
 uncover special locations. Pharmacies (`M`) have a high chance of yielding
-medkits while armories (`W`) are the best spots to find weapons. Once revealed,
-their symbols remain on the board. Each round hunger decreases for every
+medkits while armories (`W`) are the best spots to find weapons. Hidden traps
+(`!`) may also appear and will injure any survivor that triggers them, though
+they can destroy zombies as well. Once revealed, their symbols remain on the board.
+Each round hunger decreases for every
 survivor. Starving costs health. The scenario ends after 20 rounds. Win scenario
 1 by finding the antidote and returning to the `S` marked starting tile. Scenario
 2 is won by bringing both keys and fuel back to the start. You can carry at most
