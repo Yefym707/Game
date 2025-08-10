@@ -154,6 +154,7 @@ DEFAULT_EVENT_CARD_COUNTS = {
     "survivors": 1,
     "rain": 1,
     "fog": 1,
+    "heatwave": 1,
     "firebomb": 1,
     "blizzard": 1,
 }
@@ -446,6 +447,7 @@ class Game:
         self.noise_markers: List[Tuple[int, int, float, int]] = []
         self.noise_dampener_turns = 0
         self.visibility_penalty_turns = 0
+        self.hunger_penalty_turns = 0
         self.revealed: Set[Tuple[int, int]] = set()
         self.spawn_zombies(settings["starting_zombies"] + extra_players)
         self.spawn_pharmacies(PHARMACY_COUNT)
@@ -539,6 +541,7 @@ class Game:
             "noise_markers": [list(n) for n in self.noise_markers],
             "noise_dampener_turns": self.noise_dampener_turns,
             "visibility_penalty_turns": self.visibility_penalty_turns,
+            "hunger_penalty_turns": self.hunger_penalty_turns,
             "xp_gained": self.xp_gained,
             "zombie_spawn_chance": self.zombie_spawn_chance,
             "base_zombie_spawn_chance": self.base_zombie_spawn_chance,
@@ -623,6 +626,7 @@ class Game:
         ]
         game.noise_dampener_turns = data.get("noise_dampener_turns", 0)
         game.visibility_penalty_turns = data.get("visibility_penalty_turns", 0)
+        game.hunger_penalty_turns = data.get("hunger_penalty_turns", 0)
         game.zombie_spawn_chance = data.get("zombie_spawn_chance", game.zombie_spawn_chance)
         game.base_zombie_spawn_chance = data.get(
             "base_zombie_spawn_chance", game.zombie_spawn_chance
@@ -1792,6 +1796,9 @@ class Game:
         elif event == "fog":
             self.reveal_random_tiles(5)
             print("A gust of wind lifts the fog, revealing more of the area.")
+        elif event == "heatwave":
+            self.hunger_penalty_turns = 1
+            print("A brutal heatwave scorches the area. Hunger will drop faster next round.")
         elif event == "blizzard":
             self.actions_per_turn = max(1, ACTIONS_PER_TURN - 1)
             self.noise_dampener_turns = max(self.noise_dampener_turns, 1)
@@ -1821,8 +1828,9 @@ class Game:
                 print("Their corpse rises again as a zombie!")
 
     def apply_hunger(self) -> None:
+        decay = HUNGER_DECAY + (1 if self.hunger_penalty_turns > 0 else 0)
         for p in list(self.players):
-            p.hunger = max(0, p.hunger - HUNGER_DECAY)
+            p.hunger = max(0, p.hunger - decay)
             if p.hunger == 0:
                 p.health -= HUNGER_STARVE_DAMAGE
                 print(f"Player {p.symbol} is starving! -1 health")
@@ -1834,6 +1842,8 @@ class Game:
                     continue
             if p.health <= 0:
                 self.handle_player_death(p)
+        if self.hunger_penalty_turns > 0:
+            self.hunger_penalty_turns -= 1
 
     def advance_time_of_day(self) -> None:
         """Advance the day/night cycle and update related modifiers."""

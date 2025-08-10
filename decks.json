@@ -9,6 +9,7 @@
     "survivors": 1,
     "rain": 1,
     "fog": 1,
+    "heatwave": 1,
     "firebomb": 1,
     "blizzard": 1
   },
