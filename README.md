@@ -110,9 +110,10 @@ uncover special locations. Pharmacies (`M`) have a high chance of yielding
   (`!`) may also appear and will injure any survivor that triggers them, though
   they can destroy zombies as well. Survivors can also rig traps or build
   temporary campfires (`C`) of their own; fires grant extra healing when resting
-  but fade after a few rounds. Shelters (`U`) are permanent safe spots that grant
-  the same rest bonus. Traps may be disarmed to recover supplies. Once
-  revealed, their symbols remain on the board.
+  and shed light that reveals adjacent tiles each round but fade after a few
+  rounds. Shelters (`U`) are permanent safe spots that grant the same rest
+  bonus. Traps may be disarmed to recover supplies. Once revealed, their
+  symbols remain on the board.
 Each round hunger decreases for every
 survivor. Starving costs health. The scenario ends after 20 rounds. Win scenario
 1 by finding the antidote and returning to the `S` marked starting tile. Scenario
@@ -127,7 +128,7 @@ campaign progress is stored in `campaign_save.json`. A save file is also written
 so you can resume a run later. Survive as long as you can before your health
 reaches zero.
 
-  Dropped items remain on the board: supplies show as `R`, medkits as `H`, weapons as `G` and molotovs as `L` once the tile is revealed. Built campfires appear as `C` and burn out after a few rounds but provide better rest while lit. Permanent shelters are marked `U`.
+  Dropped items remain on the board: supplies show as `R`, medkits as `H`, weapons as `G` and molotovs as `L` once the tile is revealed. Built campfires appear as `C`; while lit they provide better rest and illuminate adjacent tiles but burn out after a few rounds. Permanent shelters are marked `U`.
 Noise markers from loud actions show their remaining turns as numbers until they attract or fade.
 
 Experience points accumulate across the campaign. Killing zombies and
