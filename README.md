@@ -43,6 +43,7 @@ During your turn you have two actions. Enter:
 - `B` – spend two supplies to barricade the current tile, blocking zombies once.
 - `C` – craft items (3 supplies → medkit, supply + fuel → molotov).
 - `M` – throw a molotov to burn adjacent zombies.
+- `R` – attempt to steal an item from another player sharing your tile (50% success, -1 HP on failure).
 - `T` – drop the item of your choice on the current tile.
 - `P` – pass the remaining actions.
 - `Q` – save the game and quit.
