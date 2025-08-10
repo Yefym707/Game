@@ -1598,11 +1598,13 @@ class Game:
 
 if __name__ == "__main__":
     if os.path.exists(SAVE_FILE) and input("Load saved game? [y/N]: ").strip().lower() == "y":
-        game = Game.load_game()
+        Game.load_game().run()
     else:
         diff = input("Choose difficulty [easy/normal/hard]: ").strip().lower() or "normal"
         players = input("Number of players [1-4]: ").strip() or "1"
-        scen = input("Choose scenario [1/2/3/4]: ").strip() or "1"
+        scen = (
+            input("Choose scenario [1/2/3/4 or 0 for campaign]: ").strip() or "1"
+        )
         try:
             scen_num = int(scen)
         except ValueError:
@@ -1617,6 +1619,20 @@ if __name__ == "__main__":
         except ValueError:
             num_ai = 0
         coop = input("Cooperative mode? [y/N]: ").strip().lower() == "y"
-        game = Game(diff, scen_num, num_players, num_ai, cooperative=coop)
-    game.run()
+        if scen_num == 0:
+            current = 1
+            while current <= 4:
+                game = Game(diff, current, num_players, num_ai, cooperative=coop)
+                game.run()
+                if current >= 4:
+                    break
+                if current not in game.campaign.get("completed_scenarios", []):
+                    break
+                cont = input("Proceed to next scenario? [y/N]: ").strip().lower()
+                if cont != "y":
+                    break
+                current += 1
+        else:
+            game = Game(diff, scen_num, num_players, num_ai, cooperative=coop)
+            game.run()
 

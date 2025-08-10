@@ -22,11 +22,13 @@ These bots heal, eat, scavenge and pathfind toward revealed objectives and
 supplies. If a previous run was saved, you'll be offered to load it instead.
 Available difficulties are **easy**, **normal**, and
 **hard**. If unsure, press Enter for the defaults. You can optionally enable a
-cooperative mode where all survivors must escape together. Scenario **1** tasks you with
-finding an antidote and returning to the starting tile. Scenario **2** requires
-locating both car keys and fuel before escaping. Scenario **3** asks you to
-gather three radio parts then retreat to the start. Scenario **4** is a final
-stand: call for rescue and survive until it arrives.
+cooperative mode where all survivors must escape together. Selecting scenario
+**0** launches a full four-part campaign, automatically progressing to the next
+chapter after each victory. Scenario **1** tasks you with finding an antidote
+and returning to the starting tile. Scenario **2** requires locating both car
+keys and fuel before escaping. Scenario **3** asks you to gather three radio
+parts then retreat to the start. Scenario **4** is a final stand: call for
+rescue and survive until it arrives.
 
 In cooperative mode the group shares victory conditions – once the objective is
 met all surviving players must regroup on the starting tile to win together.
