@@ -1091,6 +1091,83 @@ class Game:
         print("Nothing dropped.")
         return False
 
+    def trade_item(self) -> bool:
+        """Trade an item with another player on the same tile."""
+        others = [
+            p
+            for p in self.players
+            if p is not self.player and p.x == self.player.x and p.y == self.player.y
+        ]
+        if not others:
+            print("No other players here to trade with.")
+            return False
+        print("Players here: " + ", ".join(p.symbol for p in others))
+        choice = input("Trade with which player? ").strip()
+        target = next((p for p in others if p.symbol == choice), None)
+        if not target:
+            print("Trade cancelled.")
+            return False
+        options = []
+        if self.player.supplies > 0:
+            options.append("supply")
+        if self.player.medkits > 0:
+            options.append("medkit")
+        if self.player.molotovs > 0:
+            options.append("molotov")
+        if self.player.has_weapon:
+            options.append("weapon")
+        if self.player.has_keys:
+            options.append("keys")
+        if self.player.has_fuel:
+            options.append("fuel")
+        if self.player.has_antidote:
+            options.append("antidote")
+        if not options:
+            print("You have nothing to trade.")
+            return False
+        item = input("Trade which item {}: ".format("/".join(options))).strip().lower()
+        if item not in options:
+            print("Trade cancelled.")
+            return False
+        if item in {"supply", "medkit", "molotov"} and target.inventory_size >= INVENTORY_LIMIT:
+            print(f"Player {target.symbol}'s pack is full.")
+            return False
+        if item == "supply":
+            self.player.supplies -= 1
+            target.supplies += 1
+        elif item == "medkit":
+            self.player.medkits -= 1
+            target.medkits += 1
+        elif item == "molotov":
+            self.player.molotovs -= 1
+            target.molotovs += 1
+        elif item == "weapon":
+            if target.has_weapon:
+                print(f"Player {target.symbol} already has a weapon.")
+                return False
+            self.player.has_weapon = False
+            target.has_weapon = True
+        elif item == "keys":
+            if target.has_keys:
+                print(f"Player {target.symbol} already has keys.")
+                return False
+            self.player.has_keys = False
+            target.has_keys = True
+        elif item == "fuel":
+            if target.has_fuel:
+                print(f"Player {target.symbol} already has fuel.")
+                return False
+            self.player.has_fuel = False
+            target.has_fuel = True
+        elif item == "antidote":
+            if target.has_antidote:
+                print(f"Player {target.symbol} already has the antidote.")
+                return False
+            self.player.has_antidote = False
+            target.has_antidote = True
+        print(f"You trade a {item} to player {target.symbol}.")
+        return True
+
     def steal_item(self) -> bool:
         """Attempt to steal an item from another player on the same tile."""
         # find other players on same position
@@ -1396,7 +1473,7 @@ class Game:
         while actions_left > 0 and self.player.health > 0:
             self.draw_board()
             cmd = input(
-                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, e=eat, b=barricade, c=craft, m=molotov, t=drop, p=pass, q=save]: "
+                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, e=eat, b=barricade, c=craft, m=molotov, r=steal, x=trade, t=drop, p=pass, q=save]: "
             ).strip().lower()
 
             if cmd in {"w", "a", "s", "d"}:
@@ -1449,6 +1526,9 @@ class Game:
                     actions_left -= 1
                 else:
                     print("No one here to steal from or pack is full.")
+            elif cmd == "x":
+                if self.trade_item():
+                    actions_left -= 1
             elif cmd == "t":
                 if self.drop_item():
                     actions_left -= 1
