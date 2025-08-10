@@ -13,6 +13,8 @@ Loud actions such as gunfire or revving an engine place noise tokens on the
 board. These markers linger for a couple of rounds and at the end of each
 round may spawn new zombies, capturing the tension of physical board games
 that track noise.
+Combat and other risky actions explicitly roll dice, displaying the result so
+you can cheer or lament the luck of the draw just like at a real table.
 
 ## Requirements
 - Python 3.12+
@@ -46,7 +48,7 @@ met all surviving players must regroup on the starting tile to win together.
 During your turn you have two actions. Enter:
 
 - `W` `A` `S` `D` – move one tile (or two if using a double-move token).
-- `F` – attack an adjacent zombie (70% hit chance, 90% if armed).
+- `F` – attack an adjacent zombie; roll a d10 (≤7 hits, ≤9 if armed).
 - `G` – scavenge the current tile for supplies, weapons or the antidote.
 - `H` – use a found medkit to recover health.
 - `E` – consume one supply to restore hunger.
@@ -54,7 +56,7 @@ During your turn you have two actions. Enter:
 - `O` – scout an adjacent tile to reveal more of the map.
 - `C` – craft items (3 supplies → medkit, supply + fuel → molotov).
 - `M` – throw a molotov to burn adjacent zombies.
-- `R` – attempt to steal an item from another player sharing your tile (50% success, -1 HP on failure).
+- `R` – attempt to steal an item from another player sharing your tile; roll a d10 (≤5 succeeds, failure costs 1 HP).
 - `X` – trade an item with another player on your tile.
 - `T` – drop the item of your choice on the current tile.
 - `P` – pass the remaining actions.
