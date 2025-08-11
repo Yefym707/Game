@@ -2458,6 +2458,18 @@ class Game:
         elif event == "earthquake":
             self.quake_walls()
             print("The ground rumbles, shifting rubble around you!")
+        elif event == "dusk":
+            self.is_night = True
+            self.phase_turns = NIGHT_LENGTH + 1
+            self.reveal_radius = max(0, REVEAL_RADIUS - NIGHT_REVEAL_PENALTY)
+            self.zombie_spawn_chance = self.base_zombie_spawn_chance * NIGHT_SPAWN_MULTIPLIER
+            print("Night falls early. Zombies grow restless in the dark.")
+        elif event == "dawn":
+            self.is_night = False
+            self.phase_turns = DAY_LENGTH + 1
+            self.reveal_radius = REVEAL_RADIUS
+            self.zombie_spawn_chance = self.base_zombie_spawn_chance
+            print("An unexpected dawn breaks, lifting the shadows.")
         elif event == "calm":
             self.calm_rounds = 1
             print("An eerie calm settles over the area. No zombies will spawn next round.")
