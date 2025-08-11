@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import pygame
 
+from gamecore.i18n import gettext as _
+
 
 class Button:
     """Clickable rectangular button."""
@@ -59,6 +61,6 @@ class StatusPanel:
         self.font = pygame.font.SysFont(None, 24)
 
     def draw(self, surface: pygame.Surface, state) -> None:
-        text = f"Turn {state.turn}  Player {state.player.x},{state.player.y}"
+        text = _("status_turn").format(turn=state.turn, x=state.player.x, y=state.player.y)
         img = self.font.render(text, True, (255, 255, 0))
         surface.blit(img, (5, 5))

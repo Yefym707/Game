@@ -1,0 +1,9 @@
+{
+  "menu_new_game": "Новая игра",
+  "menu_continue": "Продолжить",
+  "menu_settings": "Настройки",
+  "menu_quit": "Выход",
+  "action_prompt": "действие (w/a/s/d — движение, q — выход): ",
+  "status_turn": "Ход {turn}  Игрок {x},{y}",
+  "window_title": "Gamecore GUI"
+}

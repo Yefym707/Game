@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 
 from . import ai, board, io_textures, rules
+from .i18n import gettext as _
 
 
 def render(state: board.GameState, textures: dict[str, str]) -> str:
@@ -36,7 +37,7 @@ def main(argv: list[str] | None = None) -> None:
         print(render(state, textures))
         if state.log:
             print("\n".join(state.log[-5:]))
-        cmd = input("action (w/a/s/d to move, q to quit): ").strip()
+        cmd = input(_("action_prompt")).strip()
         if cmd == "q":
             break
         board.player_move(state, cmd)

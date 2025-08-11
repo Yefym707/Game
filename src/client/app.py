@@ -4,6 +4,8 @@ from __future__ import annotations
 import pygame
 from typing import Optional
 
+from gamecore.i18n import gettext as _
+
 
 class Scene:
     """Base class for scenes."""
@@ -27,7 +29,7 @@ class App:
 
     def __init__(self, width: int = 800, height: int = 600) -> None:
         pygame.init()
-        pygame.display.set_caption("Gamecore GUI")
+        pygame.display.set_caption(_("window_title"))
         self.screen = pygame.display.set_mode((width, height))
         self.clock = pygame.time.Clock()
         from .scene_menu import MenuScene
