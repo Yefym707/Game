@@ -127,7 +127,7 @@ appearing next to the survivors. Friendly survivors may appear with
 supplies or medkits and, if there’s room, may even join your group. The wind
 can momentarily lift the fog to reveal unexplored tiles. A wandering trader may
 offer a medkit in exchange for two supplies. Occasionally a supply airdrop parachutes in, leaving a medkit and some food for whoever reaches it first. Rain muffles sound so noise tokens
-are less likely to draw zombies in the following round. Heatwaves parch the survivors, causing extra hunger loss next turn. A sudden
+are less likely to draw zombies in the following round. Heatwaves parch the survivors, causing extra hunger loss next turn. Epidemics sweep through, making zombie bites more likely to infect during the next round. A sudden
 blizzard both muffles noise and limits everyone to fewer actions with reduced
 visibility on the next turn. Occasional earthquakes may raise or crumble rubble walls, reshaping the paths ahead. Exploring may also
 At times the city falls eerily silent and no new zombies appear that round.

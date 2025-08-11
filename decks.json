@@ -12,6 +12,7 @@
     "rain": 1,
     "fog": 1,
     "heatwave": 1,
+    "epidemic": 1,
     "firebomb": 1,
     "blizzard": 1,
     "earthquake": 1,

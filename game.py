@@ -152,6 +152,7 @@ STEAL_SUCCESS_CHANCE = 0.5
 # Infection settings
 INFECTION_CHANCE = 0.3  # chance a zombie bite causes infection
 INFECTION_TURNS = 5  # turns until an infected survivor turns
+EPIDEMIC_INFECTION_BONUS = 0.2  # extra infection chance during epidemic event
 
 # PvP attack settings
 PVP_ATTACK_HIT_CHANCE = 0.5
@@ -191,6 +192,7 @@ DEFAULT_EVENT_CARD_COUNTS = {
     "heatwave": 1,
     "firebomb": 1,
     "blizzard": 1,
+    "epidemic": 1,
     "earthquake": 1,
     "trader": 1,
     "calm": 1,
@@ -590,6 +592,7 @@ class Game:
         self.noise_dampener_turns = 0
         self.visibility_penalty_turns = 0
         self.hunger_penalty_turns = 0
+        self.infection_boost_turns = 0
         self.calm_rounds = 0
         self.revealed: Set[Tuple[int, int]] = set()
         self.wall_positions: Set[Tuple[int, int]] = set(layout.get("walls", set()))
@@ -695,6 +698,7 @@ class Game:
             "noise_dampener_turns": self.noise_dampener_turns,
             "visibility_penalty_turns": self.visibility_penalty_turns,
             "hunger_penalty_turns": self.hunger_penalty_turns,
+            "infection_boost_turns": self.infection_boost_turns,
             "calm_rounds": self.calm_rounds,
             "xp_gained": self.xp_gained,
             "zombie_spawn_chance": self.zombie_spawn_chance,
@@ -796,6 +800,7 @@ class Game:
         game.noise_dampener_turns = data.get("noise_dampener_turns", 0)
         game.visibility_penalty_turns = data.get("visibility_penalty_turns", 0)
         game.hunger_penalty_turns = data.get("hunger_penalty_turns", 0)
+        game.infection_boost_turns = data.get("infection_boost_turns", 0)
         game.calm_rounds = data.get("calm_rounds", 0)
         game.zombie_spawn_chance = data.get("zombie_spawn_chance", game.zombie_spawn_chance)
         game.base_zombie_spawn_chance = data.get(
@@ -2139,9 +2144,13 @@ class Game:
                 if z.x == p.x and z.y == p.y:
                     p.health -= 1
                     print(f"Player {p.symbol} is bitten! -1 health")
-                    if p.health > 0 and p.infection_turns == 0 and random.random() < INFECTION_CHANCE:
-                        p.infection_turns = INFECTION_TURNS
-                        print(f"Player {p.symbol} is infected!")
+                    if p.health > 0 and p.infection_turns == 0:
+                        chance = INFECTION_CHANCE + (
+                            EPIDEMIC_INFECTION_BONUS if self.infection_boost_turns > 0 else 0
+                        )
+                        if random.random() < chance:
+                            p.infection_turns = INFECTION_TURNS
+                            print(f"Player {p.symbol} is infected!")
 
     def spawn_random_zombie(self) -> None:
         if self.calm_rounds > 0:
@@ -2327,6 +2336,9 @@ class Game:
         elif event == "heatwave":
             self.hunger_penalty_turns = 1
             print("A brutal heatwave scorches the area. Hunger will drop faster next round.")
+        elif event == "epidemic":
+            self.infection_boost_turns = 1
+            print("A virulent strain spreads! Bites are more infectious next round.")
         elif event == "blizzard":
             self.actions_per_turn = max(1, ACTIONS_PER_TURN - 1)
             self.noise_dampener_turns = max(self.noise_dampener_turns, 1)
@@ -2884,6 +2896,8 @@ class Game:
                 self.update_campfires()
                 if self.calm_rounds > 0:
                     self.calm_rounds -= 1
+                if self.infection_boost_turns > 0:
+                    self.infection_boost_turns -= 1
                 self.actions_per_turn = ACTIONS_PER_TURN
                 self.random_event()
                 self.apply_hunger()
