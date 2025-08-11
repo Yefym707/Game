@@ -177,6 +177,7 @@ DEFAULT_EVENT_CARD_COUNTS = {
     "heatwave": 1,
     "firebomb": 1,
     "blizzard": 1,
+    "earthquake": 1,
 }
 
 DEFAULT_LOOT_CARD_COUNTS = {
@@ -839,6 +840,44 @@ class Game:
                 ):
                     self.wall_positions.add((x, y))
                     break
+
+    def quake_walls(self, changes: int = 3) -> None:
+        """Randomly collapse or raise walls to simulate an earthquake."""
+        done = 0
+        attempts = 0
+        occupied = lambda x, y: (
+            self.is_player_at(x, y)
+            or (x, y) in {(z.x, z.y) for z in self.zombies}
+            or (x, y) in self.barricade_positions
+            or (x, y) in self.campfires
+            or (x, y) in self.shelter_positions
+            or (x, y) in self.trap_positions
+            or (x, y) in self.supplies_positions
+            or (x, y) in self.medkit_positions
+            or (x, y) in self.weapon_positions
+            or (x, y) in self.molotov_positions
+            or (x, y) in self.flashlight_positions
+            or (x, y) in self.radio_positions
+            or (x, y) == self.radio_tower_pos
+            or (x, y) == self.antidote_pos
+            or (x, y) == self.keys_pos
+            or (x, y) == self.fuel_pos
+        )
+        while done < changes and attempts < changes * 10:
+            attempts += 1
+            x, y = random.randrange(self.board_size), random.randrange(self.board_size)
+            if (x, y) == self.start_pos:
+                continue
+            if (x, y) in self.wall_positions:
+                self.wall_positions.remove((x, y))
+                if (x, y) in self.revealed:
+                    print("A wall crumbles.")
+                done += 1
+            elif not occupied(x, y):
+                self.wall_positions.add((x, y))
+                if (x, y) in self.revealed:
+                    print("Rubble blocks a new path.")
+                done += 1
 
     def spawn_zombies(self, count: int) -> None:
         for _ in range(count):
@@ -2048,6 +2087,9 @@ class Game:
             print(
                 "A blizzard howls! Next round you have one fewer action and reduced visibility."
             )
+        elif event == "earthquake":
+            self.quake_walls()
+            print("The ground rumbles, shifting rubble around you!")
         elif event == "firebomb":
             given = False
             for p in self.players:

@@ -11,7 +11,8 @@
     "fog": 1,
     "heatwave": 1,
     "firebomb": 1,
-    "blizzard": 1
+    "blizzard": 1,
+    "earthquake": 1
   },
   "loot": {
     "supply": 8,

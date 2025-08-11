@@ -109,7 +109,7 @@ supplies or medkits and, if there’s room, may even join your group. The wind
 can momentarily lift the fog to reveal unexplored tiles. Rain muffles sound so
 noise tokens are less likely to draw zombies in the following round. Heatwaves parch the survivors, causing extra hunger loss next turn. A sudden
 blizzard both muffles noise and limits everyone to a single action with reduced
-visibility on the next turn. Exploring may also
+visibility on the next turn. Occasional earthquakes may raise or crumble rubble walls, reshaping the paths ahead. Exploring may also
 uncover special locations. Pharmacies (`M`) have a high chance of yielding
   medkits while armories (`W`) are the best spots to find weapons. Hidden traps
   (`!`) may also appear and will injure any survivor that triggers them, though
