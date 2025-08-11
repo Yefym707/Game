@@ -2245,6 +2245,19 @@ class Game:
                 self.zombie_spawn_chance = self.base_zombie_spawn_chance
                 print("Dawn breaks. You can see further again.")
 
+    def determine_turn_order(self) -> None:
+        """Roll for initiative and order players each round.
+
+        Each survivor rolls a d6 at the start of the round. Highest roll
+        goes first, providing a tabletop-inspired turn order that can
+        change from round to round.
+        """
+        rolls = [(p, random.randint(1, 6)) for p in self.players]
+        rolls.sort(key=lambda pr: pr[1], reverse=True)
+        self.players = [p for p, _ in rolls]
+        order = ", ".join(f"{p.symbol}({r})" for p, r in rolls)
+        print(f"Initiative order: {order}")
+
     def check_achievements(self) -> None:
         """Unlock achievements based on campaign stats."""
         unlocked = set(self.campaign.get("achievements", []))
@@ -2605,6 +2618,7 @@ class Game:
         try:
             winner: Optional[Player] = None
             while True:
+                self.determine_turn_order()
                 for pl in list(self.players):
                     self.player_turn(pl)
                     if self.check_victory():
