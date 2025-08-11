@@ -116,6 +116,7 @@ ARMORY_COUNT = 2
 PHARMACY_MEDKIT_CHANCE = 0.8
 ARMORY_WEAPON_CHANCE = 0.6
 ARMORY_SUPPLY_CHANCE = 0.4
+ARMORY_ARMOR_CHANCE = 0.4
 
 # Shelter settings
 SHELTER_SYMBOL = "U"
@@ -139,6 +140,8 @@ MOLOTOV_NOISE_ZOMBIE_CHANCE = 0.6
 TRAP_CRAFT_COST = 2
 FLASHLIGHT_SYMBOL = "I"
 FLASHLIGHT_CRAFT_COST = 2
+ARMOR_SYMBOL = "V"
+ARMOR_CRAFT_COST = 3
 
 # Campfire settings
 CAMPFIRE_SYMBOL = "C"
@@ -212,6 +215,7 @@ DEFAULT_LOOT_CARD_COUNTS = {
     "weapon": 2,
     "flashlight": 1,
     "decoy": 1,
+    "armor": 1,
     "nothing": 10,
 }
 
@@ -541,6 +545,7 @@ class Player(Entity):
         self.medkits: int = 0
         self.molotovs: int = 0
         self.decoys: int = 0
+        self.armor: int = 0
         self.has_antidote: bool = False
         self.has_keys: bool = False
         self.has_fuel: bool = False
@@ -553,6 +558,22 @@ class Player(Entity):
     def inventory_size(self) -> int:
         """Total number of items currently carried."""
         return self.supplies + self.medkits + self.molotovs + self.decoys
+
+    def take_damage(self, amount: int) -> int:
+        """Apply damage to the player, consuming armor first.
+
+        Returns the actual damage dealt to health."""
+        if amount <= 0:
+            return 0
+        if self.armor > 0:
+            absorbed = min(self.armor, amount)
+            self.armor -= absorbed
+            amount -= absorbed
+            if absorbed > 0:
+                print(f"Armor absorbs {absorbed} damage!")
+        if amount > 0:
+            self.health -= amount
+        return amount
 
 
 class Zombie(Entity):
@@ -658,6 +679,7 @@ class Game:
         self.weapon_positions: Set[Tuple[int, int]] = set()
         self.molotov_positions: Set[Tuple[int, int]] = set()
         self.flashlight_positions: Set[Tuple[int, int]] = set()
+        self.armor_positions: Set[Tuple[int, int]] = set()
         # Decoys on the ground that can be picked up
         self.decoy_positions: Set[Tuple[int, int]] = set()
         # Active decoys currently luring zombies with remaining duration
@@ -728,6 +750,7 @@ class Game:
                     "medkits": p.medkits,
                     "molotovs": p.molotovs,
                     "decoys": p.decoys,
+                    "armor": p.armor,
                     "kills": p.kills,
                     "has_antidote": p.has_antidote,
                     "has_keys": p.has_keys,
@@ -747,6 +770,7 @@ class Game:
             "weapon_positions": list(self.weapon_positions),
             "molotov_positions": list(self.molotov_positions),
             "flashlight_positions": list(self.flashlight_positions),
+            "armor_positions": list(self.armor_positions),
             "decoy_positions": list(self.decoy_positions),
             "active_decoys": [[x, y, t] for (x, y), t in self.active_decoys.items()],
             "trap_positions": list(self.trap_positions),
@@ -811,6 +835,7 @@ class Game:
             p.medkits = pdata["medkits"]
             p.molotovs = pdata.get("molotovs", 0)
             p.decoys = pdata.get("decoys", 0)
+            p.armor = pdata.get("armor", 0)
             p.kills = pdata.get("kills", 0)
             p.has_antidote = pdata["has_antidote"]
             p.has_keys = pdata["has_keys"]
@@ -829,6 +854,7 @@ class Game:
         game.weapon_positions = {tuple(pos) for pos in data.get("weapon_positions", [])}
         game.molotov_positions = {tuple(pos) for pos in data.get("molotov_positions", [])}
         game.flashlight_positions = {tuple(pos) for pos in data.get("flashlight_positions", [])}
+        game.armor_positions = {tuple(pos) for pos in data.get("armor_positions", [])}
         game.decoy_positions = {tuple(pos) for pos in data.get("decoy_positions", [])}
         game.active_decoys = {
             (pos[0], pos[1]): pos[2] for pos in data.get("active_decoys", [])
@@ -1203,6 +1229,7 @@ class Game:
                     and (x, y) not in self.medkit_positions
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
+                    and (x, y) not in self.armor_positions
                     and (x, y) not in self.decoy_positions
                     and (x, y) not in self.active_decoys
                 ):
@@ -1230,6 +1257,7 @@ class Game:
                     and (x, y) not in self.supplies_positions
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
+                    and (x, y) not in self.armor_positions
                     and (x, y) not in self.decoy_positions
                     and (x, y) not in self.active_decoys
                 ):
@@ -1253,6 +1281,7 @@ class Game:
                 and (x, y) not in self.medkit_positions
                 and (x, y) not in self.weapon_positions
                 and (x, y) not in self.molotov_positions
+                and (x, y) not in self.armor_positions
                 and (x, y) not in self.decoy_positions
                 and (x, y) not in self.active_decoys
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
@@ -1276,6 +1305,7 @@ class Game:
                 and (x, y) not in self.medkit_positions
                 and (x, y) not in self.weapon_positions
                 and (x, y) not in self.molotov_positions
+                and (x, y) not in self.armor_positions
                 and (x, y) not in self.decoy_positions
                 and (x, y) not in self.active_decoys
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
@@ -1301,6 +1331,7 @@ class Game:
                 and (x, y) not in self.medkit_positions
                 and (x, y) not in self.weapon_positions
                 and (x, y) not in self.molotov_positions
+                and (x, y) not in self.armor_positions
                 and (x, y) not in self.decoy_positions
                 and (x, y) not in self.active_decoys
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
@@ -1327,6 +1358,7 @@ class Game:
                     and (x, y) not in self.medkit_positions
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
+                    and (x, y) not in self.armor_positions
                     and (x, y) not in self.decoy_positions
                     and (x, y) not in self.active_decoys
                     and all((z.x, z.y) != (x, y) for z in self.zombies)
@@ -1351,6 +1383,7 @@ class Game:
                 and (x, y) not in self.medkit_positions
                 and (x, y) not in self.weapon_positions
                 and (x, y) not in self.molotov_positions
+                and (x, y) not in self.armor_positions
                 and (x, y) not in self.decoy_positions
                 and (x, y) not in self.active_decoys
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
@@ -1430,6 +1463,9 @@ class Game:
         for x, y in self.flashlight_positions:
             if (x, y) in self.revealed and not self.is_player_at(x, y):
                 board[y][x] = FLASHLIGHT_SYMBOL
+        for x, y in self.armor_positions:
+            if (x, y) in self.revealed and not self.is_player_at(x, y):
+                board[y][x] = ARMOR_SYMBOL
         for x, y in self.trap_positions:
             if (x, y) in self.revealed and not self.is_player_at(x, y):
                 board[y][x] = TRAP_SYMBOL
@@ -1441,7 +1477,7 @@ class Game:
                 board[z.y][z.x] = z.symbol
 
         print(
-            "Health: {}    Hunger: {}/{}    Medkits: {}    Supplies: {}    Molotovs: {}    Decoys: {}    Inventory: {}/{}    Tokens: {}    Weapon: {}    Flashlight: {}    Infection: {}    Level: {}    XP: {}".format(
+            "Health: {}    Hunger: {}/{}    Medkits: {}    Supplies: {}    Molotovs: {}    Decoys: {}    Inventory: {}/{}    Tokens: {}    Weapon: {}    Armor: {}    Flashlight: {}    Infection: {}    Level: {}    XP: {}".format(
                 self.player.health,
                 self.player.hunger,
                 self.player.max_hunger,
@@ -1453,6 +1489,7 @@ class Game:
                 self.player.inventory_limit,
                 self.double_move_tokens,
                 "Y" if self.player.has_weapon else "N",
+                self.player.armor,
                 "Y" if self.player.has_flashlight else "N",
                 self.player.infection_turns if self.player.infection_turns > 0 else "-",
                 self.level,
@@ -1495,7 +1532,7 @@ class Game:
             "Legend:\n"
             "  S start    . explored    ? unexplored\n"
             "  1-6 players    Z zombie    R supply    H medkit\n"
-            "  G weapon    L molotov    D decoy    I flashlight    B barricade\n"
+            "  G weapon    L molotov    D decoy    I flashlight    V armor    B barricade\n"
             f"  {CAMPFIRE_SYMBOL} campfire (light)    {SHELTER_SYMBOL} shelter (rest bonus)    ! trap    A antidote    K keys    F fuel\n"
             f"  P radio part    T radio tower    numbers noise timers    {WALL_SYMBOL} wall"
         )
@@ -1538,8 +1575,10 @@ class Game:
         """Trigger a trap if the active player steps on one."""
         if (x, y) in self.trap_positions:
             self.trap_positions.remove((x, y))
-            self.player.health -= TRAP_DAMAGE
-            print(f"You trigger a trap! -{TRAP_DAMAGE} health")
+            dmg = self.player.take_damage(TRAP_DAMAGE)
+            print(f"You trigger a trap! -{dmg} health")
+            if self.player.health <= 0:
+                self.handle_player_death(self.player)
 
     def attack(self) -> bool:
         # Find adjacent zombie (4-directional)
@@ -1557,8 +1596,10 @@ class Game:
                     self.xp_gained += XP_PER_ZOMBIE
                     print("You slay a zombie!")
                 else:
-                    self.player.health -= 1
-                    print("Your attack misses! You take 1 damage.")
+                    dmg = self.player.take_damage(1)
+                    print(f"Your attack misses! You take {dmg} damage.")
+                    if self.player.health <= 0:
+                        self.handle_player_death(self.player)
                 if self.player.has_weapon:
                     self.add_noise(
                         self.player.x, self.player.y, WEAPON_NOISE_ZOMBIE_CHANCE
@@ -1584,13 +1625,13 @@ class Game:
             return False
         target = random.choice(others)
         if roll_check(PVP_ATTACK_HIT_CHANCE, label="Skirmish", allow_manual=not self.player.is_ai):
-            target.health -= 1
-            print(f"You strike player {target.symbol}! -1 HP")
+            dmg = target.take_damage(1)
+            print(f"You strike player {target.symbol}! -{dmg} HP")
             if target.health <= 0:
                 self.handle_player_death(target)
         else:
-            self.player.health -= 1
-            print("The fight backfires! You take 1 damage.")
+            dmg = self.player.take_damage(1)
+            print(f"The fight backfires! You take {dmg} damage.")
             if self.player.health <= 0:
                 self.handle_player_death(self.player)
         self.add_noise(self.player.x, self.player.y, PVP_ATTACK_NOISE_CHANCE)
@@ -1657,6 +1698,14 @@ class Game:
                 self.player.has_weapon = True
                 found = True
                 print("You find a weapon in the armory!")
+            if self.player.armor == 0 and roll_check(
+                ARMORY_ARMOR_CHANCE,
+                label="Armory",
+                allow_manual=not self.player.is_ai,
+            ):
+                self.player.armor = 1
+                found = True
+                print("You strap on a protective vest!")
             if self.player.inventory_size < self.player.inventory_limit:
                 if roll_check(
                     ARMORY_SUPPLY_CHANCE,
@@ -1712,6 +1761,15 @@ class Game:
                 print("You pick up a flashlight.")
             else:
                 print("You already have a flashlight.")
+            return
+
+        if pos in self.armor_positions:
+            if self.player.armor == 0:
+                self.armor_positions.remove(pos)
+                self.player.armor = 1
+                print("You don a protective vest.")
+            else:
+                print("You're already wearing armor.")
             return
 
         if pos in self.medkit_positions:
@@ -1779,6 +1837,12 @@ class Game:
                 print("You find a decoy!")
             else:
                 print("You find a decoy but your pack is full.")
+        elif card == "armor":
+            if self.player.armor == 0:
+                self.player.armor = 1
+                print("You find a sturdy vest!")
+            else:
+                print("You find armor but already wear one.")
         else:
             print("You find nothing of use.")
 
@@ -1930,14 +1994,16 @@ class Game:
         cost_flash = max(1, FLASHLIGHT_CRAFT_COST - (1 if self.player.role == "engineer" else 0))
         cost_camp = max(1, CAMPFIRE_CRAFT_COST - (1 if self.player.role == "engineer" else 0))
         cost_decoy = max(1, DECOY_CRAFT_COST - (1 if self.player.role == "engineer" else 0))
+        cost_vest = max(1, ARMOR_CRAFT_COST - (1 if self.player.role == "engineer" else 0))
         choice = input(
-            "Craft [m]edkit (cost {0} supplies), [l]molotov (cost {1} supply + fuel), [t]rap (cost {2} supplies), [f]lashlight (cost {3} supplies), [c]ampfire (cost {4} supplies) or [d]ecoy (cost {5} supplies): ".format(
+            "Craft [m]edkit (cost {0} supplies), [l]molotov (cost {1} supply + fuel), [t]rap (cost {2} supplies), [f]lashlight (cost {3} supplies), [c]ampfire (cost {4} supplies), [d]ecoy (cost {5} supplies) or [v]est (cost {6} supplies): ".format(
                 cost_medkit,
                 MOLOTOV_SUPPLY_COST,
                 cost_trap,
                 cost_flash,
                 cost_camp,
                 cost_decoy,
+                cost_vest,
             )
         ).strip().lower()
         if choice == "m":
@@ -2006,6 +2072,16 @@ class Game:
                 print("Your pack is full.")
             else:
                 print("Not enough supplies to craft a decoy.")
+        elif choice == "v":
+            if self.player.armor > 0:
+                print("You're already wearing armor.")
+            elif self.player.supplies >= cost_vest:
+                self.player.supplies -= cost_vest
+                self.player.armor = 1
+                print("You assemble a makeshift vest.")
+                return True
+            else:
+                print("Not enough supplies to craft a vest.")
         return False
 
     def throw_molotov(self) -> bool:
@@ -2032,7 +2108,7 @@ class Game:
     def drop_item(self) -> bool:
         pos = (self.player.x, self.player.y)
         choice = input(
-            "Drop item [s]upply, [m]edkit, [w]eapon, [k]eys, [f]uel, [a]ntidote, [l]molotov, [i]flashlight, [d]ecoy: "
+            "Drop item [s]upply, [m]edkit, [w]eapon, [k]eys, [f]uel, [a]ntidote, [l]molotov, [i]flashlight, [d]ecoy, [v]est: "
         ).strip().lower()
         if choice == "s" and self.player.supplies > 0:
             self.player.supplies -= 1
@@ -2079,6 +2155,11 @@ class Game:
             self.flashlight_positions.add(pos)
             print("You drop the flashlight.")
             return True
+        if choice == "v" and self.player.armor > 0:
+            self.player.armor -= 1
+            self.armor_positions.add(pos)
+            print("You drop your vest.")
+            return True
         print("Nothing dropped.")
         return False
 
@@ -2117,6 +2198,8 @@ class Game:
             options.append("antidote")
         if self.player.has_flashlight:
             options.append("flashlight")
+        if self.player.armor > 0:
+            options.append("vest")
         if not options:
             print("You have nothing to trade.")
             return False
@@ -2169,6 +2252,12 @@ class Game:
                 return False
             self.player.has_flashlight = False
             target.has_flashlight = True
+        elif item == "vest":
+            if target.armor > 0:
+                print(f"Player {target.symbol} already has armor.")
+                return False
+            self.player.armor -= 1
+            target.armor += 1
         print(f"You trade a {item} to player {target.symbol}.")
         return True
 
@@ -2198,6 +2287,8 @@ class Game:
             stealable.append("antidote")
         if target.has_flashlight and not self.player.has_flashlight:
             stealable.append("flashlight")
+        if target.armor > 0 and self.player.armor == 0:
+            stealable.append("vest")
         if not stealable:
             print(f"Player {target.symbol} has nothing you can take.")
             return False
@@ -2231,10 +2322,15 @@ class Game:
             elif item == "flashlight":
                 target.has_flashlight = False
                 self.player.has_flashlight = True
+            elif item == "vest":
+                target.armor -= 1
+                self.player.armor = 1
             print(f"You steal a {item} from player {target.symbol}!")
         else:
-            self.player.health -= 1
-            print(f"Player {target.symbol} fends you off! You take 1 damage.")
+            dmg = self.player.take_damage(1)
+            print(f"Player {target.symbol} fends you off! You take {dmg} damage.")
+            if self.player.health <= 0:
+                self.handle_player_death(self.player)
         return True
 
     # ------------------------------------------------------------------
@@ -2307,15 +2403,20 @@ class Game:
                     print("A zombie tears apart a decoy!")
             for p in self.players:
                 if z.x == p.x and z.y == p.y:
-                    p.health -= 1
-                    print(f"Player {p.symbol} is bitten! -1 health")
-                    if p.health > 0 and p.infection_turns == 0:
+                    dmg = p.take_damage(1)
+                    if dmg > 0:
+                        print(f"Player {p.symbol} is bitten! -{dmg} health")
+                    else:
+                        print(f"Player {p.symbol}'s armor absorbs the bite!")
+                    if p.health > 0 and dmg > 0 and p.infection_turns == 0:
                         chance = INFECTION_CHANCE + (
                             EPIDEMIC_INFECTION_BONUS if self.infection_boost_turns > 0 else 0
                         )
                         if random.random() < chance:
                             p.infection_turns = INFECTION_TURNS
                             print(f"Player {p.symbol} is infected!")
+                    if p.health <= 0:
+                        self.handle_player_death(p)
 
     def spawn_random_zombie(self) -> None:
         if self.calm_rounds > 0:
@@ -2471,8 +2572,11 @@ class Game:
                     robbed = True
                     print(f"Bandits snatch a medkit from player {p.symbol}!")
                 else:
-                    p.health -= 1
-                    print(f"Bandits rough up player {p.symbol} for 1 damage!")
+                    dmg = p.take_damage(1)
+                    if dmg > 0:
+                        print(f"Bandits rough up player {p.symbol} for {dmg} damage!")
+                    else:
+                        print(f"Bandits strike player {p.symbol} but the armor holds!")
                     if p.health <= 0:
                         self.handle_player_death(p)
             if not robbed:
@@ -2659,7 +2763,7 @@ class Game:
         """Display a scoreboard of each player's outcome and inventory."""
         print("\nFinal results:")
         print(
-            f"{'P':<3}{'Status':<10}{'HP':>5}{'Hunger':>8}{'Kills':>7}{'Sup':>7}{'Med':>7}{'Mol':>7}{'Dec':>7}{'Weap':>6}{'Light':>7}"
+            f"{'P':<3}{'Status':<10}{'HP':>5}{'Hunger':>8}{'Kills':>7}{'Sup':>7}{'Med':>7}{'Mol':>7}{'Dec':>7}{'Arm':>5}{'Weap':>6}{'Light':>7}"
         )
         for p in self.all_players:
             if p in self.evacuated_players:
@@ -2671,7 +2775,7 @@ class Game:
             weapon = "Y" if p.has_weapon else "N"
             light = "Y" if p.has_flashlight else "N"
             print(
-                f"{p.symbol:<3}{status:<10}{p.health:>5}{p.hunger:>8}{p.kills:>7}{p.supplies:>7}{p.medkits:>7}{p.molotovs:>7}{p.decoys:>7}{weapon:>6}{light:>7}"
+                f"{p.symbol:<3}{status:<10}{p.health:>5}{p.hunger:>8}{p.kills:>7}{p.supplies:>7}{p.medkits:>7}{p.molotovs:>7}{p.decoys:>7}{p.armor:>5}{weapon:>6}{light:>7}"
             )
 
         total_xp = self.campaign.get("xp", 0) + self.xp_gained
