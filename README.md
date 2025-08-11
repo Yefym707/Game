@@ -66,6 +66,10 @@ story hook before play and a short epilogue once the scenario concludes.
 In cooperative mode the group shares victory conditions – once the objective is
 met all surviving players must regroup on the starting tile to win together.
 
+When a scenario ends a small scoreboard lists each survivor's fate alongside
+their kill count and remaining supplies, echoing the post-game tally of a
+tabletop session.
+
 ### Roles
 
 Before play begins each survivor chooses a role, granting a small passive
