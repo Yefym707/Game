@@ -542,6 +542,7 @@ class Game:
         if bonus_supplies:
             for p in self.players:
                 p.supplies = min(INVENTORY_LIMIT, p.supplies + bonus_supplies)
+        self.all_players: List[Player] = list(self.players)
         self.player: Player = self.players[0]
         self.start_pos = start_pos
         self.antidote_pos: Optional[Tuple[int, int]] = None
@@ -779,6 +780,7 @@ class Game:
             "reveal_radius",
             REVEAL_RADIUS if not game.is_night else max(0, REVEAL_RADIUS - NIGHT_REVEAL_PENALTY),
         )
+        game.all_players = list(game.players)
         return game
 
     def save_game(self, filename: str = SAVE_FILE) -> None:
@@ -2228,6 +2230,21 @@ class Game:
             print(f"Player {p.symbol} is left behind as the craft departs!")
         return evacuated
 
+    def print_summary(self) -> None:
+        """Display a scoreboard of each player's outcome and inventory."""
+        print("\nFinal results:")
+        print(f"{'P':<3}{'Status':<10}{'Kills':>7}{'Supplies':>10}{'Medkits':>10}")
+        for p in self.all_players:
+            if p in self.evacuated_players:
+                status = "escaped"
+            elif p in self.players and p.health > 0:
+                status = "alive"
+            else:
+                status = "dead"
+            print(
+                f"{p.symbol:<3}{status:<10}{p.kills:>7}{p.supplies:>10}{p.medkits:>10}"
+            )
+
     def advance_time_of_day(self) -> None:
         """Advance the day/night cycle and update related modifiers."""
         self.phase_turns -= 1
@@ -2708,6 +2725,7 @@ class Game:
                     print(fail)
                 self.campaign["supply_bonus"] = self.campaign.get("supply_bonus", 0) + 1
                 print("A stash of supplies is set aside to help in the next run.")
+            self.print_summary()
         except (KeyboardInterrupt, EOFError):
             print("\nThanks for playing!")
         finally:
