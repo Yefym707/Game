@@ -76,7 +76,9 @@ met all surviving players must regroup on the starting tile to win together.
 
 When a scenario ends a small scoreboard lists each survivor's fate alongside
 their remaining health, hunger, kill count and inventory, echoing the
-post-game tally of a tabletop session.
+post-game tally of a tabletop session. The summary now also displays the
+current campaign level, total experience earned and any achievements unlocked
+during the run.
 
 ### Roles
 
