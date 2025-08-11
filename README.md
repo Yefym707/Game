@@ -1,8 +1,7 @@
 # Survival Board Game
 
 This repository contains a small prototype of a turn-based survival board game
-for one to six players. The player roams a fog-covered square grid (10×10 by default) searching for objectives while
-avoiding zombies and navigating around rubble walls that block movement. Inventory space is limited so choose carefully what to carry.
+for one to six players. The player roams a fog-covered square grid (10×10 by default) searching for objectives while avoiding zombies and navigating around rubble walls that block movement. Vision now follows line of sight – walls and barricades hide tiles behind them until a survivor gets a clear view. Inventory space is limited so choose carefully what to carry.
 Players may also spend an action to scout an adjacent tile, peeking through the
 fog before committing to a move.
 Survivors sharing a tile can steal from or even brawl with each other, though
@@ -140,8 +139,9 @@ uncover special locations. Pharmacies (`M`) have a high chance of yielding
   and shed light that reveals adjacent tiles each round but fade after a few
   rounds. Shelters (`U`) are permanent safe spots that grant the same rest
   bonus. Traps may be disarmed to recover supplies. Once revealed, their
-  symbols remain on the board. Rubble walls (`#`) are impassable obstacles that
-  block movement for both survivors and zombies, forcing careful navigation.
+  symbols remain on the board. Rubble walls (`#`) and built barricades (`B`) are
+  impassable obstacles that block movement **and** line of sight, forcing careful
+  navigation.
 Each round hunger decreases for every
 survivor. Starving costs health. The scenario ends after 20 rounds. Win scenario
 1 by finding the antidote and returning to the `S` marked starting tile. Scenario
