@@ -2620,6 +2620,18 @@ class Game:
                 self.rest()
                 actions_left -= 1
                 continue
+            # Use a molotov if multiple zombies surround the survivor
+            if player.molotovs > 0:
+                nearby = sum(
+                    1
+                    for z in self.zombies
+                    if abs(z.x - player.x) <= 1 and abs(z.y - player.y) <= 1
+                )
+                if nearby >= 2:
+                    print(f"Player {player.symbol} hurls a molotov!")
+                    if self.throw_molotov():
+                        actions_left -= 1
+                        continue
             # Attack if a zombie is adjacent
             if any(
                 abs(z.x - player.x) + abs(z.y - player.y) == 1 for z in self.zombies
