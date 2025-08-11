@@ -57,3 +57,23 @@ Missing keys default to the lookup key itself.
 ```bash
 pytest -q
 ```
+
+## Build & Steam upload
+
+Create platform-specific executables with PyInstaller:
+
+```bash
+pyinstaller tools/build_spec.win.spec
+pyinstaller tools/build_spec.mac.spec
+pyinstaller tools/build_spec.linux.spec
+```
+
+The resulting files are placed in the `dist/` directory.
+
+To publish on Steam, set up depots for each platform in Steamworks and use SteamCMD to upload the builds. Each depot should reference the matching `dist` output. A simple upload command looks like:
+
+```bash
+steamcmd +login <user> +run_app_build path/to/app_build.vdf +quit
+```
+
+Replace `<user>` and the VDF path with your account and build script.
