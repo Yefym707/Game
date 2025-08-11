@@ -33,7 +33,8 @@ and recover extra health or hunger.
 Combat and other risky actions explicitly roll dice, displaying the result so
 you can cheer or lament the luck of the draw just like at a real table. Every
 roll is also written to `roll_log.txt`, and d6 rolls show a little ASCII die for
-extra tabletop flavor.
+extra tabletop flavor. For an even more analog feel you can opt to roll
+physical dice yourself and type in the results when prompted.
 Zombie bites may also infect survivors; without an antidote they will turn
 into zombies after a few rounds, adding urgency to secure the cure.
 
@@ -55,7 +56,9 @@ These bots heal, eat, scavenge and pathfind toward revealed objectives and
 supplies. If a previous run was saved, you'll be offered to load it instead.
 Available difficulties are **easy**, **normal**, and
 **hard**. If unsure, press Enter for the defaults. You can optionally enable a
-cooperative mode where all survivors must escape together. Selecting scenario
+cooperative mode where all survivors must escape together. If you want the full
+board-game experience you can enable manual dice input and enter your own
+rolls. Selecting scenario
 **0** launches a full four-part campaign, automatically progressing to the next
 chapter after each victory. Scenario **1** tasks you with finding an antidote
 and returning to the starting tile. Scenario **2** requires locating both car

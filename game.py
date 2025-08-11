@@ -39,6 +39,8 @@ Features
 * Rare calm nights halt zombie spawns entirely for a single round.
 * Zombie bites may infect survivors; without an antidote they will turn
   after a few rounds.
+* Optional manual dice input lets players roll physical dice and enter the
+  results for a tactile tabletop experience.
 
 The code is intentionally compact and uses only the Python standard
 library so it can run in any environment with Python 3.12 or newer.
@@ -53,6 +55,8 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Set, Tuple
 from collections import deque
 
+
+MANUAL_DICE = False
 
 BOARD_SIZE = 10
 # Maximum number of actions a survivor may roll each turn
@@ -375,6 +379,30 @@ def show_die(value: int) -> None:
             print(line)
 
 
+def roll_die(sides: int, allow_manual: bool = True, label: str | None = None) -> int:
+    """Return the result of rolling a die with ``sides`` sides.
+
+    When manual dice mode is enabled and ``allow_manual`` is true the user is
+    prompted to enter the roll result, allowing the use of physical dice for a
+    more authentic tabletop feel. Otherwise a pseudo-random value is
+    generated.
+    """
+    if MANUAL_DICE and allow_manual:
+        while True:
+            try:
+                prompt = f"Roll a d{sides}"
+                if label:
+                    prompt += f" for {label}"
+                prompt += ": "
+                val = int(input(prompt).strip())
+            except ValueError:
+                val = 0
+            if 1 <= val <= sides:
+                return val
+            print(f"Enter a number between 1 and {sides}.")
+    return random.randint(1, sides)
+
+
 def log_roll(label: str, sides: int, result: int, threshold: int | None = None) -> None:
     """Append the roll result to ``ROLL_LOG_FILE``."""
     try:
@@ -387,7 +415,13 @@ def log_roll(label: str, sides: int, result: int, threshold: int | None = None) 
         pass
 
 
-def roll_check(chance: float, sides: int = 10, label: str = "Roll", log: bool = True) -> bool:
+def roll_check(
+    chance: float,
+    sides: int = 10,
+    label: str = "Roll",
+    log: bool = True,
+    allow_manual: bool = True,
+) -> bool:
     """Return True if a dice roll succeeds against ``chance``.
 
     The function rolls a ``sides``-sided die, optionally prints the result,
@@ -395,7 +429,7 @@ def roll_check(chance: float, sides: int = 10, label: str = "Roll", log: bool = 
     randomness of tabletop games by surfacing the die roll to the player.
     """
     threshold = max(1, int(chance * sides))
-    roll = random.randint(1, sides)
+    roll = roll_die(sides, allow_manual=allow_manual)
     if log:
         print(f"{label} d{sides}: {roll} (need <= {threshold})")
         if sides <= 6:
@@ -1492,7 +1526,7 @@ class Game:
                 )
                 if self.player.role == "fighter":
                     hit_chance = min(1.0, hit_chance + 0.1)
-                if roll_check(hit_chance, label="Attack"):
+                if roll_check(hit_chance, label="Attack", allow_manual=not self.player.is_ai):
                     self.zombies.remove(z)
                     self.zombies_killed += 1
                     self.player.kills += 1
@@ -1525,7 +1559,7 @@ class Game:
         if not others:
             return False
         target = random.choice(others)
-        if roll_check(PVP_ATTACK_HIT_CHANCE, label="Skirmish"):
+        if roll_check(PVP_ATTACK_HIT_CHANCE, label="Skirmish", allow_manual=not self.player.is_ai):
             target.health -= 1
             print(f"You strike player {target.symbol}! -1 HP")
             if target.health <= 0:
@@ -1567,11 +1601,19 @@ class Game:
             self.pharmacy_positions.remove(pos)
             if self.player.inventory_size < self.player.inventory_limit:
                 found = False
-                if roll_check(PHARMACY_MEDKIT_CHANCE, label="Pharmacy"):
+                if roll_check(
+                    PHARMACY_MEDKIT_CHANCE,
+                    label="Pharmacy",
+                    allow_manual=not self.player.is_ai,
+                ):
                     self.player.medkits += 1
                     found = True
                     print("You raid the pharmacy and find a medkit!")
-                if roll_check(SCAVENGE_FIND_CHANCE, label="Pharmacy"):
+                if roll_check(
+                    SCAVENGE_FIND_CHANCE,
+                    label="Pharmacy",
+                    allow_manual=not self.player.is_ai,
+                ):
                     self.player.supplies += 1
                     found = True
                     print("You grab some supplies.")
@@ -1583,12 +1625,20 @@ class Game:
         if pos in self.armory_positions:
             self.armory_positions.remove(pos)
             found = False
-            if not self.player.has_weapon and roll_check(ARMORY_WEAPON_CHANCE, label="Armory"):
+            if not self.player.has_weapon and roll_check(
+                ARMORY_WEAPON_CHANCE,
+                label="Armory",
+                allow_manual=not self.player.is_ai,
+            ):
                 self.player.has_weapon = True
                 found = True
                 print("You find a weapon in the armory!")
             if self.player.inventory_size < self.player.inventory_limit:
-                if roll_check(ARMORY_SUPPLY_CHANCE, label="Armory"):
+                if roll_check(
+                    ARMORY_SUPPLY_CHANCE,
+                    label="Armory",
+                    allow_manual=not self.player.is_ai,
+                ):
                     self.player.supplies += 1
                     found = True
                     print("You scavenge some useful gear.")
@@ -2124,7 +2174,7 @@ class Game:
             print(f"Player {target.symbol} has nothing you can take.")
             return False
         chance = STEAL_SUCCESS_CHANCE + (0.25 if self.player.role == "thief" else 0)
-        if roll_check(min(0.95, chance), label="Steal"):
+        if roll_check(min(0.95, chance), label="Steal", allow_manual=not self.player.is_ai):
             item = random.choice(stealable)
             if item == "supply":
                 target.supplies -= 1
@@ -2545,7 +2595,7 @@ class Game:
         """
         rolls = []
         for p in self.players:
-            roll = random.randint(1, 6)
+            roll = roll_die(6, allow_manual=not p.is_ai, label=f"initiative {p.symbol}")
             if p.role == "leader":
                 roll += 1
             log_roll(f"Initiative {p.symbol}", 6, roll)
@@ -2568,14 +2618,18 @@ class Game:
         modify. Returning the rolled value keeps turns feeling like a board game
         where the dice decide your options.
         """
-        actions = random.randint(1, self.actions_per_turn)
+        actions = roll_die(
+            self.actions_per_turn, allow_manual=not player.is_ai, label=f"actions {player.symbol}"
+        )
         if player.role == "leader" and self.actions_per_turn > 1:
             actions = max(actions, 2)
         log_roll(f"Actions {player.symbol}", self.actions_per_turn, actions)
         who = "Player {}".format(player.symbol)
         if not player.is_ai:
             who = "You"
-        print(f"{who} roll{'' if actions == 1 else 's'} {actions} action{'s' if actions != 1 else ''}.")
+        print(
+            f"{who} roll{'' if actions == 1 else 's'} {actions} action{'s' if actions != 1 else ''}."
+        )
         if self.actions_per_turn <= 6:
             show_die(actions)
         return actions
@@ -3104,6 +3158,9 @@ if __name__ == "__main__":
         except ValueError:
             board_size = BOARD_SIZE
         coop = input("Cooperative mode? [y/N]: ").strip().lower() == "y"
+        manual = input("Manual dice input? [y/N]: ").strip().lower() == "y"
+        if manual:
+            MANUAL_DICE = True
         role_names = "/".join(ROLE_DEFS.keys())
         roles = []
         for i in range(num_players):
