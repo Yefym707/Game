@@ -21,6 +21,7 @@
     "medkit": 4,
     "weapon": 2,
     "flashlight": 1,
+    "decoy": 1,
     "nothing": 10
   }
 }
