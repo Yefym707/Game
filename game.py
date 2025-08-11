@@ -187,6 +187,7 @@ DEFAULT_EVENT_CARD_COUNTS = {
     "adrenaline": 1,
     "survivors": 1,
     "ambush": 1,
+    "bandits": 1,
     "rain": 1,
     "fog": 1,
     "heatwave": 1,
@@ -2279,6 +2280,24 @@ class Game:
             for p in list(self.players):
                 self.spawn_zombie_near(p.x, p.y, 1.0)
             print("Zombies spring from the shadows, ambushing the survivors!")
+        elif event == "bandits":
+            robbed = False
+            for p in list(self.players):
+                if p.supplies > 0:
+                    p.supplies -= 1
+                    robbed = True
+                    print(f"Bandits steal a supply from player {p.symbol}!")
+                elif p.medkits > 0:
+                    p.medkits -= 1
+                    robbed = True
+                    print(f"Bandits snatch a medkit from player {p.symbol}!")
+                else:
+                    p.health -= 1
+                    print(f"Bandits rough up player {p.symbol} for 1 damage!")
+                    if p.health <= 0:
+                        self.handle_player_death(p)
+            if not robbed:
+                print("The bandits find nothing worth taking and depart.")
         elif event == "storm":
             self.actions_per_turn = max(1, ACTIONS_PER_TURN - 1)
             print(
