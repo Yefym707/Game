@@ -126,7 +126,7 @@ an adrenaline rush grants an extra move. Sometimes zombies spring an ambush,
 appearing next to the survivors. Friendly survivors may appear with
 supplies or medkits and, if there’s room, may even join your group. The wind
 can momentarily lift the fog to reveal unexplored tiles. A wandering trader may
-offer a medkit in exchange for two supplies. Rain muffles sound so noise tokens
+offer a medkit in exchange for two supplies. Occasionally a supply airdrop parachutes in, leaving a medkit and some food for whoever reaches it first. Rain muffles sound so noise tokens
 are less likely to draw zombies in the following round. Heatwaves parch the survivors, causing extra hunger loss next turn. A sudden
 blizzard both muffles noise and limits everyone to fewer actions with reduced
 visibility on the next turn. Occasional earthquakes may raise or crumble rubble walls, reshaping the paths ahead. Exploring may also
