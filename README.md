@@ -13,6 +13,9 @@ Scavenging pulls from a finite loot deck so items won't repeat until the deck
 is reshuffled, reinforcing the tabletop feel. Both event and loot deck
 compositions are stored in `decks.json` so you can tweak card frequencies or
 add your own entries.
+Each new round begins with an initiative roll for every survivor; the highest
+roll acts first, making turn order unpredictable just like around a real
+table.
 For even more control an optional `board_layout.json` file can describe the
 starting map as an array of ten strings. Use `#` for walls, `U` for shelters,
 `M` for pharmacies, `W` for armories and `S` for the starting tile. Any
