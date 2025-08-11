@@ -6,7 +6,8 @@ safety.
 
 Features
 --------
-* 10x10 board with up to six players, zombies and supply tokens.
+* Customizable square board (default 10×10) with up to six players,
+  zombies and supply tokens.
 * Each player rolls at the start of their turn to see how many actions they
   may take: move, scout, attack, scavenge or pass.
 * Resting lets survivors regain hunger or a point of health.
@@ -476,8 +477,6 @@ class Zombie(Entity):
 class Game:
     """Main game controller handling turns and board state."""
 
-    board_size: int = BOARD_SIZE
-
     def __init__(
         self,
         difficulty: str = "normal",
@@ -486,6 +485,7 @@ class Game:
         num_ai: int = 0,
         cooperative: bool = False,
         roles: Optional[List[str]] = None,
+        board_size: int = BOARD_SIZE,
     ) -> None:
         settings = DIFFICULTY_SETTINGS.get(difficulty.lower())
         if settings is None:
@@ -493,6 +493,7 @@ class Game:
         self.difficulty = difficulty.lower()
         self.scenario = scenario
         self.cooperative = cooperative
+        self.board_size = max(5, board_size)
         self.campaign = load_campaign()
         self.level = self.campaign.get("level", 1)
         # Small consolation stash awarded after failed runs
@@ -668,6 +669,7 @@ class Game:
             "actions_per_turn": self.actions_per_turn,
             "zombies_killed": self.zombies_killed,
             "cooperative": self.cooperative,
+            "board_size": self.board_size,
             "event_deck": list(self.event_deck),
             "loot_deck": list(self.loot_deck),
             "noise_markers": [list(n) for n in self.noise_markers],
@@ -690,6 +692,7 @@ class Game:
             data["scenario"],
             len(data["players"]),
             cooperative=data.get("cooperative", False),
+            board_size=data.get("board_size", BOARD_SIZE),
         )
         game.start_pos = tuple(data["start_pos"])
         for p, pdata in zip(game.players, data["players"]):
@@ -2793,6 +2796,11 @@ if __name__ == "__main__":
             num_ai = max(0, min(num_players - 1, int(bots)))
         except ValueError:
             num_ai = 0
+        size = input("Board size [5-20]: ").strip() or str(BOARD_SIZE)
+        try:
+            board_size = min(20, max(5, int(size)))
+        except ValueError:
+            board_size = BOARD_SIZE
         coop = input("Cooperative mode? [y/N]: ").strip().lower() == "y"
         role_names = "/".join(ROLE_DEFS.keys())
         roles = []
@@ -2807,7 +2815,15 @@ if __name__ == "__main__":
         if scen_num == 0:
             current = 1
             while current <= 4:
-                game = Game(diff, current, num_players, num_ai, cooperative=coop, roles=roles)
+                game = Game(
+                    diff,
+                    current,
+                    num_players,
+                    num_ai,
+                    cooperative=coop,
+                    roles=roles,
+                    board_size=board_size,
+                )
                 game.run()
                 if current >= 4:
                     break
@@ -2818,6 +2834,14 @@ if __name__ == "__main__":
                     break
                 current += 1
         else:
-            game = Game(diff, scen_num, num_players, num_ai, cooperative=coop, roles=roles)
+            game = Game(
+                diff,
+                scen_num,
+                num_players,
+                num_ai,
+                cooperative=coop,
+                roles=roles,
+                board_size=board_size,
+            )
             game.run()
 
