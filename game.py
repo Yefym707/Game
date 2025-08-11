@@ -658,7 +658,10 @@ class Game:
         self.weapon_positions: Set[Tuple[int, int]] = set()
         self.molotov_positions: Set[Tuple[int, int]] = set()
         self.flashlight_positions: Set[Tuple[int, int]] = set()
+        # Decoys on the ground that can be picked up
         self.decoy_positions: Set[Tuple[int, int]] = set()
+        # Active decoys currently luring zombies with remaining duration
+        self.active_decoys: Dict[Tuple[int, int], int] = {}
         self.trap_positions: Set[Tuple[int, int]] = set()
         self.pharmacy_positions: Set[Tuple[int, int]] = set(layout.get("pharmacies", set()))
         self.armory_positions: Set[Tuple[int, int]] = set(layout.get("armories", set()))
@@ -745,6 +748,7 @@ class Game:
             "molotov_positions": list(self.molotov_positions),
             "flashlight_positions": list(self.flashlight_positions),
             "decoy_positions": list(self.decoy_positions),
+            "active_decoys": [[x, y, t] for (x, y), t in self.active_decoys.items()],
             "trap_positions": list(self.trap_positions),
             "pharmacy_positions": list(self.pharmacy_positions),
             "armory_positions": list(self.armory_positions),
@@ -826,6 +830,9 @@ class Game:
         game.molotov_positions = {tuple(pos) for pos in data.get("molotov_positions", [])}
         game.flashlight_positions = {tuple(pos) for pos in data.get("flashlight_positions", [])}
         game.decoy_positions = {tuple(pos) for pos in data.get("decoy_positions", [])}
+        game.active_decoys = {
+            (pos[0], pos[1]): pos[2] for pos in data.get("active_decoys", [])
+        }
         game.trap_positions = {tuple(pos) for pos in data.get("trap_positions", [])}
         game.pharmacy_positions = {
             tuple(pos) for pos in data.get("pharmacy_positions", [])
@@ -978,6 +985,7 @@ class Game:
                             and (nx, ny) not in self.weapon_positions
                             and (nx, ny) not in self.molotov_positions
                             and (nx, ny) not in self.decoy_positions
+                            and (nx, ny) not in self.active_decoys
                             and (nx, ny) not in self.flashlight_positions
                             and (nx, ny) not in self.trap_positions
                             and (nx, ny) != self.antidote_pos
@@ -1090,6 +1098,7 @@ class Game:
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
                     and (x, y) not in self.decoy_positions
+                    and (x, y) not in self.active_decoys
                     and (x, y) not in self.trap_positions
                     and (x, y) not in self.campfires
                     and (x, y) not in self.shelter_positions
@@ -1116,6 +1125,7 @@ class Game:
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
                     and (x, y) not in self.decoy_positions
+                    and (x, y) not in self.active_decoys
                     and (x, y) not in self.supplies_positions
                     and all((z.x, z.y) != (x, y) for z in self.zombies)
                 ):
@@ -1141,6 +1151,7 @@ class Game:
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
                     and (x, y) not in self.decoy_positions
+                    and (x, y) not in self.active_decoys
                     and (x, y) not in self.supplies_positions
                     and all((z.x, z.y) != (x, y) for z in self.zombies)
                 ):
@@ -1165,6 +1176,7 @@ class Game:
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
                     and (x, y) not in self.decoy_positions
+                    and (x, y) not in self.active_decoys
                     and (x, y) not in self.supplies_positions
                     and all((z.x, z.y) != (x, y) for z in self.zombies)
                 ):
@@ -1192,6 +1204,7 @@ class Game:
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
                     and (x, y) not in self.decoy_positions
+                    and (x, y) not in self.active_decoys
                 ):
                     self.supplies_positions.add((x, y))
                     break
@@ -1218,6 +1231,7 @@ class Game:
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
                     and (x, y) not in self.decoy_positions
+                    and (x, y) not in self.active_decoys
                 ):
                     self.medkit_positions.add((x, y))
                     break
@@ -1240,6 +1254,7 @@ class Game:
                 and (x, y) not in self.weapon_positions
                 and (x, y) not in self.molotov_positions
                 and (x, y) not in self.decoy_positions
+                and (x, y) not in self.active_decoys
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
                 self.antidote_pos = (x, y)
@@ -1262,6 +1277,7 @@ class Game:
                 and (x, y) not in self.weapon_positions
                 and (x, y) not in self.molotov_positions
                 and (x, y) not in self.decoy_positions
+                and (x, y) not in self.active_decoys
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
                 self.keys_pos = (x, y)
@@ -1286,6 +1302,7 @@ class Game:
                 and (x, y) not in self.weapon_positions
                 and (x, y) not in self.molotov_positions
                 and (x, y) not in self.decoy_positions
+                and (x, y) not in self.active_decoys
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
                 self.fuel_pos = (x, y)
@@ -1311,6 +1328,7 @@ class Game:
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
                     and (x, y) not in self.decoy_positions
+                    and (x, y) not in self.active_decoys
                     and all((z.x, z.y) != (x, y) for z in self.zombies)
                 ):
                     self.radio_positions.add((x, y))
@@ -1334,6 +1352,7 @@ class Game:
                 and (x, y) not in self.weapon_positions
                 and (x, y) not in self.molotov_positions
                 and (x, y) not in self.decoy_positions
+                and (x, y) not in self.active_decoys
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
                 self.radio_tower_pos = (x, y)
@@ -1402,6 +1421,9 @@ class Game:
         for x, y in self.molotov_positions:
             if (x, y) in self.revealed and not self.is_player_at(x, y):
                 board[y][x] = MOLOTOV_SYMBOL
+        for (x, y), _ in self.active_decoys.items():
+            if (x, y) in self.revealed and not self.is_player_at(x, y):
+                board[y][x] = DECOY_SYMBOL
         for x, y in self.decoy_positions:
             if (x, y) in self.revealed and not self.is_player_at(x, y):
                 board[y][x] = DECOY_SYMBOL
@@ -1718,6 +1740,9 @@ class Game:
             else:
                 print("Your pack is full. You leave the decoy behind.")
             return
+        if pos in self.active_decoys:
+            print("The decoy here is still rattling and can't be reclaimed yet.")
+            return
 
         if not self.loot_deck:
             self.loot_deck = create_loot_deck()
@@ -1874,6 +1899,7 @@ class Game:
         if use_decoy:
             self.player.decoys -= 1
             self.add_noise(nx, ny, DECOY_NOISE_ZOMBIE_CHANCE, DECOY_DURATION)
+            self.active_decoys[(nx, ny)] = DECOY_DURATION
             print("You set a decoy to lure the horde.")
         else:
             self.player.supplies -= 1
@@ -2222,7 +2248,10 @@ class Game:
         their board-game utility.
         """
 
-        goals = {(p.x, p.y) for p in self.players if p.health > 0}
+        if self.active_decoys:
+            goals = set(self.active_decoys.keys())
+        else:
+            goals = {(p.x, p.y) for p in self.players if p.health > 0}
         if not goals:
             return None
         queue: deque[Tuple[Tuple[int, int], List[Tuple[int, int]]]] = deque()
@@ -2272,6 +2301,10 @@ class Game:
                 continue
             if not any((other.x, other.y) == (nx, ny) for other in self.zombies):
                 z.x, z.y = nx, ny
+            if (z.x, z.y) in self.active_decoys:
+                del self.active_decoys[(z.x, z.y)]
+                if (z.x, z.y) in self.revealed:
+                    print("A zombie tears apart a decoy!")
             for p in self.players:
                 if z.x == p.x and z.y == p.y:
                     p.health -= 1
@@ -2309,6 +2342,7 @@ class Game:
                 and (nx, ny) not in self.wall_positions
                 and (nx, ny) not in self.molotov_positions
                 and (nx, ny) not in self.decoy_positions
+                and (nx, ny) not in self.active_decoys
                 and (nx, ny) not in self.trap_positions
                 and (nx, ny) not in self.campfires
                 and (nx, ny) not in self.shelter_positions
@@ -2339,6 +2373,7 @@ class Game:
             and (nx, ny) not in self.weapon_positions
             and (nx, ny) not in self.molotov_positions
             and (nx, ny) not in self.decoy_positions
+            and (nx, ny) not in self.active_decoys
             and (nx, ny) not in self.trap_positions
             and (nx, ny) not in self.wall_positions
             and all((z.x, z.y) != (nx, ny) for z in self.zombies)
@@ -2367,6 +2402,19 @@ class Game:
             self.noise_dampener_turns -= 1
         if self.visibility_penalty_turns > 0:
             self.visibility_penalty_turns -= 1
+
+    def update_decoys(self) -> None:
+        """Tick down active decoy timers and remove expired ones."""
+        expired: List[Tuple[int, int]] = []
+        for (x, y), turns in list(self.active_decoys.items()):
+            if turns > 1:
+                self.active_decoys[(x, y)] = turns - 1
+            else:
+                expired.append((x, y))
+        for pos in expired:
+            del self.active_decoys[pos]
+            if pos in self.revealed:
+                print("A decoy falls silent.")
     def update_campfires(self) -> None:
         """Reduce campfire timers, reveal their light and remove expired fires."""
         expired: List[Tuple[int, int]] = []
@@ -3085,6 +3133,7 @@ class Game:
                     break
                 self.spawn_random_zombie()
                 self.resolve_noise()
+                self.update_decoys()
                 self.update_campfires()
                 if self.calm_rounds > 0:
                     self.calm_rounds -= 1
