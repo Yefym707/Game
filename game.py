@@ -252,6 +252,52 @@ DEFAULT_LOOT_CARD_COUNTS = {
     "nothing": 10,
 }
 
+# Optional mapping of board symbols to display characters.  The game renders
+# its map using simple text glyphs so it can run in any terminal, but some
+# users may wish to customise how tiles look.  If a ``textures.json`` file is
+# present it will be loaded and any symbols defined there will replace the
+# defaults during rendering.  This keeps texture handling lightweight while
+# still allowing a touch of personal flavour, e.g. using Unicode box drawing or
+# emoji for tiles.
+TEXTURE_FILE = "textures.json"
+DEFAULT_TEXTURES = {
+    ".": ".",  # revealed empty tile
+    "?": "?",  # unrevealed tile
+    WALL_SYMBOL: WALL_SYMBOL,
+    BARRICADE_SYMBOL: BARRICADE_SYMBOL,
+    SHELTER_SYMBOL: SHELTER_SYMBOL,
+    PHARMACY_SYMBOL: PHARMACY_SYMBOL,
+    ARMORY_SYMBOL: ARMORY_SYMBOL,
+    ANTIDOTE_SYMBOL: ANTIDOTE_SYMBOL,
+    KEYS_SYMBOL: KEYS_SYMBOL,
+    FUEL_SYMBOL: FUEL_SYMBOL,
+    RADIO_PART_SYMBOL: RADIO_PART_SYMBOL,
+    RADIO_TOWER_SYMBOL: RADIO_TOWER_SYMBOL,
+    MEDKIT_SYMBOL: MEDKIT_SYMBOL,
+    WEAPON_SYMBOL: WEAPON_SYMBOL,
+    TRAP_SYMBOL: TRAP_SYMBOL,
+    CAMPFIRE_SYMBOL: CAMPFIRE_SYMBOL,
+    DECOY_SYMBOL: DECOY_SYMBOL,
+}
+
+
+def load_textures(path: str) -> Dict[str, str]:
+    """Load optional tile textures from ``path``.
+
+    The file should contain a JSON object mapping board symbols to strings.
+    Any missing symbols fall back to :data:`DEFAULT_TEXTURES`.
+    """
+
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        textures = {k: str(v) for k, v in data.items()}
+        merged = DEFAULT_TEXTURES.copy()
+        merged.update(textures)
+        return merged
+    except (OSError, ValueError):
+        return DEFAULT_TEXTURES.copy()
+
 
 def load_deck_config(path: str) -> tuple[dict[str, int], dict[str, int]]:
     """Load event and loot deck counts from *path* if it exists."""
@@ -666,6 +712,9 @@ class Game:
         self.evacuation_turns = EVACUATION_TURNS + extra_players
         starting_health = settings["starting_health"] + self.campaign.get("hp_bonus", 0)
         layout = load_board_layout(BOARD_LAYOUT_FILE, self.board_size)
+        # Load optional tile textures; missing or malformed files simply use
+        # the built-in defaults so gameplay isn't affected.
+        self.textures = load_textures(TEXTURE_FILE)
         start_pos = layout.get("start_pos") or (self.board_size // 2, self.board_size // 2)
         offsets = [(0, 0), (0, 1), (1, 0), (-1, 0), (0, -1), (1, 1)]
         self.players: List[Player] = []
@@ -1534,7 +1583,8 @@ class Game:
         header = "   " + " ".join(str(i) for i in range(self.board_size))
         print(header)
         for idx, row in enumerate(board):
-            print(f"{idx:2d} " + " ".join(row))
+            display_row = [self.textures.get(cell, cell) for cell in row]
+            print(f"{idx:2d} " + " ".join(display_row))
 
     def show_help(self) -> None:
         """Display available controls and board legend."""
