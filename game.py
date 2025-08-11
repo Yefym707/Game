@@ -2022,17 +2022,35 @@ class Game:
         print("No trap here to disarm.")
         return False
 
-    def create_noise(self) -> bool:
-        """Place a noise marker on an adjacent tile to lure zombies."""
-        use_decoy = False
-        if self.player.decoys > 0:
-            choice = input("Use a decoy? [y/N]: ").strip().lower()
-            if choice == "y":
-                use_decoy = True
-        if not use_decoy and self.player.supplies <= 0:
+    def create_noise(self, direction: Optional[str] = None, use_decoy: Optional[bool] = None) -> bool:
+        """Place a noise marker on an adjacent tile to lure zombies.
+
+        ``direction`` and ``use_decoy`` may be provided by tests or a future
+        non-interactive interface.  When omitted the player is prompted just as
+        before this change.
+        """
+        # Determine whether the player wants to deploy a decoy instead of
+        # spending a supply.  When ``use_decoy`` is ``None`` we fall back to the
+        # original interactive prompt to preserve gameplay behaviour.
+        use_decoy_flag = False
+        if use_decoy is None:
+            if self.player.decoys > 0:
+                choice = input("Use a decoy? [y/N]: ").strip().lower()
+                if choice == "y":
+                    use_decoy_flag = True
+        else:
+            use_decoy_flag = bool(use_decoy) and self.player.decoys > 0
+
+        if not use_decoy_flag and self.player.supplies <= 0:
             print("You lack the supplies to create a distraction.")
             return False
-        direction = input("Throw noise [w/a/s/d]: ").strip().lower()
+
+        if direction is None:
+            direction = input("Throw noise [w/a/s/d]: ").strip().lower()
+        else:
+            direction = direction.lower()
+        # Accept natural language directions such as "north" or "left".
+        direction = normalize_direction(direction)
         if direction not in DIRECTION_OFFSETS:
             print("Invalid direction.")
             return False
@@ -2041,7 +2059,7 @@ class Game:
         if not (0 <= nx < self.board_size and 0 <= ny < self.board_size):
             print("You can't toss noise off the board.")
             return False
-        if use_decoy:
+        if use_decoy_flag:
             self.player.decoys -= 1
             self.add_noise(nx, ny, DECOY_NOISE_ZOMBIE_CHANCE, DECOY_DURATION)
             self.active_decoys[(nx, ny)] = DECOY_DURATION
