@@ -80,6 +80,17 @@ characters of your choice.  Any entries you omit fall back to sensible
 defaults.  This allows quick experiments like swapping walls for Unicode box
 drawing or using emoji for items without touching the code.
 
+### Building Tile Images
+
+If you want graphical tiles, a small helper script can turn `textures.json`
+into images:
+
+1. Install Pillow if needed: `pip install pillow`
+2. Ensure `textures.json` sits next to `game.py`
+3. Run `python build_tiles.py`
+4. Tiles appear under `assets/tiles/` and an atlas plus mapping are written to
+   `assets/tileset.png` and `assets/tileset.json`
+
 In cooperative mode the group shares victory conditions – once the objective is
 met all surviving players must regroup on the starting tile to win together.
 
