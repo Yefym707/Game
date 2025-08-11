@@ -179,6 +179,7 @@ DEFAULT_EVENT_CARD_COUNTS = {
     "firebomb": 1,
     "blizzard": 1,
     "earthquake": 1,
+    "trader": 1,
 }
 
 DEFAULT_LOOT_CARD_COUNTS = {
@@ -2144,6 +2145,35 @@ class Game:
                     break
             if not given:
                 print("You find a firebomb cache but can't carry any.")
+        elif event == "trader":
+            bought = False
+            for p in self.players:
+                if p.supplies >= 2 and p.inventory_size < INVENTORY_LIMIT:
+                    if p.is_ai:
+                        if p.medkits == 0:
+                            p.supplies -= 2
+                            p.medkits += 1
+                            print(
+                                f"Player {p.symbol} buys a medkit from a wandering trader."
+                            )
+                            bought = True
+                    else:
+                        choice = (
+                            input(
+                                f"Player {p.symbol}: buy a medkit for 2 supplies? [y/N]: "
+                            )
+                            .strip()
+                            .lower()
+                        )
+                        if choice == "y":
+                            p.supplies -= 2
+                            p.medkits += 1
+                            print(
+                                f"Player {p.symbol} buys a medkit from the trader."
+                            )
+                            bought = True
+            if not bought:
+                print("The wandering trader finds no buyers and moves on.")
 
     def handle_player_death(self, player: Player) -> None:
         """Remove a dead player and spawn a zombie at their location."""
