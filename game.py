@@ -130,6 +130,9 @@ DIRECTION_ALIASES = {
     "south": "s",
     "west": "a",
     "east": "d",
+    # Allow short hand cardinal letters for programmatic control.
+    "n": "w",
+    "e": "d",
 }
 
 
@@ -144,6 +147,18 @@ def normalize_direction(direction: str) -> str:
     """
     direction = direction.lower()
     return DIRECTION_ALIASES.get(direction, direction)
+
+
+def direction_to_offset(direction: str) -> Optional[Tuple[int, int]]:
+    """Return the ``(dx, dy)`` offset for ``direction``.
+
+    The helper first normalises the input via :func:`normalize_direction` and
+    then looks up the appropriate offset in :data:`DIRECTION_OFFSETS`.  ``None``
+    is returned when the direction is unknown, allowing callers to handle
+    invalid input uniformly.
+    """
+
+    return DIRECTION_OFFSETS.get(normalize_direction(direction))
 
 # Special tile settings
 PHARMACY_SYMBOL = "M"
@@ -1633,10 +1648,10 @@ class Game:
         word-based aliases such as "north"/"up".  Unsupported directions simply
         return ``False`` and no movement occurs.
         """
-        direction = normalize_direction(direction)
-        if direction not in DIRECTION_OFFSETS:
+        offset = direction_to_offset(direction)
+        if offset is None:
             return False
-        dx, dy = DIRECTION_OFFSETS[direction]
+        dx, dy = offset
 
         original = (self.player.x, self.player.y)
         for _ in range(steps):
@@ -2051,12 +2066,11 @@ class Game:
 
         if direction is None:
             direction = input("Throw noise [w/a/s/d]: ").strip()
-        # Accept natural language directions such as "north" or "left".
-        direction = normalize_direction(direction)
-        if direction not in DIRECTION_OFFSETS:
+        offset = direction_to_offset(direction)
+        if offset is None:
             print("Invalid direction.")
             return False
-        dx, dy = DIRECTION_OFFSETS[direction]
+        dx, dy = offset
         nx, ny = self.player.x + dx, self.player.y + dy
         if not (0 <= nx < self.board_size and 0 <= ny < self.board_size):
             print("You can't toss noise off the board.")
@@ -2080,15 +2094,12 @@ class Game:
         """
         if direction is None:
             direction = input("Scout direction [w/a/s/d]: ").strip()
-        # Map any word-based direction to the canonical WASD keys so scouting
-        # works with both keyboard-style controls and higher level descriptions
-        # such as "north" or "left".
-        direction = normalize_direction(direction)
-
-        if direction not in DIRECTION_OFFSETS:
+        # Convert any natural language direction to the canonical offset.
+        offset = direction_to_offset(direction)
+        if offset is None:
             print("Invalid direction.")
             return False
-        dx, dy = DIRECTION_OFFSETS[direction]
+        dx, dy = offset
         nx, ny = self.player.x + dx, self.player.y + dy
         if not (0 <= nx < self.board_size and 0 <= ny < self.board_size):
             print("You can't scout past the edge of the board.")
