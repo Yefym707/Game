@@ -94,7 +94,11 @@ EVACUATION_CAPACITY = 2  # rescue seats available in final scenario
 DOUBLE_MOVE_REWARD = 5
 WEAPON_NOISE_ZOMBIE_CHANCE = 0.3
 VEHICLE_NOISE_ZOMBIE_CHANCE = 0.5
+THROWN_NOISE_ZOMBIE_CHANCE = 0.3
 DECOY_NOISE_ZOMBIE_CHANCE = 0.4
+DECOY_DURATION = 3  # rounds a deployed decoy persists
+DECOY_SYMBOL = "D"
+DECOY_CRAFT_COST = 2
 NOISE_DURATION = 2  # rounds noise tokens persist
 SCOUT_RADIUS = 2  # tiles revealed when scouting
 RAIN_NOISE_MULTIPLIER = 0.5  # noise chance multiplier during rain events
@@ -194,6 +198,7 @@ DEFAULT_LOOT_CARD_COUNTS = {
     "medkit": 4,
     "weapon": 2,
     "flashlight": 1,
+    "decoy": 1,
     "nothing": 10,
 }
 
@@ -459,6 +464,7 @@ class Player(Entity):
         self.supplies: int = 0
         self.medkits: int = 0
         self.molotovs: int = 0
+        self.decoys: int = 0
         self.has_antidote: bool = False
         self.has_keys: bool = False
         self.has_fuel: bool = False
@@ -470,7 +476,7 @@ class Player(Entity):
     @property
     def inventory_size(self) -> int:
         """Total number of items currently carried."""
-        return self.supplies + self.medkits + self.molotovs
+        return self.supplies + self.medkits + self.molotovs + self.decoys
 
 
 class Zombie(Entity):
@@ -570,6 +576,7 @@ class Game:
         self.weapon_positions: Set[Tuple[int, int]] = set()
         self.molotov_positions: Set[Tuple[int, int]] = set()
         self.flashlight_positions: Set[Tuple[int, int]] = set()
+        self.decoy_positions: Set[Tuple[int, int]] = set()
         self.trap_positions: Set[Tuple[int, int]] = set()
         self.pharmacy_positions: Set[Tuple[int, int]] = set(layout.get("pharmacies", set()))
         self.armory_positions: Set[Tuple[int, int]] = set(layout.get("armories", set()))
@@ -634,6 +641,7 @@ class Game:
                     "supplies": p.supplies,
                     "medkits": p.medkits,
                     "molotovs": p.molotovs,
+                    "decoys": p.decoys,
                     "kills": p.kills,
                     "has_antidote": p.has_antidote,
                     "has_keys": p.has_keys,
@@ -653,6 +661,7 @@ class Game:
             "weapon_positions": list(self.weapon_positions),
             "molotov_positions": list(self.molotov_positions),
             "flashlight_positions": list(self.flashlight_positions),
+            "decoy_positions": list(self.decoy_positions),
             "trap_positions": list(self.trap_positions),
             "pharmacy_positions": list(self.pharmacy_positions),
             "armory_positions": list(self.armory_positions),
@@ -713,6 +722,7 @@ class Game:
             p.supplies = pdata["supplies"]
             p.medkits = pdata["medkits"]
             p.molotovs = pdata.get("molotovs", 0)
+            p.decoys = pdata.get("decoys", 0)
             p.kills = pdata.get("kills", 0)
             p.has_antidote = pdata["has_antidote"]
             p.has_keys = pdata["has_keys"]
@@ -731,6 +741,7 @@ class Game:
         game.weapon_positions = {tuple(pos) for pos in data.get("weapon_positions", [])}
         game.molotov_positions = {tuple(pos) for pos in data.get("molotov_positions", [])}
         game.flashlight_positions = {tuple(pos) for pos in data.get("flashlight_positions", [])}
+        game.decoy_positions = {tuple(pos) for pos in data.get("decoy_positions", [])}
         game.trap_positions = {tuple(pos) for pos in data.get("trap_positions", [])}
         game.pharmacy_positions = {
             tuple(pos) for pos in data.get("pharmacy_positions", [])
@@ -844,6 +855,7 @@ class Game:
                             and (nx, ny) not in self.medkit_positions
                             and (nx, ny) not in self.weapon_positions
                             and (nx, ny) not in self.molotov_positions
+                            and (nx, ny) not in self.decoy_positions
                             and (nx, ny) not in self.flashlight_positions
                             and (nx, ny) not in self.trap_positions
                             and (nx, ny) != self.antidote_pos
@@ -955,6 +967,7 @@ class Game:
                     and (x, y) not in self.medkit_positions
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
+                    and (x, y) not in self.decoy_positions
                     and (x, y) not in self.trap_positions
                     and (x, y) not in self.campfires
                     and (x, y) not in self.shelter_positions
@@ -980,6 +993,7 @@ class Game:
                     and (x, y) not in self.medkit_positions
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
+                    and (x, y) not in self.decoy_positions
                     and (x, y) not in self.supplies_positions
                     and all((z.x, z.y) != (x, y) for z in self.zombies)
                 ):
@@ -1004,6 +1018,7 @@ class Game:
                     and (x, y) not in self.medkit_positions
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
+                    and (x, y) not in self.decoy_positions
                     and (x, y) not in self.supplies_positions
                     and all((z.x, z.y) != (x, y) for z in self.zombies)
                 ):
@@ -1027,6 +1042,7 @@ class Game:
                     and (x, y) not in self.medkit_positions
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
+                    and (x, y) not in self.decoy_positions
                     and (x, y) not in self.supplies_positions
                     and all((z.x, z.y) != (x, y) for z in self.zombies)
                 ):
@@ -1053,6 +1069,7 @@ class Game:
                     and (x, y) not in self.medkit_positions
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
+                    and (x, y) not in self.decoy_positions
                 ):
                     self.supplies_positions.add((x, y))
                     break
@@ -1074,6 +1091,7 @@ class Game:
                 and (x, y) not in self.medkit_positions
                 and (x, y) not in self.weapon_positions
                 and (x, y) not in self.molotov_positions
+                and (x, y) not in self.decoy_positions
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
                 self.antidote_pos = (x, y)
@@ -1095,6 +1113,7 @@ class Game:
                 and (x, y) not in self.medkit_positions
                 and (x, y) not in self.weapon_positions
                 and (x, y) not in self.molotov_positions
+                and (x, y) not in self.decoy_positions
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
                 self.keys_pos = (x, y)
@@ -1118,6 +1137,7 @@ class Game:
                 and (x, y) not in self.medkit_positions
                 and (x, y) not in self.weapon_positions
                 and (x, y) not in self.molotov_positions
+                and (x, y) not in self.decoy_positions
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
                 self.fuel_pos = (x, y)
@@ -1142,6 +1162,7 @@ class Game:
                     and (x, y) not in self.medkit_positions
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
+                    and (x, y) not in self.decoy_positions
                     and all((z.x, z.y) != (x, y) for z in self.zombies)
                 ):
                     self.radio_positions.add((x, y))
@@ -1164,6 +1185,7 @@ class Game:
                 and (x, y) not in self.medkit_positions
                 and (x, y) not in self.weapon_positions
                 and (x, y) not in self.molotov_positions
+                and (x, y) not in self.decoy_positions
                 and all((z.x, z.y) != (x, y) for z in self.zombies)
             ):
                 self.radio_tower_pos = (x, y)
@@ -1232,6 +1254,9 @@ class Game:
         for x, y in self.molotov_positions:
             if (x, y) in self.revealed and not self.is_player_at(x, y):
                 board[y][x] = MOLOTOV_SYMBOL
+        for x, y in self.decoy_positions:
+            if (x, y) in self.revealed and not self.is_player_at(x, y):
+                board[y][x] = DECOY_SYMBOL
         for x, y in self.flashlight_positions:
             if (x, y) in self.revealed and not self.is_player_at(x, y):
                 board[y][x] = FLASHLIGHT_SYMBOL
@@ -1246,13 +1271,14 @@ class Game:
                 board[z.y][z.x] = z.symbol
 
         print(
-            "Health: {}    Hunger: {}/{}    Medkits: {}    Supplies: {}    Molotovs: {}    Inventory: {}/{}    Tokens: {}    Weapon: {}    Flashlight: {}    Infection: {}    Level: {}    XP: {}".format(
+            "Health: {}    Hunger: {}/{}    Medkits: {}    Supplies: {}    Molotovs: {}    Decoys: {}    Inventory: {}/{}    Tokens: {}    Weapon: {}    Flashlight: {}    Infection: {}    Level: {}    XP: {}".format(
                 self.player.health,
                 self.player.hunger,
                 self.player.max_hunger,
                 self.player.medkits,
                 self.player.supplies,
                 self.player.molotovs,
+                self.player.decoys,
                 self.player.inventory_size,
                 self.player.inventory_limit,
                 self.double_move_tokens,
@@ -1282,7 +1308,7 @@ class Game:
             "  E - eat supplies\n"
             "  B - build a barricade\n"
             "  U - disarm a trap\n"
-            "  N - create noise to lure zombies\n"
+            "  N - create noise or deploy a decoy to lure zombies\n"
             "  O - scout without moving\n"
             "  C - craft items\n"
             "  M - throw a molotov\n"
@@ -1299,7 +1325,7 @@ class Game:
             "Legend:\n"
             "  S start    . explored    ? unexplored\n"
             "  1-6 players    Z zombie    R supply    H medkit\n"
-            "  G weapon    L molotov    I flashlight    B barricade\n"
+            "  G weapon    L molotov    D decoy    I flashlight    B barricade\n"
             f"  {CAMPFIRE_SYMBOL} campfire (light)    {SHELTER_SYMBOL} shelter (rest bonus)    ! trap    A antidote    K keys    F fuel\n"
             f"  P radio part    T radio tower    numbers noise timers    {WALL_SYMBOL} wall"
         )
@@ -1520,6 +1546,15 @@ class Game:
                 print("Your pack is full. You leave the supply behind.")
             return
 
+        if pos in self.decoy_positions:
+            if self.player.inventory_size < self.player.inventory_limit:
+                self.decoy_positions.remove(pos)
+                self.player.decoys += 1
+                print("You pick up a decoy.")
+            else:
+                print("Your pack is full. You leave the decoy behind.")
+            return
+
         if not self.loot_deck:
             self.loot_deck = create_loot_deck()
         card = self.loot_deck.popleft()
@@ -1549,6 +1584,12 @@ class Game:
                 print("You find a flashlight!")
             else:
                 print("You find a flashlight but already have one.")
+        elif card == "decoy":
+            if self.player.inventory_size < self.player.inventory_limit:
+                self.player.decoys += 1
+                print("You find a decoy!")
+            else:
+                print("You find a decoy but your pack is full.")
         else:
             print("You find nothing of use.")
 
@@ -1648,7 +1689,12 @@ class Game:
 
     def create_noise(self) -> bool:
         """Place a noise marker on an adjacent tile to lure zombies."""
-        if self.player.supplies <= 0:
+        use_decoy = False
+        if self.player.decoys > 0:
+            choice = input("Use a decoy? [y/N]: ").strip().lower()
+            if choice == "y":
+                use_decoy = True
+        if not use_decoy and self.player.supplies <= 0:
             print("You lack the supplies to create a distraction.")
             return False
         direction = input("Throw noise [w/a/s/d]: ").strip().lower()
@@ -1661,9 +1707,14 @@ class Game:
         if not (0 <= nx < self.board_size and 0 <= ny < self.board_size):
             print("You can't toss noise off the board.")
             return False
-        self.player.supplies -= 1
-        self.add_noise(nx, ny, DECOY_NOISE_ZOMBIE_CHANCE)
-        print("You create a noisy distraction.")
+        if use_decoy:
+            self.player.decoys -= 1
+            self.add_noise(nx, ny, DECOY_NOISE_ZOMBIE_CHANCE, DECOY_DURATION)
+            print("You set a decoy to lure the horde.")
+        else:
+            self.player.supplies -= 1
+            self.add_noise(nx, ny, THROWN_NOISE_ZOMBIE_CHANCE)
+            print("You create a noisy distraction.")
         return True
 
     def scout(self) -> bool:
@@ -1688,13 +1739,15 @@ class Game:
         cost_trap = max(1, TRAP_CRAFT_COST - (1 if self.player.role == "engineer" else 0))
         cost_flash = max(1, FLASHLIGHT_CRAFT_COST - (1 if self.player.role == "engineer" else 0))
         cost_camp = max(1, CAMPFIRE_CRAFT_COST - (1 if self.player.role == "engineer" else 0))
+        cost_decoy = max(1, DECOY_CRAFT_COST - (1 if self.player.role == "engineer" else 0))
         choice = input(
-            "Craft [m]edkit (cost {0} supplies), [l]molotov (cost {1} supply + fuel), [t]rap (cost {2} supplies), [f]lashlight (cost {3} supplies) or [c]ampfire (cost {4} supplies): ".format(
+            "Craft [m]edkit (cost {0} supplies), [l]molotov (cost {1} supply + fuel), [t]rap (cost {2} supplies), [f]lashlight (cost {3} supplies), [c]ampfire (cost {4} supplies) or [d]ecoy (cost {5} supplies): ".format(
                 cost_medkit,
                 MOLOTOV_SUPPLY_COST,
                 cost_trap,
                 cost_flash,
                 cost_camp,
+                cost_decoy,
             )
         ).strip().lower()
         if choice == "m":
@@ -1753,6 +1806,16 @@ class Game:
                     return True
             else:
                 print("Not enough supplies to build a campfire.")
+        elif choice == "d":
+            if self.player.supplies >= cost_decoy:
+                if self.player.inventory_size < self.player.inventory_limit:
+                    self.player.supplies -= cost_decoy
+                    self.player.decoys += 1
+                    print("You craft a clattering decoy.")
+                    return True
+                print("Your pack is full.")
+            else:
+                print("Not enough supplies to craft a decoy.")
         return False
 
     def throw_molotov(self) -> bool:
@@ -1779,7 +1842,7 @@ class Game:
     def drop_item(self) -> bool:
         pos = (self.player.x, self.player.y)
         choice = input(
-            "Drop item [s]upply, [m]edkit, [w]eapon, [k]eys, [f]uel, [a]ntidote, [l]molotov, [i]flashlight: "
+            "Drop item [s]upply, [m]edkit, [w]eapon, [k]eys, [f]uel, [a]ntidote, [l]molotov, [i]flashlight, [d]ecoy: "
         ).strip().lower()
         if choice == "s" and self.player.supplies > 0:
             self.player.supplies -= 1
@@ -1816,6 +1879,11 @@ class Game:
             self.molotov_positions.add(pos)
             print("You drop a molotov.")
             return True
+        if choice == "d" and self.player.decoys > 0:
+            self.player.decoys -= 1
+            self.decoy_positions.add(pos)
+            print("You drop a decoy.")
+            return True
         if choice == "i" and self.player.has_flashlight:
             self.player.has_flashlight = False
             self.flashlight_positions.add(pos)
@@ -1847,6 +1915,8 @@ class Game:
             options.append("medkit")
         if self.player.molotovs > 0:
             options.append("molotov")
+        if self.player.decoys > 0:
+            options.append("decoy")
         if self.player.has_weapon:
             options.append("weapon")
         if self.player.has_keys:
@@ -1864,7 +1934,7 @@ class Game:
         if item not in options:
             print("Trade cancelled.")
             return False
-        if item in {"supply", "medkit", "molotov"} and target.inventory_size >= target.inventory_limit:
+        if item in {"supply", "medkit", "molotov", "decoy"} and target.inventory_size >= target.inventory_limit:
             print(f"Player {target.symbol}'s pack is full.")
             return False
         if item == "supply":
@@ -1876,6 +1946,9 @@ class Game:
         elif item == "molotov":
             self.player.molotovs -= 1
             target.molotovs += 1
+        elif item == "decoy":
+            self.player.decoys -= 1
+            target.decoys += 1
         elif item == "weapon":
             if target.has_weapon:
                 print(f"Player {target.symbol} already has a weapon.")
@@ -1923,6 +1996,8 @@ class Game:
             stealable.append("medkit")
         if target.molotovs > 0 and self.player.inventory_size < self.player.inventory_limit:
             stealable.append("molotov")
+        if target.decoys > 0 and self.player.inventory_size < self.player.inventory_limit:
+            stealable.append("decoy")
         if target.has_weapon and not self.player.has_weapon:
             stealable.append("weapon")
         if target.has_keys:
@@ -1948,6 +2023,9 @@ class Game:
             elif item == "molotov":
                 target.molotovs -= 1
                 self.player.molotovs += 1
+            elif item == "decoy":
+                target.decoys -= 1
+                self.player.decoys += 1
             elif item == "weapon":
                 target.has_weapon = False
                 self.player.has_weapon = True
@@ -2023,6 +2101,7 @@ class Game:
                 and (nx, ny) not in self.barricade_positions
                 and (nx, ny) not in self.wall_positions
                 and (nx, ny) not in self.molotov_positions
+                and (nx, ny) not in self.decoy_positions
                 and (nx, ny) not in self.trap_positions
                 and (nx, ny) not in self.campfires
                 and (nx, ny) not in self.shelter_positions
@@ -2052,15 +2131,16 @@ class Game:
             and (nx, ny) not in self.medkit_positions
             and (nx, ny) not in self.weapon_positions
             and (nx, ny) not in self.molotov_positions
+            and (nx, ny) not in self.decoy_positions
             and (nx, ny) not in self.trap_positions
             and (nx, ny) not in self.wall_positions
             and all((z.x, z.y) != (nx, ny) for z in self.zombies)
         ]
         return random.choice(candidates) if candidates else None
 
-    def add_noise(self, x: int, y: int, chance: float) -> None:
+    def add_noise(self, x: int, y: int, chance: float, duration: int = NOISE_DURATION) -> None:
         """Record a noisy action that may attract zombies later."""
-        self.noise_markers.append((x, y, chance, NOISE_DURATION))
+        self.noise_markers.append((x, y, chance, duration))
 
     def resolve_noise(self) -> None:
         """Spawn zombies for all accumulated noise markers."""
@@ -2282,7 +2362,7 @@ class Game:
     def print_summary(self) -> None:
         """Display a scoreboard of each player's outcome and inventory."""
         print("\nFinal results:")
-        print(f"{'P':<3}{'Status':<10}{'Kills':>7}{'Supplies':>10}{'Medkits':>10}")
+        print(f"{'P':<3}{'Status':<10}{'Kills':>7}{'Supplies':>10}{'Medkits':>10}{'Decoys':>10}")
         for p in self.all_players:
             if p in self.evacuated_players:
                 status = "escaped"
@@ -2291,7 +2371,7 @@ class Game:
             else:
                 status = "dead"
             print(
-                f"{p.symbol:<3}{status:<10}{p.kills:>7}{p.supplies:>10}{p.medkits:>10}"
+                f"{p.symbol:<3}{status:<10}{p.kills:>7}{p.supplies:>10}{p.medkits:>10}{p.decoys:>10}"
             )
 
     def advance_time_of_day(self) -> None:

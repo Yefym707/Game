@@ -24,10 +24,10 @@ remaining required tiles are spawned procedurally so partial layouts work too.
 Loud actions such as gunfire or revving an engine place noise tokens on the
 board. These markers linger for a couple of rounds and at the end of each
 round may spawn new zombies, capturing the tension of physical board games
-that track noise. Survivors can even toss a supply to deliberately place a
-noise marker on a neighboring tile, luring the horde elsewhere.
-  Simple crafting lets survivors convert supplies into medkits, traps,
-  campfires, flashlights and molotov cocktails for a tactical edge. A day/night cycle
+that track noise. Survivors can toss a supply to deliberately place a
+noise marker on a neighboring tile or deploy a crafted decoy to draw the
+horde elsewhere. Simple crafting lets survivors convert supplies into medkits, traps,
+campfires, flashlights, decoys and molotov cocktails for a tactical edge. A day/night cycle
 reduces visibility after dark unless a survivor carries a flashlight.
 Scattered shelters on the board offer weary survivors a safe place to rest
 and recover extra health or hunger.
@@ -102,9 +102,9 @@ take (1–3 by default, though events may raise or lower this). Enter:
 - `E` – consume one supply to restore hunger.
 - `B` – spend two supplies to barricade the current tile, blocking zombies once.
 - `U` – disarm a trap on your tile, salvaging a supply.
-  - `N` – toss a noisy distraction to an adjacent tile, costing one supply.
+  - `N` – toss a noisy distraction or deploy a decoy to an adjacent tile.
   - `O` – scout an adjacent tile to reveal more of the map.
-  - `C` – craft items (3 supplies → medkit, supply + fuel → molotov, 2 supplies → trap, 2 supplies → flashlight, 2 supplies → campfire).
+  - `C` – craft items (3 supplies → medkit, supply + fuel → molotov, 2 supplies → trap, 2 supplies → flashlight, 2 supplies → campfire, 2 supplies → decoy).
 - `M` – throw a molotov to burn adjacent zombies.
 - `R` – attempt to steal an item from another player sharing your tile; roll a d10 (≤5 succeeds, failure costs 1 HP).
 - `K` – attack another player on your tile; roll a d10 (≤5 hits, failure hurts you. The brawl creates noise.)
@@ -154,7 +154,7 @@ campaign progress is stored in `campaign_save.json`. A save file is also written
 so you can resume a run later. Survive as long as you can before your health
 reaches zero.
 
-  Dropped items remain on the board: supplies show as `R`, medkits as `H`, weapons as `G` and molotovs as `L` once the tile is revealed. Built campfires appear as `C`; while lit they provide better rest and illuminate adjacent tiles but burn out after a few rounds. Permanent shelters are marked `U`.
+  Dropped items remain on the board: supplies show as `R`, medkits as `H`, weapons as `G`, molotovs as `L` and decoys as `D` once the tile is revealed. Built campfires appear as `C`; while lit they provide better rest and illuminate adjacent tiles but burn out after a few rounds. Permanent shelters are marked `U`.
 Noise markers from loud actions show their remaining turns as numbers until they attract or fade.
 
 Experience points accumulate across the campaign. Killing zombies and
