@@ -167,6 +167,7 @@ ROLE_DEFS = {
     "scout": "Wider vision and superior scavenging",
     "engineer": "Cheaper barricades and crafted gear",
     "thief": "Higher steal success and larger pack",
+    "leader": "Acts early and avoids poor action rolls",
 }
 
 # End-of-round event and loot deck configuration is now loaded from an
@@ -2398,7 +2399,12 @@ class Game:
         goes first, providing a tabletop-inspired turn order that can
         change from round to round.
         """
-        rolls = [(p, random.randint(1, 6)) for p in self.players]
+        rolls = []
+        for p in self.players:
+            roll = random.randint(1, 6)
+            if p.role == "leader":
+                roll += 1
+            rolls.append((p, roll))
         rolls.sort(key=lambda pr: pr[1], reverse=True)
         self.players = [p for p, _ in rolls]
         order = ", ".join(f"{p.symbol}({r})" for p, r in rolls)
@@ -2412,6 +2418,8 @@ class Game:
         where the dice decide your options.
         """
         actions = random.randint(1, self.actions_per_turn)
+        if player.role == "leader" and self.actions_per_turn > 1:
+            actions = max(actions, 2)
         who = "Player {}".format(player.symbol)
         if not player.is_ai:
             who = "You"
