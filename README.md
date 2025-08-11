@@ -24,7 +24,8 @@ remaining required tiles are spawned procedurally so partial layouts work too.
 Loud actions such as gunfire or revving an engine place noise tokens on the
 board. These markers linger for a couple of rounds and at the end of each
 round may spawn new zombies, capturing the tension of physical board games
-that track noise.
+that track noise. Survivors can even toss a supply to deliberately place a
+noise marker on a neighboring tile, luring the horde elsewhere.
   Simple crafting lets survivors convert supplies into medkits, traps,
   campfires, flashlights and molotov cocktails for a tactical edge. A day/night cycle
 reduces visibility after dark unless a survivor carries a flashlight.
@@ -101,6 +102,7 @@ take (1–3 by default, though events may raise or lower this). Enter:
 - `E` – consume one supply to restore hunger.
 - `B` – spend two supplies to barricade the current tile, blocking zombies once.
 - `U` – disarm a trap on your tile, salvaging a supply.
+  - `N` – toss a noisy distraction to an adjacent tile, costing one supply.
   - `O` – scout an adjacent tile to reveal more of the map.
   - `C` – craft items (3 supplies → medkit, supply + fuel → molotov, 2 supplies → trap, 2 supplies → flashlight, 2 supplies → campfire).
 - `M` – throw a molotov to burn adjacent zombies.

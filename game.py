@@ -93,6 +93,7 @@ EVACUATION_CAPACITY = 2  # rescue seats available in final scenario
 DOUBLE_MOVE_REWARD = 5
 WEAPON_NOISE_ZOMBIE_CHANCE = 0.3
 VEHICLE_NOISE_ZOMBIE_CHANCE = 0.5
+DECOY_NOISE_ZOMBIE_CHANCE = 0.4
 NOISE_DURATION = 2  # rounds noise tokens persist
 SCOUT_RADIUS = 2  # tiles revealed when scouting
 RAIN_NOISE_MULTIPLIER = 0.5  # noise chance multiplier during rain events
@@ -1276,6 +1277,7 @@ class Game:
             "  E - eat supplies\n"
             "  B - build a barricade\n"
             "  U - disarm a trap\n"
+            "  N - create noise to lure zombies\n"
             "  O - scout without moving\n"
             "  C - craft items\n"
             "  M - throw a molotov\n"
@@ -1638,6 +1640,26 @@ class Game:
             return True
         print("No trap here to disarm.")
         return False
+
+    def create_noise(self) -> bool:
+        """Place a noise marker on an adjacent tile to lure zombies."""
+        if self.player.supplies <= 0:
+            print("You lack the supplies to create a distraction.")
+            return False
+        direction = input("Throw noise [w/a/s/d]: ").strip().lower()
+        offsets = {"w": (-1, 0), "a": (0, -1), "s": (1, 0), "d": (0, 1)}
+        if direction not in offsets:
+            print("Invalid direction.")
+            return False
+        dx, dy = offsets[direction]
+        nx, ny = self.player.x + dx, self.player.y + dy
+        if not (0 <= nx < self.board_size and 0 <= ny < self.board_size):
+            print("You can't toss noise off the board.")
+            return False
+        self.player.supplies -= 1
+        self.add_noise(nx, ny, DECOY_NOISE_ZOMBIE_CHANCE)
+        print("You create a noisy distraction.")
+        return True
 
     def scout(self) -> bool:
         """Reveal tiles in an adjacent direction without moving."""
@@ -2489,7 +2511,7 @@ class Game:
         while actions_left > 0 and self.player.health > 0:
             self.draw_board()
             cmd = input(
-                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, v=antidote, e=eat, b=barricade, u=disarm, o=scout, c=craft, m=molotov, r=steal, k=fight, x=trade, t=drop, z=rest, p=pass, q=save, ?=help]: "
+                f"Action ({actions_left} left) [w/a/s/d=move, f=attack, g=scavenge, h=medkit, v=antidote, e=eat, b=barricade, u=disarm, n=noise, o=scout, c=craft, m=molotov, r=steal, k=fight, x=trade, t=drop, z=rest, p=pass, q=save, ?=help]: "
             ).strip().lower()
 
             if cmd == "?":
@@ -2540,6 +2562,9 @@ class Game:
                     actions_left -= 1
             elif cmd == "u":
                 if self.disarm_trap():
+                    actions_left -= 1
+            elif cmd == "n":
+                if self.create_noise():
                     actions_left -= 1
             elif cmd == "o":
                 if self.scout():
