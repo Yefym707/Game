@@ -15,7 +15,8 @@ compositions are stored in `decks.json` so you can tweak card frequencies or
 add your own entries.
 Each new round begins with an initiative roll for every survivor; the highest
 roll acts first, making turn order unpredictable just like around a real
-table.
+table. When your turn arrives you also roll a die to see how many actions you
+may spend, reinforcing the tabletop feel where luck can shape your options.
 For even more control an optional `board_layout.json` file can describe the
 starting map as an array of ten strings. Use `#` for walls, `U` for shelters,
 `M` for pharmacies, `W` for armories and `S` for the starting tile. Any
@@ -86,7 +87,8 @@ rules light.
 
 ### Controls
 
-During your turn you have two actions. Enter:
+At the start of your turn roll a d3 to determine how many actions you may
+take (1–3 by default, though events may raise or lower this). Enter:
 
 - `W` `A` `S` `D` – move one tile (or two if using a double-move token).
 - `F` – attack an adjacent zombie; roll a d10 (≤7 hits, ≤9 if armed).
@@ -114,13 +116,13 @@ Zombies move after all players finish their actions, then an event card is drawn
 from a shuffled deck. Cards are not returned until the deck is exhausted,
 mirroring a physical board game's event system. Fallen survivors do not stay
 down—any player who dies will rise again as a zombie at that spot. Events can
-alter the next round’s pace – a storm might reduce everyone to one action while
+alter the next round’s pace – a storm might cut your available actions while
 an adrenaline rush grants an extra move. Friendly survivors may appear with
 supplies or medkits and, if there’s room, may even join your group. The wind
 can momentarily lift the fog to reveal unexplored tiles. A wandering trader may
 offer a medkit in exchange for two supplies. Rain muffles sound so noise tokens
 are less likely to draw zombies in the following round. Heatwaves parch the survivors, causing extra hunger loss next turn. A sudden
-blizzard both muffles noise and limits everyone to a single action with reduced
+blizzard both muffles noise and limits everyone to fewer actions with reduced
 visibility on the next turn. Occasional earthquakes may raise or crumble rubble walls, reshaping the paths ahead. Exploring may also
 uncover special locations. Pharmacies (`M`) have a high chance of yielding
   medkits while armories (`W`) are the best spots to find weapons. Hidden traps

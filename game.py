@@ -7,7 +7,8 @@ safety.
 Features
 --------
 * 10x10 board with up to six players, zombies and supply tokens.
-* Each player has two actions per turn: move, scout, attack, scavenge or pass.
+* Each player rolls at the start of their turn to see how many actions they
+  may take: move, scout, attack, scavenge or pass.
 * Resting lets survivors regain hunger or a point of health.
 * Melee combat with a chance to hit. Failed attacks cost health.
 * Scavenging draws from a finite loot deck to mimic board-game card draws.
@@ -52,7 +53,8 @@ from collections import deque
 
 
 BOARD_SIZE = 10
-ACTIONS_PER_TURN = 2
+# Maximum number of actions a survivor may roll each turn
+ACTIONS_PER_TURN = 3
 MAX_PLAYERS = 6
 STARTING_HEALTH = 10
 STARTING_ZOMBIES = 5
@@ -2075,7 +2077,10 @@ class Game:
             print("A small horde shambles in!")
         elif event == "storm":
             self.actions_per_turn = max(1, ACTIONS_PER_TURN - 1)
-            print("A fierce storm slows you down. Only one action next turn!")
+            print(
+                f"A fierce storm slows you down. Only {self.actions_per_turn} action"
+                f"{'s' if self.actions_per_turn != 1 else ''} next turn!"
+            )
         elif event == "adrenaline":
             self.actions_per_turn = ACTIONS_PER_TURN + 1
             print("Adrenaline surges through you! You gain an extra action next turn.")
@@ -2275,6 +2280,20 @@ class Game:
         order = ", ".join(f"{p.symbol}({r})" for p, r in rolls)
         print(f"Initiative order: {order}")
 
+    def roll_action_points(self, player: Player) -> int:
+        """Roll a die to determine how many actions *player* may take this turn.
+
+        The maximum is bounded by ``self.actions_per_turn`` which events may
+        modify. Returning the rolled value keeps turns feeling like a board game
+        where the dice decide your options.
+        """
+        actions = random.randint(1, self.actions_per_turn)
+        who = "Player {}".format(player.symbol)
+        if not player.is_ai:
+            who = "You"
+        print(f"{who} roll{'' if actions == 1 else 's'} {actions} action{'s' if actions != 1 else ''}.")
+        return actions
+
     def check_achievements(self) -> None:
         """Unlock achievements based on campaign stats."""
         unlocked = set(self.campaign.get("achievements", []))
@@ -2329,7 +2348,7 @@ class Game:
     # Turn handling and game state
     def ai_turn(self, player: Player) -> None:
         """Execute a simple turn for an AI-controlled player."""
-        actions_left = self.actions_per_turn
+        actions_left = self.roll_action_points(player)
         while actions_left > 0 and player.health > 0:
             self.draw_board()
             if player.infection_turns > 0 and player.has_antidote:
@@ -2458,7 +2477,7 @@ class Game:
         if player.is_ai:
             self.ai_turn(player)
             return
-        actions_left = self.actions_per_turn
+        actions_left = self.roll_action_points(player)
         while actions_left > 0 and self.player.health > 0:
             self.draw_board()
             cmd = input(
