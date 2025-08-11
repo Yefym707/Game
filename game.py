@@ -108,6 +108,11 @@ SHELTER_SYMBOL = "U"
 SHELTER_COUNT = 2
 
 
+# Wall settings
+WALL_SYMBOL = "#"
+WALL_COUNT = 12
+
+
 # Barricade settings
 BARRICADE_SYMBOL = "B"
 BARRICADE_SUPPLY_COST = 2
@@ -480,6 +485,8 @@ class Game:
         self.visibility_penalty_turns = 0
         self.hunger_penalty_turns = 0
         self.revealed: Set[Tuple[int, int]] = set()
+        self.wall_positions: Set[Tuple[int, int]] = set()
+        self.spawn_walls(WALL_COUNT)
         self.spawn_shelters(SHELTER_COUNT)
         self.spawn_zombies(settings["starting_zombies"] + extra_players)
         self.spawn_pharmacies(PHARMACY_COUNT)
@@ -553,6 +560,7 @@ class Game:
             "pharmacy_positions": list(self.pharmacy_positions),
             "armory_positions": list(self.armory_positions),
             "shelter_positions": list(self.shelter_positions),
+            "wall_positions": list(self.wall_positions),
             "barricade_positions": list(self.barricade_positions),
             "campfires": [[x, y, t] for (x, y), t in self.campfires.items()],
             "revealed": list(self.revealed),
@@ -631,6 +639,9 @@ class Game:
         }
         game.shelter_positions = {
             tuple(pos) for pos in data.get("shelter_positions", [])
+        }
+        game.wall_positions = {
+            tuple(pos) for pos in data.get("wall_positions", [])
         }
         game.barricade_positions = {
             tuple(pos) for pos in data.get("barricade_positions", [])
@@ -742,6 +753,7 @@ class Game:
                             and (nx, ny) not in self.shelter_positions
                             and (nx, ny) not in self.barricade_positions
                             and (nx, ny) not in self.campfires
+                            and (nx, ny) not in self.wall_positions
                             and all((z.x, z.y) != (nx, ny) for z in self.zombies)
                         ):
                             roll = random.random()
@@ -774,6 +786,20 @@ class Game:
 
     # ------------------------------------------------------------------
     # Board setup helpers
+    def spawn_walls(self, count: int) -> None:
+        for _ in range(count):
+            while True:
+                x, y = random.randrange(self.board_size), random.randrange(
+                    self.board_size
+                )
+                if (
+                    (x, y) != self.start_pos
+                    and not self.is_player_at(x, y)
+                    and (x, y) not in self.wall_positions
+                ):
+                    self.wall_positions.add((x, y))
+                    break
+
     def spawn_zombies(self, count: int) -> None:
         for _ in range(count):
             while True:
@@ -784,6 +810,7 @@ class Game:
                     not self.is_player_at(x, y)
                     and (x, y) not in {(z.x, z.y) for z in self.zombies}
                     and (x, y) not in self.barricade_positions
+                    and (x, y) not in self.wall_positions
                     and (x, y) not in self.medkit_positions
                     and (x, y) not in self.weapon_positions
                     and (x, y) not in self.molotov_positions
@@ -806,6 +833,7 @@ class Game:
                     and (x, y) not in self.shelter_positions
                     and not self.is_player_at(x, y)
                     and (x, y) not in self.barricade_positions
+                    and (x, y) not in self.wall_positions
                     and (x, y) not in self.trap_positions
                     and (x, y) not in self.campfires
                     and (x, y) not in self.medkit_positions
@@ -829,6 +857,7 @@ class Game:
                     and (x, y) not in self.shelter_positions
                     and not self.is_player_at(x, y)
                     and (x, y) not in self.barricade_positions
+                    and (x, y) not in self.wall_positions
                     and (x, y) not in self.trap_positions
                     and (x, y) not in self.campfires
                     and (x, y) not in self.medkit_positions
@@ -851,6 +880,7 @@ class Game:
                     and not self.is_player_at(x, y)
                     and (x, y) != self.start_pos
                     and (x, y) not in self.barricade_positions
+                    and (x, y) not in self.wall_positions
                     and (x, y) not in self.trap_positions
                     and (x, y) not in self.campfires
                     and (x, y) not in self.medkit_positions
@@ -876,6 +906,7 @@ class Game:
                     and not self.is_player_at(x, y)
                     and (x, y) != self.antidote_pos
                     and (x, y) not in self.barricade_positions
+                    and (x, y) not in self.wall_positions
                     and (x, y) not in self.trap_positions
                     and (x, y) not in self.campfires
                     and (x, y) not in self.medkit_positions
@@ -896,6 +927,7 @@ class Game:
                 and (x, y) != self.start_pos
                 and not self.is_player_at(x, y)
                 and (x, y) not in self.barricade_positions
+                and (x, y) not in self.wall_positions
                 and (x, y) not in self.trap_positions
                 and (x, y) not in self.campfires
                 and (x, y) not in self.medkit_positions
@@ -939,6 +971,7 @@ class Game:
                 and (x, y) != self.keys_pos
                 and not self.is_player_at(x, y)
                 and (x, y) not in self.barricade_positions
+                and (x, y) not in self.wall_positions
                 and (x, y) not in self.trap_positions
                 and (x, y) not in self.campfires
                 and (x, y) not in self.medkit_positions
@@ -962,6 +995,7 @@ class Game:
                     and (x, y) not in self.radio_positions
                     and not self.is_player_at(x, y)
                     and (x, y) not in self.barricade_positions
+                    and (x, y) not in self.wall_positions
                     and (x, y) not in self.trap_positions
                     and (x, y) not in self.campfires
                     and (x, y) not in self.medkit_positions
@@ -980,6 +1014,7 @@ class Game:
                 and (x, y) not in self.pharmacy_positions
                 and (x, y) not in self.armory_positions
                 and (x, y) not in self.shelter_positions
+                and (x, y) not in self.wall_positions
                 and (x, y) != self.start_pos
                 and not self.is_player_at(x, y)
                 and (x, y) not in self.barricade_positions
@@ -1035,6 +1070,9 @@ class Game:
         for x, y in self.shelter_positions:
             if (x, y) in self.revealed and not self.is_player_at(x, y):
                 board[y][x] = SHELTER_SYMBOL
+        for x, y in self.wall_positions:
+            if (x, y) in self.revealed:
+                board[y][x] = WALL_SYMBOL
         for x, y in self.barricade_positions:
             if (x, y) in self.revealed and not self.is_player_at(x, y):
                 board[y][x] = BARRICADE_SYMBOL
@@ -1121,7 +1159,7 @@ class Game:
             "  1-6 players    Z zombie    R supply    H medkit\n"
             "  G weapon    L molotov    I flashlight    B barricade\n"
             f"  {CAMPFIRE_SYMBOL} campfire (light)    {SHELTER_SYMBOL} shelter (rest bonus)    ! trap    A antidote    K keys    F fuel\n"
-            "  P radio part    T radio tower    numbers noise timers"
+            f"  P radio part    T radio tower    numbers noise timers    {WALL_SYMBOL} wall"
         )
 
     # ------------------------------------------------------------------
@@ -1142,13 +1180,19 @@ class Game:
         original = (self.player.x, self.player.y)
         for _ in range(steps):
             nx, ny = self.player.x + dx, self.player.y + dy
-            if 0 <= nx < self.board_size and 0 <= ny < self.board_size:
+            if (
+                0 <= nx < self.board_size
+                and 0 <= ny < self.board_size
+                and (nx, ny) not in self.wall_positions
+            ):
                 self.player.x, self.player.y = nx, ny
                 self.reveal_area(nx, ny, player=self.player)
                 self.check_for_trap(nx, ny)
             else:
                 self.player.x, self.player.y = original
                 self.reveal_area(*original, player=self.player)
+                if (nx, ny) in self.wall_positions:
+                    print("A wall blocks your path.")
                 return False
         return True
 
@@ -1780,6 +1824,8 @@ class Game:
                 self.zombies_killed += 1
                 print("A zombie stumbles into a trap and is destroyed!")
                 continue
+            if (nx, ny) in self.wall_positions:
+                continue
             if not any((other.x, other.y) == (nx, ny) for other in self.zombies):
                 z.x, z.y = nx, ny
             for p in self.players:
@@ -1809,6 +1855,7 @@ class Game:
                 and 0 <= ny < self.board_size
                 and (nx, ny) != (x, y)
                 and (nx, ny) not in self.barricade_positions
+                and (nx, ny) not in self.wall_positions
                 and (nx, ny) not in self.molotov_positions
                 and (nx, ny) not in self.trap_positions
                 and (nx, ny) not in self.campfires
@@ -1840,6 +1887,7 @@ class Game:
             and (nx, ny) not in self.weapon_positions
             and (nx, ny) not in self.molotov_positions
             and (nx, ny) not in self.trap_positions
+            and (nx, ny) not in self.wall_positions
             and all((z.x, z.y) != (nx, ny) for z in self.zombies)
         ]
         return random.choice(candidates) if candidates else None
@@ -2083,6 +2131,7 @@ class Game:
                     and 0 <= ny < self.board_size
                     and (nx, ny) not in visited
                     and (nx, ny) not in self.barricade_positions
+                    and (nx, ny) not in self.wall_positions
                     and (nx, ny) not in self.trap_positions
                     and all((z.x, z.y) != (nx, ny) for z in self.zombies)
                 ):
