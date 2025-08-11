@@ -1,7 +1,7 @@
 # Survival Board Game
 
 This repository contains a small prototype of a turn-based survival board game
-for one to six players. The player roams a fog-covered square grid (10×10 by default) searching for objectives while avoiding zombies and navigating around rubble walls that block movement. Vision now follows line of sight – walls and barricades hide tiles behind them until a survivor gets a clear view. Inventory space is limited so choose carefully what to carry.
+for one to six players. The player roams a fog-covered square grid (10×10 by default) searching for objectives while avoiding zombies and navigating around rubble walls that block movement. Vision now follows line of sight – walls and barricades hide tiles behind them until a survivor gets a clear view. Zombies will now path around obstacles to hunt the nearest survivor, so positioning matters. Inventory space is limited so choose carefully what to carry.
 Players may also spend an action to scout an adjacent tile, peeking through the
 fog before committing to a move.
 Survivors sharing a tile can steal from or even brawl with each other, though
