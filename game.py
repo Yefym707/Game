@@ -160,6 +160,7 @@ ROLE_DEFS = {
     "medic": "Better healing from medkits and rest",
     "scout": "Wider vision and superior scavenging",
     "engineer": "Cheaper barricades and crafted gear",
+    "thief": "Higher steal success and larger pack",
 }
 
 # End-of-round event and loot deck configuration is now loaded from an
@@ -446,6 +447,8 @@ class Player(Entity):
         super().__init__(x, y, symbol)
         self.is_ai: bool = is_ai
         self.role: str = role
+        # Thieves carry a bit more thanks to their knack for packing light.
+        self.inventory_limit: int = INVENTORY_LIMIT + 2 if role == "thief" else INVENTORY_LIMIT
         self.max_health: int = starting_health
         self.health: int = starting_health
         self.max_hunger: int = STARTING_HUNGER
@@ -544,7 +547,7 @@ class Game:
             )
         if bonus_supplies:
             for p in self.players:
-                p.supplies = min(INVENTORY_LIMIT, p.supplies + bonus_supplies)
+                p.supplies = min(p.inventory_limit, p.supplies + bonus_supplies)
         self.all_players: List[Player] = list(self.players)
         self.player: Player = self.players[0]
         self.start_pos = start_pos
@@ -715,6 +718,7 @@ class Game:
             p.symbol = pdata.get("symbol", p.symbol)
             p.is_ai = pdata.get("is_ai", False)
             p.role = pdata.get("role", "fighter")
+            p.inventory_limit = INVENTORY_LIMIT + 2 if p.role == "thief" else INVENTORY_LIMIT
         game.player = game.players[data.get("current_player", 0)]
         game.zombies = [Zombie(x, y) for x, y in data["zombies"]]
         game.supplies_positions = {tuple(pos) for pos in data["supplies_positions"]}
@@ -1244,7 +1248,7 @@ class Game:
                 self.player.supplies,
                 self.player.molotovs,
                 self.player.inventory_size,
-                INVENTORY_LIMIT,
+                self.player.inventory_limit,
                 self.double_move_tokens,
                 "Y" if self.player.has_weapon else "N",
                 "Y" if self.player.has_flashlight else "N",
@@ -1416,7 +1420,7 @@ class Game:
             return
         if pos in self.pharmacy_positions:
             self.pharmacy_positions.remove(pos)
-            if self.player.inventory_size < INVENTORY_LIMIT:
+            if self.player.inventory_size < self.player.inventory_limit:
                 found = False
                 if roll_check(PHARMACY_MEDKIT_CHANCE, label="Pharmacy"):
                     self.player.medkits += 1
@@ -1438,7 +1442,7 @@ class Game:
                 self.player.has_weapon = True
                 found = True
                 print("You find a weapon in the armory!")
-            if self.player.inventory_size < INVENTORY_LIMIT:
+            if self.player.inventory_size < self.player.inventory_limit:
                 if roll_check(ARMORY_SUPPLY_CHANCE, label="Armory"):
                     self.player.supplies += 1
                     found = True
@@ -1474,7 +1478,7 @@ class Game:
             return
 
         if pos in self.molotov_positions:
-            if self.player.inventory_size < INVENTORY_LIMIT:
+            if self.player.inventory_size < self.player.inventory_limit:
                 self.molotov_positions.remove(pos)
                 self.player.molotovs += 1
                 print("You pick up a molotov cocktail.")
@@ -1492,7 +1496,7 @@ class Game:
             return
 
         if pos in self.medkit_positions:
-            if self.player.inventory_size < INVENTORY_LIMIT:
+            if self.player.inventory_size < self.player.inventory_limit:
                 self.medkit_positions.remove(pos)
                 self.player.medkits += 1
                 print("You pick up a medkit.")
@@ -1501,7 +1505,7 @@ class Game:
             return
 
         if pos in self.supplies_positions:
-            if self.player.inventory_size < INVENTORY_LIMIT:
+            if self.player.inventory_size < self.player.inventory_limit:
                 self.supplies_positions.remove(pos)
                 self.player.supplies += 1
                 print("You pick up a supply.")
@@ -1521,13 +1525,13 @@ class Game:
             else:
                 print("You find a weapon but already have one.")
         elif card == "supply":
-            if self.player.inventory_size < INVENTORY_LIMIT:
+            if self.player.inventory_size < self.player.inventory_limit:
                 self.player.supplies += 1
                 print("You find a supply!")
             else:
                 print("You find a supply but your pack is full.")
         elif card == "medkit":
-            if self.player.inventory_size < INVENTORY_LIMIT:
+            if self.player.inventory_size < self.player.inventory_limit:
                 self.player.medkits += 1
                 print("You find a medkit!")
             else:
@@ -1668,7 +1672,7 @@ class Game:
         ).strip().lower()
         if choice == "m":
             if self.player.supplies >= cost_medkit:
-                if self.player.inventory_size < INVENTORY_LIMIT:
+                if self.player.inventory_size < self.player.inventory_limit:
                     self.player.supplies -= cost_medkit
                     self.player.medkits += 1
                     print("You craft a makeshift medkit.")
@@ -1680,7 +1684,7 @@ class Game:
             if (
                 self.player.supplies >= MOLOTOV_SUPPLY_COST
                 and self.player.has_fuel
-                and self.player.inventory_size < INVENTORY_LIMIT
+                and self.player.inventory_size < self.player.inventory_limit
             ):
                 self.player.supplies -= MOLOTOV_SUPPLY_COST
                 self.player.has_fuel = False
@@ -1833,7 +1837,7 @@ class Game:
         if item not in options:
             print("Trade cancelled.")
             return False
-        if item in {"supply", "medkit", "molotov"} and target.inventory_size >= INVENTORY_LIMIT:
+        if item in {"supply", "medkit", "molotov"} and target.inventory_size >= target.inventory_limit:
             print(f"Player {target.symbol}'s pack is full.")
             return False
         if item == "supply":
@@ -1886,11 +1890,11 @@ class Game:
             return False
         target = random.choice(others)
         stealable = []
-        if target.supplies > 0 and self.player.inventory_size < INVENTORY_LIMIT:
+        if target.supplies > 0 and self.player.inventory_size < self.player.inventory_limit:
             stealable.append("supply")
-        if target.medkits > 0 and self.player.inventory_size < INVENTORY_LIMIT:
+        if target.medkits > 0 and self.player.inventory_size < self.player.inventory_limit:
             stealable.append("medkit")
-        if target.molotovs > 0 and self.player.inventory_size < INVENTORY_LIMIT:
+        if target.molotovs > 0 and self.player.inventory_size < self.player.inventory_limit:
             stealable.append("molotov")
         if target.has_weapon and not self.player.has_weapon:
             stealable.append("weapon")
@@ -1905,7 +1909,8 @@ class Game:
         if not stealable:
             print(f"Player {target.symbol} has nothing you can take.")
             return False
-        if roll_check(STEAL_SUCCESS_CHANCE, label="Steal"):
+        chance = STEAL_SUCCESS_CHANCE + (0.25 if self.player.role == "thief" else 0)
+        if roll_check(min(0.95, chance), label="Steal"):
             item = random.choice(stealable)
             if item == "supply":
                 target.supplies -= 1
@@ -2114,7 +2119,7 @@ class Game:
             if not joined:
                 given = False
                 for p in self.players:
-                    if p.inventory_size < INVENTORY_LIMIT:
+                    if p.inventory_size < p.inventory_limit:
                         if random.random() < 0.5:
                             p.supplies += 1
                             print(f"Friendly survivors toss supplies to player {p.symbol}!")
@@ -2148,7 +2153,7 @@ class Game:
         elif event == "firebomb":
             given = False
             for p in self.players:
-                if p.inventory_size < INVENTORY_LIMIT:
+                if p.inventory_size < p.inventory_limit:
                     p.molotovs += 1
                     print(f"Player {p.symbol} discovers a hidden molotov cache!")
                     given = True
@@ -2158,7 +2163,7 @@ class Game:
         elif event == "trader":
             bought = False
             for p in self.players:
-                if p.supplies >= 2 and p.inventory_size < INVENTORY_LIMIT:
+                if p.supplies >= 2 and p.inventory_size < p.inventory_limit:
                     if p.is_ai:
                         if p.medkits == 0:
                             p.supplies -= 2
@@ -2421,7 +2426,7 @@ class Game:
                 continue
 
             # Scavenge regular tiles only if there's room to carry loot.
-            if player.inventory_size < INVENTORY_LIMIT:
+            if player.inventory_size < player.inventory_limit:
                 self.scavenge()
                 actions_left -= 1
                 continue

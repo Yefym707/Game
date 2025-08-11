@@ -82,7 +82,8 @@ ability reminiscent of character cards in a physical board game:
 - **Medic** – medkits and resting restore an extra point of health.
 - **Scout** – reveals one additional tile and draws a second loot card if the
   first is empty.
-  - **Engineer** – barricades, traps, campfires and flashlights cost one less supply.
+ - **Engineer** – barricades, traps, campfires and flashlights cost one less supply.
+ - **Thief** – stealing is easier and their pack holds two more items.
 
 These asymmetrical perks encourage different play styles while keeping the
 rules light.
@@ -140,7 +141,7 @@ Each round hunger decreases for every
 survivor. Starving costs health. The scenario ends after 20 rounds. Win scenario
 1 by finding the antidote and returning to the `S` marked starting tile. Scenario
 2 is won by bringing both keys and fuel back to the start. You can carry at most
-eight items (supplies and medkits combined). Weapons and scenario objectives
+eight items (supplies and medkits combined) — thieves may haul up to ten. Weapons and scenario objectives
 don't take space. Gunfire, engines and molotov blasts leave noise tokens that
 linger for several rounds and may attract additional zombies when the round
 ends. Each victory in scenario 1
