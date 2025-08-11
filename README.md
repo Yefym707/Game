@@ -101,7 +101,8 @@ rules light.
 At the start of your turn roll a d3 to determine how many actions you may
 take (1–3 by default, though events may raise or lower this). Enter:
 
-- `W` `A` `S` `D` – move one tile (or two if using a double-move token).
+- `W` `A` `S` `D` – move one tile (or two if using a double-move token). Word
+  directions like *north*, *south*, *left* or *right* are also accepted.
 - `F` – attack an adjacent zombie; roll a d10 (≤7 hits, ≤9 if armed).
 - `G` – scavenge the current tile for supplies, weapons or the antidote.
 - `H` – use a found medkit to recover health.
@@ -110,7 +111,8 @@ take (1–3 by default, though events may raise or lower this). Enter:
 - `B` – spend two supplies to barricade the current tile, blocking zombies once.
 - `U` – disarm a trap on your tile, salvaging a supply.
   - `N` – toss a noisy distraction or deploy a decoy to an adjacent tile.
-  - `O` – scout an adjacent tile to reveal more of the map.
+  - `O` – scout an adjacent tile to reveal more of the map (supports the same
+    word-based directions as movement).
   - `C` – craft items (3 supplies → medkit, supply + fuel → molotov, 2 supplies → trap, 2 supplies → flashlight, 2 supplies → campfire, 2 supplies → decoy, 3 supplies → vest).
 - `M` – throw a molotov to burn adjacent zombies.
 - `R` – attempt to steal an item from another player sharing your tile; roll a d10 (≤5 succeeds, failure costs 1 HP).

@@ -116,6 +116,31 @@ DIRECTION_OFFSETS = {
     "d": (1, 0),   # right
 }
 
+# Allow slightly more natural direction names.  These map onto the standard
+# WASD controls so higher level interfaces (tests or future UIs) can drive
+# movement and scouting using words like "north" or "left" instead of raw key
+# presses.  Keeping the mapping centralised avoids repeating it in multiple
+# methods.
+DIRECTION_ALIASES = {
+    "up": "w",
+    "down": "s",
+    "left": "a",
+    "right": "d",
+    "north": "w",
+    "south": "s",
+    "west": "a",
+    "east": "d",
+}
+
+
+def normalize_direction(direction: str) -> str:
+    """Return the canonical WASD representation for ``direction``.
+
+    Unknown values are returned unchanged so callers can simply check the
+    result against ``DIRECTION_OFFSETS``.
+    """
+    return DIRECTION_ALIASES.get(direction, direction)
+
 # Special tile settings
 PHARMACY_SYMBOL = "M"
 ARMORY_SYMBOL = "W"
@@ -1548,6 +1573,13 @@ class Game:
     # ------------------------------------------------------------------
     # Player actions
     def move_player(self, direction: str, steps: int = 1) -> bool:
+        """Move the active player in the given direction.
+
+        ``direction`` may be provided using the traditional WASD keys or
+        word-based aliases such as "north"/"up".  Unsupported directions simply
+        return ``False`` and no movement occurs.
+        """
+        direction = normalize_direction(direction)
         if direction not in DIRECTION_OFFSETS:
             return False
         dx, dy = DIRECTION_OFFSETS[direction]
@@ -1981,20 +2013,10 @@ class Game:
         else:
             direction = direction.lower()
 
-        # Support simple word-based directions to make the feature easier to
-        # drive from tests or potential UI layers.  These map directly onto the
-        # traditional WASD controls used elsewhere in the game.
-        aliases = {
-            "up": "w",
-            "down": "s",
-            "left": "a",
-            "right": "d",
-            "north": "w",
-            "south": "s",
-            "west": "a",
-            "east": "d",
-        }
-        direction = aliases.get(direction, direction)
+        # Map any word-based direction to the canonical WASD keys so scouting
+        # works with both keyboard-style controls and higher level descriptions
+        # such as "north" or "left".
+        direction = normalize_direction(direction)
 
         if direction not in DIRECTION_OFFSETS:
             print("Invalid direction.")
