@@ -40,8 +40,10 @@ class MenuScene(Scene):
 
         self.next_scene = GameScene(self.app, new_game=False)
 
-    def settings(self) -> None:  # pragma: no cover - placeholder
-        """Settings placeholder."""
+    def settings(self) -> None:
+        from .scene_settings import SettingsScene
+
+        self.next_scene = SettingsScene(self.app)
 
     def quit(self) -> None:
         pygame.event.post(pygame.event.Event(pygame.QUIT))
