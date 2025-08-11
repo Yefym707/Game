@@ -44,3 +44,41 @@ def test_scout_blocked_by_wall():
     # The wall tile is revealed but the tile behind remains hidden
     assert (player.x + 1, player.y) in g.revealed
     assert (player.x + 2, player.y) not in g.revealed
+
+
+def test_scout_accepts_word_directions():
+    """Scouting should accept word-based directions such as 'up' or 'north'."""
+    g = game.Game(
+        board_size=10,
+        num_players=1,
+        num_ai=0,
+        roles=["leader"],
+        difficulty="easy",
+        scenario=1,
+        cooperative=False,
+    )
+    player = g.player
+    g.revealed = {(player.x, player.y)}
+    with patch.object(game, "SCOUT_RADIUS", 0):
+        g.scout(direction="up")
+    assert (player.x, player.y - 1) in g.revealed
+
+
+def test_scout_prevents_out_of_bounds_reveal():
+    g = game.Game(
+        board_size=10,
+        num_players=1,
+        num_ai=0,
+        roles=["leader"],
+        difficulty="easy",
+        scenario=1,
+        cooperative=False,
+    )
+    player = g.player
+    # Place the player on the top edge so scouting north would go out of bounds
+    player.y = 0
+    g.revealed = {(player.x, player.y)}
+    with patch.object(game, "SCOUT_RADIUS", 0):
+        result = g.scout(direction="w")
+    assert result is False
+    assert g.revealed == {(player.x, player.y)}

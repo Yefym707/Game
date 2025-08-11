@@ -1980,6 +1980,22 @@ class Game:
             direction = input("Scout direction [w/a/s/d]: ").strip().lower()
         else:
             direction = direction.lower()
+
+        # Support simple word-based directions to make the feature easier to
+        # drive from tests or potential UI layers.  These map directly onto the
+        # traditional WASD controls used elsewhere in the game.
+        aliases = {
+            "up": "w",
+            "down": "s",
+            "left": "a",
+            "right": "d",
+            "north": "w",
+            "south": "s",
+            "west": "a",
+            "east": "d",
+        }
+        direction = aliases.get(direction, direction)
+
         if direction not in DIRECTION_OFFSETS:
             print("Invalid direction.")
             return False
