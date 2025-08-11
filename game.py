@@ -2674,6 +2674,15 @@ class Game:
                 f"{p.symbol:<3}{status:<10}{p.health:>5}{p.hunger:>8}{p.kills:>7}{p.supplies:>7}{p.medkits:>7}{p.molotovs:>7}{p.decoys:>7}{weapon:>6}{light:>7}"
             )
 
+        total_xp = self.campaign.get("xp", 0) + self.xp_gained
+        print(f"\nCampaign level: {self.level}   Total XP: {total_xp}")
+        achievements = self.campaign.get("achievements")
+        if achievements:
+            print("Achievements:")
+            for key in achievements:
+                desc = ACHIEVEMENT_DEFS.get(key, {}).get("desc", key)
+                print(f" - {desc}")
+
     def advance_time_of_day(self) -> None:
         """Advance the day/night cycle and update related modifiers."""
         self.phase_turns -= 1
@@ -3209,7 +3218,6 @@ class Game:
                     print(fail)
                 self.campaign["supply_bonus"] = self.campaign.get("supply_bonus", 0) + 1
                 print("A stash of supplies is set aside to help in the next run.")
-            self.print_summary()
         except (KeyboardInterrupt, EOFError):
             print("\nThanks for playing!")
         finally:
@@ -3231,6 +3239,7 @@ class Game:
                 self.campaign["last_victory_lowest_hp"] = self.lowest_survivor_hp
                 self.campaign["last_victory_zombies_killed"] = self.zombies_killed
             self.check_achievements()
+            self.print_summary()
             save_campaign(self.campaign)
             if not self.keep_save and os.path.exists(SAVE_FILE):
                 os.remove(SAVE_FILE)
