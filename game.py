@@ -200,6 +200,8 @@ DEFAULT_EVENT_CARD_COUNTS = {
     "blizzard": 1,
     "epidemic": 1,
     "earthquake": 1,
+    "dusk": 1,
+    "dawn": 1,
     "trader": 1,
     "calm": 1,
 }
@@ -2211,12 +2213,51 @@ class Game:
 
     # ------------------------------------------------------------------
     # Zombie behaviour
+    def find_zombie_step(self, start: Tuple[int, int]) -> Optional[Tuple[int, int]]:
+        """Return the next step for a zombie moving toward the nearest survivor.
+
+        A breadth-first search is used so that zombies can navigate around
+        walls and barricades instead of getting stuck on obstacles. Traps are
+        deliberately ignored so the undead may blunder into them, preserving
+        their board-game utility.
+        """
+
+        goals = {(p.x, p.y) for p in self.players if p.health > 0}
+        if not goals:
+            return None
+        queue: deque[Tuple[Tuple[int, int], List[Tuple[int, int]]]] = deque()
+        queue.append((start, []))
+        visited = {start}
+        while queue:
+            (x, y), path = queue.popleft()
+            if (x, y) in goals:
+                return path[0] if path else None
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                nx, ny = x + dx, y + dy
+                if (
+                    0 <= nx < self.board_size
+                    and 0 <= ny < self.board_size
+                    and (nx, ny) not in visited
+                    and (nx, ny) not in self.wall_positions
+                    and (nx, ny) not in self.barricade_positions
+                    and all((other.x, other.y) != (nx, ny) for other in self.zombies)
+                ):
+                    visited.add((nx, ny))
+                    queue.append(((nx, ny), path + [(nx, ny)]))
+        return None
+
     def move_zombies(self) -> None:
         for z in list(self.zombies):
-            target = min(self.players, key=lambda p: abs(z.x - p.x) + abs(z.y - p.y))
-            dx = 0 if z.x == target.x else (1 if z.x < target.x else -1)
-            dy = 0 if z.y == target.y else (1 if z.y < target.y else -1)
-            nx, ny = z.x + dx, z.y + dy
+            step = self.find_zombie_step((z.x, z.y))
+            if step is not None:
+                nx, ny = step
+            else:
+                target = min(
+                    self.players, key=lambda p: abs(z.x - p.x) + abs(z.y - p.y)
+                )
+                dx = 0 if z.x == target.x else (1 if z.x < target.x else -1)
+                dy = 0 if z.y == target.y else (1 if z.y < target.y else -1)
+                nx, ny = z.x + dx, z.y + dy
             if (nx, ny) in self.barricade_positions:
                 self.barricade_positions.remove((nx, ny))
                 print("A zombie claws at a barricade, tearing it down!")
