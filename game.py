@@ -184,6 +184,7 @@ DEFAULT_EVENT_CARD_COUNTS = {
     "storm": 1,
     "adrenaline": 1,
     "survivors": 1,
+    "ambush": 1,
     "rain": 1,
     "fog": 1,
     "heatwave": 1,
@@ -2197,6 +2198,10 @@ class Game:
         elif event == "horde":
             self.spawn_zombies(2)
             print("A small horde shambles in!")
+        elif event == "ambush":
+            for p in list(self.players):
+                self.spawn_zombie_near(p.x, p.y, 1.0)
+            print("Zombies spring from the shadows, ambushing the survivors!")
         elif event == "storm":
             self.actions_per_turn = max(1, ACTIONS_PER_TURN - 1)
             print(

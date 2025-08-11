@@ -123,7 +123,8 @@ from a shuffled deck. Cards are not returned until the deck is exhausted,
 mirroring a physical board game's event system. Fallen survivors do not stay
 down—any player who dies will rise again as a zombie at that spot. Events can
 alter the next round’s pace – a storm might cut your available actions while
-an adrenaline rush grants an extra move. Friendly survivors may appear with
+an adrenaline rush grants an extra move. Sometimes zombies spring an ambush,
+appearing next to the survivors. Friendly survivors may appear with
 supplies or medkits and, if there’s room, may even join your group. The wind
 can momentarily lift the fog to reveal unexplored tiles. A wandering trader may
 offer a medkit in exchange for two supplies. Rain muffles sound so noise tokens
