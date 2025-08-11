@@ -71,6 +71,15 @@ kill counts board first.
 Each chapter begins and ends with a brief piece of flavor text, providing a
 story hook before play and a short epilogue once the scenario concludes.
 
+### Customising Tile Textures
+
+The game renders the board using simple characters so it works in any
+terminal.  If you would like to change how tiles look you can create a
+`textures.json` file in the game directory that maps board symbols to the
+characters of your choice.  Any entries you omit fall back to sensible
+defaults.  This allows quick experiments like swapping walls for Unicode box
+drawing or using emoji for items without touching the code.
+
 In cooperative mode the group shares victory conditions – once the objective is
 met all surviving players must regroup on the starting tile to win together.
 
