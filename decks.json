@@ -28,6 +28,7 @@
     "weapon": 2,
     "flashlight": 1,
     "decoy": 1,
+    "armor": 1,
     "nothing": 10
   }
 }
