@@ -5,6 +5,7 @@ import pygame
 from typing import Optional
 
 from gamecore.i18n import gettext as _
+from gamecore import config as gconfig
 
 
 class Scene:
@@ -29,8 +30,15 @@ class App:
 
     def __init__(self, width: int = 800, height: int = 600) -> None:
         pygame.init()
+        cfg = gconfig.load_config()
+        flags = pygame.FULLSCREEN if cfg.get("fullscreen") else 0
+        w, h = cfg.get("window_size", [width, height])
         pygame.display.set_caption(_("window_title"))
-        self.screen = pygame.display.set_mode((width, height))
+        self.screen = pygame.display.set_mode((w, h), flags)
+        try:
+            pygame.mixer.music.set_volume(cfg.get("volume", 1.0))
+        except Exception:  # pragma: no cover - mixer may not be init
+            pass
         self.clock = pygame.time.Clock()
         from .scene_menu import MenuScene
 

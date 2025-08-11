@@ -1,4 +1,4 @@
-from . import rules, board, entities, cards, ai, saveio, io_textures, cli
+from . import rules, board, entities, cards, ai, saveio, io_textures, cli, config
 
 __all__ = [
     "rules",
@@ -9,4 +9,5 @@ __all__ = [
     "saveio",
     "io_textures",
     "cli",
+    "config",
 ]

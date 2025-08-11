@@ -9,7 +9,12 @@ from .app import Scene
 from .gfx.tileset import TILE_SIZE, Tileset
 from .ui.widgets import Log, StatusPanel
 from gamecore import board as gboard
-from gamecore import rules
+from gamecore import rules, saveio, config as gconfig
+
+try:  # pragma: no cover - optional dependency
+    import pygame.messagebox as messagebox
+except Exception:  # pragma: no cover - fallback if missing
+    messagebox = None
 
 
 def _tone(freq: int = 440, ms: int = 100) -> pygame.mixer.Sound:
@@ -26,8 +31,22 @@ class GameScene(Scene):
 
     def __init__(self, app, new_game: bool = True) -> None:
         super().__init__(app)
+        cfg = gconfig.load_config()
+        try:
+            pygame.mixer.music.set_volume(cfg.get("volume", 1.0))
+        except Exception:  # pragma: no cover - mixer may be uninitialised
+            pass
         self.tileset = Tileset()
-        self.state = gboard.create_game()
+        self.quick_path = gconfig.quicksave_path()
+        self.autosave_path = gconfig.autosave_path()
+        if new_game:
+            self.state = gboard.create_game()
+        else:
+            try:
+                self.state = saveio.load_game(self.autosave_path)
+            except Exception as exc:
+                self.state = gboard.create_game()
+                self._show_error(str(exc))
         rules.set_seed(0)
         self.camera_x = 0.0
         self.camera_y = 0.0
@@ -38,6 +57,20 @@ class GameScene(Scene):
         self.click_sound = _tone(880)
         self.move_sound = _tone(660)
 
+    def _show_error(self, msg: str) -> None:
+        """Display an error message without crashing."""
+
+        if messagebox:
+            try:
+                messagebox.show("Error", msg)
+                return
+            except Exception:  # pragma: no cover - fallback
+                pass
+        # Fallback to console/log output
+        print("Error:", msg)
+        if hasattr(self, "log"):
+            self.log.add(msg)
+
     # event handling ---------------------------------------------------
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.KEYDOWN:
@@ -47,6 +80,22 @@ class GameScene(Scene):
                 self.next_scene = MenuScene(self.app)
             elif event.key == pygame.K_SPACE:
                 gboard.end_turn(self.state)
+                try:
+                    saveio.save_game(self.state, self.autosave_path)
+                except Exception as exc:
+                    self._show_error(str(exc))
+            elif event.key == pygame.K_F5:
+                try:
+                    saveio.save_game(self.state, self.quick_path)
+                except Exception as exc:
+                    self._show_error(str(exc))
+            elif event.key == pygame.K_F9:
+                try:
+                    self.state = saveio.load_game(self.quick_path)
+                    self.log.lines.clear()
+                    self._last_log = 0
+                except Exception as exc:
+                    self._show_error(str(exc))
             elif event.key in (pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT):
                 self._handle_move(event.key)
         elif event.type == pygame.MOUSEWHEEL:

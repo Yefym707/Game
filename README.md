@@ -18,6 +18,20 @@ python -m scripts.run_cli --seed 123
 python -m scripts.run_gui
 ```
 
+## Saves & Config
+
+Game data is stored inside the user's home directory in `~/.oko_zombie`.
+Configuration options are kept in `config.json` and individual saves reside
+in the `saves/` subdirectory.  The save files include a `save_version` field
+so future releases can detect incompatible formats.
+
+From the game you can quick save with **F5** and quick load with **F9**. The
+game also performs an automatic save after each turn.
+
+The **Settings** menu exposes basic options like volume, language, window
+size and fullscreen state.  Changing these values writes them to
+`config.json` for the next session.
+
 ## Tiles pipeline
 
 Tile graphics are generated from `textures.json`. Run the helper script to
