@@ -180,6 +180,7 @@ DEFAULT_EVENT_CARD_COUNTS = {
     "nothing": 3,
     "heal": 1,
     "supply": 1,
+    "airdrop": 1,
     "horde": 1,
     "storm": 1,
     "adrenaline": 1,
@@ -1111,6 +1112,32 @@ class Game:
                     and (x, y) not in self.decoy_positions
                 ):
                     self.supplies_positions.add((x, y))
+                    break
+
+    def spawn_medkits(self, count: int) -> None:
+        """Randomly place medkits on free tiles."""
+        for _ in range(count):
+            while True:
+                x, y = random.randrange(self.board_size), random.randrange(
+                    self.board_size
+                )
+                if (
+                    (x, y) not in self.medkit_positions
+                    and (x, y) not in self.pharmacy_positions
+                    and (x, y) not in self.armory_positions
+                    and (x, y) not in self.shelter_positions
+                    and not self.is_player_at(x, y)
+                    and (x, y) != self.antidote_pos
+                    and (x, y) not in self.barricade_positions
+                    and (x, y) not in self.wall_positions
+                    and (x, y) not in self.trap_positions
+                    and (x, y) not in self.campfires
+                    and (x, y) not in self.supplies_positions
+                    and (x, y) not in self.weapon_positions
+                    and (x, y) not in self.molotov_positions
+                    and (x, y) not in self.decoy_positions
+                ):
+                    self.medkit_positions.add((x, y))
                     break
 
     def spawn_antidote(self) -> None:
@@ -2232,6 +2259,10 @@ class Game:
         elif event == "supply":
             self.spawn_supplies(1)
             print("A supply crate drops nearby!")
+        elif event == "airdrop":
+            self.spawn_supplies(1)
+            self.spawn_medkits(1)
+            print("A supply airdrop floats down, scattering resources!")
         elif event == "horde":
             self.spawn_zombies(2)
             print("A small horde shambles in!")
