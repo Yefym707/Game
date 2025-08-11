@@ -2569,7 +2569,9 @@ class Game:
     def print_summary(self) -> None:
         """Display a scoreboard of each player's outcome and inventory."""
         print("\nFinal results:")
-        print(f"{'P':<3}{'Status':<10}{'Kills':>7}{'Supplies':>10}{'Medkits':>10}{'Decoys':>10}")
+        print(
+            f"{'P':<3}{'Status':<10}{'HP':>5}{'Hunger':>8}{'Kills':>7}{'Sup':>7}{'Med':>7}{'Mol':>7}{'Dec':>7}{'Weap':>6}{'Light':>7}"
+        )
         for p in self.all_players:
             if p in self.evacuated_players:
                 status = "escaped"
@@ -2577,8 +2579,10 @@ class Game:
                 status = "alive"
             else:
                 status = "dead"
+            weapon = "Y" if p.has_weapon else "N"
+            light = "Y" if p.has_flashlight else "N"
             print(
-                f"{p.symbol:<3}{status:<10}{p.kills:>7}{p.supplies:>10}{p.medkits:>10}{p.decoys:>10}"
+                f"{p.symbol:<3}{status:<10}{p.health:>5}{p.hunger:>8}{p.kills:>7}{p.supplies:>7}{p.medkits:>7}{p.molotovs:>7}{p.decoys:>7}{weapon:>6}{light:>7}"
             )
 
     def advance_time_of_day(self) -> None:
