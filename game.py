@@ -1970,9 +1970,16 @@ class Game:
             print("You create a noisy distraction.")
         return True
 
-    def scout(self) -> bool:
-        """Reveal tiles in an adjacent direction without moving."""
-        direction = input("Scout direction [w/a/s/d]: ").strip().lower()
+    def scout(self, direction: Optional[str] = None) -> bool:
+        """Reveal tiles in an adjacent direction without moving.
+
+        ``direction`` may be provided for programmatic control (tests or AI).
+        When ``None`` a direction is read from user input.
+        """
+        if direction is None:
+            direction = input("Scout direction [w/a/s/d]: ").strip().lower()
+        else:
+            direction = direction.lower()
         if direction not in DIRECTION_OFFSETS:
             print("Invalid direction.")
             return False
