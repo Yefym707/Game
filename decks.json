@@ -17,6 +17,8 @@
     "firebomb": 1,
     "blizzard": 1,
     "earthquake": 1,
+    "dusk": 1,
+    "dawn": 1,
     "trader": 1,
     "calm": 1
   },
