@@ -13,6 +13,10 @@ Scavenging pulls from a finite loot deck so items won't repeat until the deck
 is reshuffled, reinforcing the tabletop feel. Both event and loot deck
 compositions are stored in `decks.json` so you can tweak card frequencies or
 add your own entries.
+For even more control an optional `board_layout.json` file can describe the
+starting map as an array of ten strings. Use `#` for walls, `U` for shelters,
+`M` for pharmacies, `W` for armories and `S` for the starting tile. Any
+remaining required tiles are spawned procedurally so partial layouts work too.
 Loud actions such as gunfire or revving an engine place noise tokens on the
 board. These markers linger for a couple of rounds and at the end of each
 round may spawn new zombies, capturing the tension of physical board games

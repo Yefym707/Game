@@ -163,6 +163,7 @@ ROLE_DEFS = {
 # external JSON file to ease modding. Defaults are provided here as
 # fallbacks if the file is missing or malformed.
 DECK_CONFIG_FILE = "decks.json"
+BOARD_LAYOUT_FILE = "board_layout.json"
 
 DEFAULT_EVENT_CARD_COUNTS = {
     "nothing": 3,
@@ -206,6 +207,48 @@ def load_deck_config(path: str) -> tuple[dict[str, int], dict[str, int]]:
 
 
 EVENT_CARD_COUNTS, LOOT_CARD_COUNTS = load_deck_config(DECK_CONFIG_FILE)
+
+
+def load_board_layout(path: str, size: int) -> dict:
+    """Load a preset board layout from *path*.
+
+    The file should contain a JSON array of strings, one per row. Characters
+    map to tiles using the same symbols as the in-game board:
+
+    ``#`` wall, ``U`` shelter, ``M`` pharmacy, ``W`` armory and ``S`` start
+    position. Missing or malformed files simply yield an empty layout, letting
+    the game fall back to its procedural placement. Any rows beyond ``size`` or
+    unknown characters are ignored.
+    """
+
+    layout = {
+        "walls": set(),
+        "shelters": set(),
+        "pharmacies": set(),
+        "armories": set(),
+        "start_pos": None,
+    }
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        rows = data if isinstance(data, list) else data.get("rows", [])
+        for y, row in enumerate(rows):
+            if y >= size or not isinstance(row, str):
+                break
+            for x, ch in enumerate(row[:size]):
+                if ch == WALL_SYMBOL:
+                    layout["walls"].add((x, y))
+                elif ch == SHELTER_SYMBOL:
+                    layout["shelters"].add((x, y))
+                elif ch == PHARMACY_SYMBOL:
+                    layout["pharmacies"].add((x, y))
+                elif ch == ARMORY_SYMBOL:
+                    layout["armories"].add((x, y))
+                elif ch == "S":
+                    layout["start_pos"] = (x, y)
+    except (OSError, ValueError):
+        return layout
+    return layout
 
 # Day/night cycle settings
 DAY_LENGTH = 3  # rounds of daylight
@@ -470,7 +513,8 @@ class Game:
         self.turn_limit = settings["turn_limit"]
         self.evacuation_turns = EVACUATION_TURNS + extra_players
         starting_health = settings["starting_health"] + self.campaign.get("hp_bonus", 0)
-        center = self.board_size // 2
+        layout = load_board_layout(BOARD_LAYOUT_FILE, self.board_size)
+        start_pos = layout.get("start_pos") or (self.board_size // 2, self.board_size // 2)
         offsets = [(0, 0), (0, 1), (1, 0), (-1, 0), (0, -1), (1, 1)]
         self.players: List[Player] = []
         total_players = self.total_players
@@ -486,8 +530,8 @@ class Game:
             )
             self.players.append(
                 Player(
-                    center + dx,
-                    center + dy,
+                    start_pos[0] + dx,
+                    start_pos[1] + dy,
                     starting_health,
                     str(i + 1),
                     is_ai,
@@ -498,7 +542,7 @@ class Game:
             for p in self.players:
                 p.supplies = min(INVENTORY_LIMIT, p.supplies + bonus_supplies)
         self.player: Player = self.players[0]
-        self.start_pos = (center, center)
+        self.start_pos = start_pos
         self.antidote_pos: Optional[Tuple[int, int]] = None
         self.keys_pos: Optional[Tuple[int, int]] = None
         self.fuel_pos: Optional[Tuple[int, int]] = None
@@ -516,9 +560,9 @@ class Game:
         self.molotov_positions: Set[Tuple[int, int]] = set()
         self.flashlight_positions: Set[Tuple[int, int]] = set()
         self.trap_positions: Set[Tuple[int, int]] = set()
-        self.pharmacy_positions: Set[Tuple[int, int]] = set()
-        self.armory_positions: Set[Tuple[int, int]] = set()
-        self.shelter_positions: Set[Tuple[int, int]] = set()
+        self.pharmacy_positions: Set[Tuple[int, int]] = set(layout.get("pharmacies", set()))
+        self.armory_positions: Set[Tuple[int, int]] = set(layout.get("armories", set()))
+        self.shelter_positions: Set[Tuple[int, int]] = set(layout.get("shelters", set()))
         self.barricade_positions: Set[Tuple[int, int]] = set()
         self.campfires: Dict[Tuple[int, int], int] = {}
         self.noise_markers: List[Tuple[int, int, float, int]] = []
@@ -526,12 +570,12 @@ class Game:
         self.visibility_penalty_turns = 0
         self.hunger_penalty_turns = 0
         self.revealed: Set[Tuple[int, int]] = set()
-        self.wall_positions: Set[Tuple[int, int]] = set()
-        self.spawn_walls(WALL_COUNT)
-        self.spawn_shelters(SHELTER_COUNT)
+        self.wall_positions: Set[Tuple[int, int]] = set(layout.get("walls", set()))
+        self.spawn_walls(max(0, WALL_COUNT - len(self.wall_positions)))
+        self.spawn_shelters(max(0, SHELTER_COUNT - len(self.shelter_positions)))
         self.spawn_zombies(settings["starting_zombies"] + extra_players)
-        self.spawn_pharmacies(PHARMACY_COUNT)
-        self.spawn_armories(ARMORY_COUNT)
+        self.spawn_pharmacies(max(0, PHARMACY_COUNT - len(self.pharmacy_positions)))
+        self.spawn_armories(max(0, ARMORY_COUNT - len(self.armory_positions)))
         self.spawn_supplies(STARTING_SUPPLIES)
         if self.scenario == 1:
             self.spawn_antidote()
