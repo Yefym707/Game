@@ -31,7 +31,9 @@ reduces visibility after dark unless a survivor carries a flashlight.
 Scattered shelters on the board offer weary survivors a safe place to rest
 and recover extra health or hunger.
 Combat and other risky actions explicitly roll dice, displaying the result so
-you can cheer or lament the luck of the draw just like at a real table.
+you can cheer or lament the luck of the draw just like at a real table. Every
+roll is also written to `roll_log.txt`, and d6 rolls show a little ASCII die for
+extra tabletop flavor.
 Zombie bites may also infect survivors; without an antidote they will turn
 into zombies after a few rounds, adding urgency to secure the cure.
 

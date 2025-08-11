@@ -81,6 +81,7 @@ LEVEL_XP_BASE = 10
 
 CAMPAIGN_FILE = "campaign_save.json"
 SAVE_FILE = "savegame.json"
+ROLL_LOG_FILE = "roll_log.txt"
 ANTIDOTE_SYMBOL = "A"
 KEYS_SYMBOL = "K"
 FUEL_SYMBOL = "F"
@@ -356,6 +357,36 @@ SCENARIO_FAILURES = {
 }
 
 
+DIE_FACES = {
+    1: ("+-------+", "|       |", "|   *   |", "|       |", "+-------+"),
+    2: ("+-------+", "| *     |", "|       |", "|     * |", "+-------+"),
+    3: ("+-------+", "| *     |", "|   *   |", "|     * |", "+-------+"),
+    4: ("+-------+", "| *   * |", "|       |", "| *   * |", "+-------+"),
+    5: ("+-------+", "| *   * |", "|   *   |", "| *   * |", "+-------+"),
+    6: ("+-------+", "| *   * |", "| *   * |", "| *   * |", "+-------+"),
+}
+
+
+def show_die(value: int) -> None:
+    """Print a simple ASCII representation of a d6 ``value``."""
+    face = DIE_FACES.get(value)
+    if face:
+        for line in face:
+            print(line)
+
+
+def log_roll(label: str, sides: int, result: int, threshold: int | None = None) -> None:
+    """Append the roll result to ``ROLL_LOG_FILE``."""
+    try:
+        with open(ROLL_LOG_FILE, "a", encoding="utf-8") as fh:
+            if threshold is None:
+                fh.write(f"{label}: d{sides} = {result}\n")
+            else:
+                fh.write(f"{label}: d{sides} = {result} (<= {threshold})\n")
+    except OSError:
+        pass
+
+
 def roll_check(chance: float, sides: int = 10, label: str = "Roll", log: bool = True) -> bool:
     """Return True if a dice roll succeeds against ``chance``.
 
@@ -367,6 +398,9 @@ def roll_check(chance: float, sides: int = 10, label: str = "Roll", log: bool = 
     roll = random.randint(1, sides)
     if log:
         print(f"{label} d{sides}: {roll} (need <= {threshold})")
+        if sides <= 6:
+            show_die(roll)
+    log_roll(label, sides, roll, threshold)
     return roll <= threshold
 
 
@@ -512,6 +546,12 @@ class Game:
         self.scenario = scenario
         self.cooperative = cooperative
         self.board_size = max(5, board_size)
+        # Fresh log for each new session
+        try:
+            with open(ROLL_LOG_FILE, "w", encoding="utf-8") as fh:
+                fh.write("Dice roll log\n")
+        except OSError:
+            pass
         self.campaign = load_campaign()
         self.level = self.campaign.get("level", 1)
         # Small consolation stash awarded after failed runs
@@ -2508,6 +2548,13 @@ class Game:
             roll = random.randint(1, 6)
             if p.role == "leader":
                 roll += 1
+            log_roll(f"Initiative {p.symbol}", 6, roll)
+            print(f"Player {p.symbol} rolls {roll} for initiative.")
+            if roll <= 6:
+                show_die(roll)
+            else:
+                show_die(6)
+                print("+1 leader bonus")
             rolls.append((p, roll))
         rolls.sort(key=lambda pr: pr[1], reverse=True)
         self.players = [p for p, _ in rolls]
@@ -2524,10 +2571,13 @@ class Game:
         actions = random.randint(1, self.actions_per_turn)
         if player.role == "leader" and self.actions_per_turn > 1:
             actions = max(actions, 2)
+        log_roll(f"Actions {player.symbol}", self.actions_per_turn, actions)
         who = "Player {}".format(player.symbol)
         if not player.is_ai:
             who = "You"
         print(f"{who} roll{'' if actions == 1 else 's'} {actions} action{'s' if actions != 1 else ''}.")
+        if self.actions_per_turn <= 6:
+            show_die(actions)
         return actions
 
     def check_achievements(self) -> None:
