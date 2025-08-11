@@ -611,7 +611,7 @@ class Game:
         else:
             self.spawn_antidote()
         for p in self.players:
-            self.reveal_area(p.x, p.y, player=p)
+            self.reveal_area(p.x, p.y, player=p, check_walls=True)
         self.turn: int = 0
         self.actions_per_turn: int = ACTIONS_PER_TURN
         self.keep_save = False
@@ -823,17 +823,51 @@ class Game:
             data = json.load(fh)
         return cls.from_dict(data)
 
+    def has_line_of_sight(self, x1: int, y1: int, x2: int, y2: int) -> bool:
+        """Return ``True`` if no wall or barricade blocks the view.
+
+        A simple Bresenham-style ray cast is used to walk from ``(x1, y1)`` to
+        ``(x2, y2)``.  The starting and ending tiles themselves do not block
+        sight so walls are still revealed when adjacent, but any interior wall
+        or barricade prevents seeing beyond it.
+        """
+        dx = abs(x2 - x1)
+        dy = abs(y2 - y1)
+        x, y = x1, y1
+        n = 1 + dx + dy
+        x_inc = 1 if x2 > x1 else -1
+        y_inc = 1 if y2 > y1 else -1
+        error = dx - dy
+        dx *= 2
+        dy *= 2
+        for _ in range(n):
+            if (
+                (x, y) not in {(x1, y1), (x2, y2)}
+                and ((x, y) in self.wall_positions or (x, y) in self.barricade_positions)
+            ):
+                return False
+            if error > 0:
+                x += x_inc
+                error -= dy
+            else:
+                y += y_inc
+                error += dx
+        return True
+
     def reveal_area(
         self,
         x: int,
         y: int,
         radius: Optional[int] = None,
         player: Optional[Player] = None,
+        check_walls: bool = False,
     ) -> None:
         """Reveal tiles around ``(x, y)`` within ``radius``.
 
-        If ``player`` has a flashlight, the night visibility penalty is
-        ignored.
+        When ``check_walls`` is true, tiles are only revealed if a clear
+        line of sight exists from the origin to the target; walls and
+        barricades block vision.  If ``player`` has a flashlight, the night
+        visibility penalty is ignored.
         """
         if radius is None:
             radius = self.reveal_radius
@@ -846,10 +880,13 @@ class Game:
                 radius = max(0, radius - NIGHT_REVEAL_PENALTY)
         if self.visibility_penalty_turns > 0:
             radius = max(0, radius - 1)
+        ox, oy = (player.x, player.y) if player else (x, y)
         for dx in range(-radius, radius + 1):
             for dy in range(-radius, radius + 1):
                 nx, ny = x + dx, y + dy
                 if 0 <= nx < self.board_size and 0 <= ny < self.board_size:
+                    if check_walls and not self.has_line_of_sight(ox, oy, nx, ny):
+                        continue
                     if (nx, ny) not in self.revealed:
                         self.revealed.add((nx, ny))
                         if (
@@ -1356,11 +1393,11 @@ class Game:
                 and (nx, ny) not in self.wall_positions
             ):
                 self.player.x, self.player.y = nx, ny
-                self.reveal_area(nx, ny, player=self.player)
+                self.reveal_area(nx, ny, player=self.player, check_walls=True)
                 self.check_for_trap(nx, ny)
             else:
                 self.player.x, self.player.y = original
-                self.reveal_area(*original, player=self.player)
+                self.reveal_area(*original, player=self.player, check_walls=True)
                 if (nx, ny) in self.wall_positions:
                     print("A wall blocks your path.")
                 return False
@@ -1731,7 +1768,7 @@ class Game:
         if not (0 <= nx < self.board_size and 0 <= ny < self.board_size):
             print("You can't scout past the edge of the board.")
             return False
-        self.reveal_area(nx, ny, radius=SCOUT_RADIUS, player=self.player)
+        self.reveal_area(nx, ny, radius=SCOUT_RADIUS, player=self.player, check_walls=True)
         print("You scout ahead, revealing more of the surroundings.")
         return True
 
@@ -2167,7 +2204,7 @@ class Game:
         expired: List[Tuple[int, int]] = []
         for (x, y), turns in list(self.campfires.items()):
             # Campfires act as light sources, revealing nearby tiles.
-            self.reveal_area(x, y, CAMPFIRE_LIGHT_RADIUS)
+            self.reveal_area(x, y, CAMPFIRE_LIGHT_RADIUS, check_walls=True)
             if turns > 1:
                 self.campfires[(x, y)] = turns - 1
             else:
@@ -2230,7 +2267,7 @@ class Game:
                         is_ai=True,
                     )
                     self.players.append(new_p)
-                    self.reveal_area(new_p.x, new_p.y, player=new_p)
+                    self.reveal_area(new_p.x, new_p.y, player=new_p, check_walls=True)
                     self.zombie_spawn_chance += 0.05
                     self.base_zombie_spawn_chance += 0.05
                     print(f"A grateful survivor joins as player {symbol}!")
