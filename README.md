@@ -53,6 +53,9 @@ rescue and survive until it arrives. Only two seats are available on the
 rescue craft, so in competitive games the survivors with the highest zombie
 kill counts board first.
 
+Each chapter begins and ends with a brief piece of flavor text, providing a
+story hook before play and a short epilogue once the scenario concludes.
+
 In cooperative mode the group shares victory conditions – once the objective is
 met all surviving players must regroup on the starting tile to win together.
 

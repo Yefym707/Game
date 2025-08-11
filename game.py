@@ -253,6 +253,46 @@ ACHIEVEMENT_DEFS = {
 }
 
 
+# Flavor text for each scenario. These short snippets act like
+# story cards in a tabletop campaign, giving players context before
+# play begins and after it ends.
+SCENARIO_INTROS = {
+    1: (
+        "Rumors speak of a hidden lab containing a vital serum. "
+        "Find the antidote and bring it back to safety."
+    ),
+    2: (
+        "With a sample secured, escape becomes the priority. "
+        "Search the ruins for car keys and enough fuel to get away."
+    ),
+    3: (
+        "No rescue will arrive unless someone makes contact. "
+        "Scavenge radio parts and assemble a working transmitter."
+    ),
+    4: (
+        "All preparations lead here. Call for rescue and hold out "
+        "until help arrives."
+    ),
+}
+
+SCENARIO_OUTROS = {
+    1: "The precious serum buys the group a little more time.",
+    2: "An engine roars to life, cutting through the dead silence.",
+    3: "The radio crackles with distant hope as your signal goes out.",
+    4: (
+        "Rotting streets shrink below as the last survivors lift off "
+        "toward uncertain safety."
+    ),
+}
+
+SCENARIO_FAILURES = {
+    1: "Without the cure the infection spreads unchecked.",
+    2: "The path out remains blocked and the horde closes in.",
+    3: "Static is the only reply. Rescue never hears your plea.",
+    4: "No one reaches safety. The outbreak consumes everything.",
+}
+
+
 def roll_check(chance: float, sides: int = 10, label: str = "Roll", log: bool = True) -> bool:
     """Return True if a dice roll succeeds against ``chance``.
 
@@ -2418,6 +2458,9 @@ class Game:
         return self.player.health <= 0
 
     def run(self) -> None:
+        intro = SCENARIO_INTROS.get(self.scenario)
+        if intro:
+            print(intro)
         if self.scenario == 1:
             print(
                 "Find the antidote and return to the safe zone. Your pack holds at most eight items. Press Q to save and quit."
@@ -2480,6 +2523,9 @@ class Game:
                 self.advance_time_of_day()
                 if self.turn >= self.turn_limit:
                     print("Time runs out and the area is overrun. You perish...")
+                    fail = SCENARIO_FAILURES.get(self.scenario)
+                    if fail:
+                        print(fail)
                     break
             if winner:
                 self.player = winner
@@ -2517,6 +2563,9 @@ class Game:
                             print(f"{names} escape on the rescue craft!")
                         else:
                             print("The rescue helicopter arrives and lifts you to safety. You win!")
+                outro = SCENARIO_OUTROS.get(self.scenario)
+                if outro:
+                    print(outro)
                 self.xp_gained += XP_SCENARIO_WIN
                 print(f"You gain {XP_SCENARIO_WIN} XP for surviving the scenario!")
                 completed = self.campaign.setdefault("completed_scenarios", [])
@@ -2524,6 +2573,9 @@ class Game:
                     completed.append(self.scenario)
             elif not self.players:
                 print("No survivors escape the outbreak...")
+                fail = SCENARIO_FAILURES.get(self.scenario)
+                if fail:
+                    print(fail)
                 self.campaign["supply_bonus"] = self.campaign.get("supply_bonus", 0) + 1
                 print("A stash of supplies is set aside to help in the next run.")
         except (KeyboardInterrupt, EOFError):
