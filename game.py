@@ -134,11 +134,15 @@ DIRECTION_ALIASES = {
 
 
 def normalize_direction(direction: str) -> str:
-    """Return the canonical WASD representation for ``direction``.
+    """Return the canonical WASD key for ``direction``.
 
-    Unknown values are returned unchanged so callers can simply check the
-    result against ``DIRECTION_OFFSETS``.
+    The helper accepts both the traditional WASD inputs and more natural
+    language such as ``"north"`` or ``"left"``.  Mapping happens in a case
+    insensitive manner so callers don't need to worry about normalising the
+    input beforehand.  Unknown values are returned (lowercased) so the caller
+    can simply check membership in :data:`DIRECTION_OFFSETS`.
     """
+    direction = direction.lower()
     return DIRECTION_ALIASES.get(direction, direction)
 
 # Special tile settings
@@ -2046,9 +2050,7 @@ class Game:
             return False
 
         if direction is None:
-            direction = input("Throw noise [w/a/s/d]: ").strip().lower()
-        else:
-            direction = direction.lower()
+            direction = input("Throw noise [w/a/s/d]: ").strip()
         # Accept natural language directions such as "north" or "left".
         direction = normalize_direction(direction)
         if direction not in DIRECTION_OFFSETS:
@@ -2077,10 +2079,7 @@ class Game:
         When ``None`` a direction is read from user input.
         """
         if direction is None:
-            direction = input("Scout direction [w/a/s/d]: ").strip().lower()
-        else:
-            direction = direction.lower()
-
+            direction = input("Scout direction [w/a/s/d]: ").strip()
         # Map any word-based direction to the canonical WASD keys so scouting
         # works with both keyboard-style controls and higher level descriptions
         # such as "north" or "left".
