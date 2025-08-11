@@ -75,8 +75,8 @@ In cooperative mode the group shares victory conditions – once the objective i
 met all surviving players must regroup on the starting tile to win together.
 
 When a scenario ends a small scoreboard lists each survivor's fate alongside
-their kill count and remaining supplies, echoing the post-game tally of a
-tabletop session.
+their remaining health, hunger, kill count and inventory, echoing the
+post-game tally of a tabletop session.
 
 ### Roles
 
