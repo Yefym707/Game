@@ -36,6 +36,7 @@ Features
   survivors huddled around the fire.
 * Rain events dampen noise, making zombies less likely to spawn from noise
   tokens in the following round.
+* Rare calm nights halt zombie spawns entirely for a single round.
 * Zombie bites may infect survivors; without an antidote they will turn
   after a few rounds.
 
@@ -185,6 +186,7 @@ DEFAULT_EVENT_CARD_COUNTS = {
     "blizzard": 1,
     "earthquake": 1,
     "trader": 1,
+    "calm": 1,
 }
 
 DEFAULT_LOOT_CARD_COUNTS = {
@@ -578,6 +580,7 @@ class Game:
         self.noise_dampener_turns = 0
         self.visibility_penalty_turns = 0
         self.hunger_penalty_turns = 0
+        self.calm_rounds = 0
         self.revealed: Set[Tuple[int, int]] = set()
         self.wall_positions: Set[Tuple[int, int]] = set(layout.get("walls", set()))
         self.spawn_walls(max(0, WALL_COUNT - len(self.wall_positions)))
@@ -680,6 +683,7 @@ class Game:
             "noise_dampener_turns": self.noise_dampener_turns,
             "visibility_penalty_turns": self.visibility_penalty_turns,
             "hunger_penalty_turns": self.hunger_penalty_turns,
+            "calm_rounds": self.calm_rounds,
             "xp_gained": self.xp_gained,
             "zombie_spawn_chance": self.zombie_spawn_chance,
             "base_zombie_spawn_chance": self.base_zombie_spawn_chance,
@@ -778,6 +782,7 @@ class Game:
         game.noise_dampener_turns = data.get("noise_dampener_turns", 0)
         game.visibility_penalty_turns = data.get("visibility_penalty_turns", 0)
         game.hunger_penalty_turns = data.get("hunger_penalty_turns", 0)
+        game.calm_rounds = data.get("calm_rounds", 0)
         game.zombie_spawn_chance = data.get("zombie_spawn_chance", game.zombie_spawn_chance)
         game.base_zombie_spawn_chance = data.get(
             "base_zombie_spawn_chance", game.zombie_spawn_chance
@@ -1995,6 +2000,9 @@ class Game:
                         print(f"Player {p.symbol} is infected!")
 
     def spawn_random_zombie(self) -> None:
+        if self.calm_rounds > 0:
+            print("The area remains eerily calm. No zombies appear.")
+            return
         if random.random() < self.zombie_spawn_chance:
             self.spawn_zombies(1)
             print("A zombie shambles in from the darkness...")
@@ -2056,6 +2064,9 @@ class Game:
 
     def resolve_noise(self) -> None:
         """Spawn zombies for all accumulated noise markers."""
+        if self.calm_rounds > 0:
+            print("Even the noise draws no undead during this calm.")
+            return
         remaining: List[Tuple[int, int, float, int]] = []
         for x, y, chance, turns in self.noise_markers:
             effective = chance
@@ -2172,6 +2183,9 @@ class Game:
         elif event == "earthquake":
             self.quake_walls()
             print("The ground rumbles, shifting rubble around you!")
+        elif event == "calm":
+            self.calm_rounds = 1
+            print("An eerie calm settles over the area. No zombies will spawn next round.")
         elif event == "firebomb":
             given = False
             for p in self.players:
@@ -2707,6 +2721,8 @@ class Game:
                 self.spawn_random_zombie()
                 self.resolve_noise()
                 self.update_campfires()
+                if self.calm_rounds > 0:
+                    self.calm_rounds -= 1
                 self.actions_per_turn = ACTIONS_PER_TURN
                 self.random_event()
                 self.apply_hunger()
