@@ -83,8 +83,9 @@ ability reminiscent of character cards in a physical board game:
 - **Medic** – medkits and resting restore an extra point of health.
 - **Scout** – reveals one additional tile and draws a second loot card if the
   first is empty.
- - **Engineer** – barricades, traps, campfires and flashlights cost one less supply.
- - **Thief** – stealing is easier and their pack holds two more items.
+- **Engineer** – barricades, traps, campfires and flashlights cost one less supply.
+- **Thief** – stealing is easier and their pack holds two more items.
+- **Leader** – acts earlier each round and never rolls fewer than two actions.
 
 These asymmetrical perks encourage different play styles while keeping the
 rules light.
