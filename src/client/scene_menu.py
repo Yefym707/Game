@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import pygame
 
+from gamecore.i18n import gettext as _
 from .app import Scene
 from .ui.widgets import Button
 
@@ -23,10 +24,10 @@ class MenuScene(Scene):
             self.buttons.append(Button(text, rect, cb))
             y += 60
 
-        add("New Game", self.start_new)
-        add("Continue", self.continue_game)
-        add("Settings", self.settings)
-        add("Quit", self.quit)
+        add(_("menu_new_game"), self.start_new)
+        add(_("menu_continue"), self.continue_game)
+        add(_("menu_settings"), self.settings)
+        add(_("menu_quit"), self.quit)
 
     # button callbacks -------------------------------------------------
     def start_new(self) -> None:

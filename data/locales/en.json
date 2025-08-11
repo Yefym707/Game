@@ -1,0 +1,9 @@
+{
+  "menu_new_game": "New Game",
+  "menu_continue": "Continue",
+  "menu_settings": "Settings",
+  "menu_quit": "Quit",
+  "action_prompt": "action (w/a/s/d to move, q to quit): ",
+  "status_turn": "Turn {turn}  Player {x},{y}",
+  "window_title": "Gamecore GUI"
+}

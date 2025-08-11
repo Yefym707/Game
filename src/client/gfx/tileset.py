@@ -1,7 +1,6 @@
 """Tileset loader and fallback generator."""
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Dict
 
@@ -17,7 +16,6 @@ class Tileset:
         root = Path(__file__).resolve().parents[3]
         self.folder = folder or root / "assets" / "tiles"
         self.folder.mkdir(parents=True, exist_ok=True)
-        pygame.font.init()
         self.tiles: Dict[str, pygame.Surface] = {}
         self._load(root)
 
@@ -31,21 +29,25 @@ class Tileset:
             self.tiles[path.stem] = pygame.image.load(path.as_posix()).convert_alpha()
 
     def _generate_from_json(self, root: Path) -> None:
-        mapping: Dict[str, str] = {}
+        """Generate PNG tiles via :mod:`tools.build_tiles`.
+
+        The helper searches for ``textures.json`` either in the project root or
+        next to the ``scripts`` package and invokes :func:`tools.build_tiles.generate`
+        to render the tiles using Pillow.
+        """
+
+        from tools import build_tiles
+
+        mapping_path: Path | None = None
         for loc in (root / "textures.json", root / "scripts" / "textures.json"):
             if loc.exists():
-                with open(loc, "r", encoding="utf8") as fh:
-                    mapping = json.load(fh)
+                mapping_path = loc
                 break
-        mapping.setdefault("@", "@")
-        font = pygame.font.SysFont(None, 48)
-        for key, glyph in mapping.items():
-            surf = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
-            img = font.render(glyph, True, (255, 255, 255))
-            rect = img.get_rect(center=(TILE_SIZE // 2, TILE_SIZE // 2))
-            surf.blit(img, rect)
-            pygame.image.save(surf, self.folder / f"{key}.png")
-            self.tiles[key] = surf
+        if mapping_path and mapping_path.exists():
+            build_tiles.generate(mapping_path)
+        else:  # minimal fallback to player glyph
+            tiles = build_tiles.build_tiles({"@": "@"})
+            build_tiles.build_atlas(tiles)
 
     # public -----------------------------------------------------------
     def get(self, key: str) -> pygame.Surface | None:
