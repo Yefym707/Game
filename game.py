@@ -108,6 +108,14 @@ NOISE_DURATION = 2  # rounds noise tokens persist
 SCOUT_RADIUS = 2  # tiles revealed when scouting
 RAIN_NOISE_MULTIPLIER = 0.5  # noise chance multiplier during rain events
 
+# Direction vectors for WASD controls used by movement and scouting
+DIRECTION_OFFSETS = {
+    "w": (0, -1),  # up
+    "s": (0, 1),   # down
+    "a": (-1, 0),  # left
+    "d": (1, 0),   # right
+}
+
 # Special tile settings
 PHARMACY_SYMBOL = "M"
 ARMORY_SYMBOL = "W"
@@ -1540,17 +1548,9 @@ class Game:
     # ------------------------------------------------------------------
     # Player actions
     def move_player(self, direction: str, steps: int = 1) -> bool:
-        dx, dy = 0, 0
-        if direction == "w":
-            dy = -1
-        elif direction == "s":
-            dy = 1
-        elif direction == "a":
-            dx = -1
-        elif direction == "d":
-            dx = 1
-        else:
+        if direction not in DIRECTION_OFFSETS:
             return False
+        dx, dy = DIRECTION_OFFSETS[direction]
 
         original = (self.player.x, self.player.y)
         for _ in range(steps):
@@ -1951,11 +1951,10 @@ class Game:
             print("You lack the supplies to create a distraction.")
             return False
         direction = input("Throw noise [w/a/s/d]: ").strip().lower()
-        offsets = {"w": (-1, 0), "a": (0, -1), "s": (1, 0), "d": (0, 1)}
-        if direction not in offsets:
+        if direction not in DIRECTION_OFFSETS:
             print("Invalid direction.")
             return False
-        dx, dy = offsets[direction]
+        dx, dy = DIRECTION_OFFSETS[direction]
         nx, ny = self.player.x + dx, self.player.y + dy
         if not (0 <= nx < self.board_size and 0 <= ny < self.board_size):
             print("You can't toss noise off the board.")
@@ -1974,11 +1973,10 @@ class Game:
     def scout(self) -> bool:
         """Reveal tiles in an adjacent direction without moving."""
         direction = input("Scout direction [w/a/s/d]: ").strip().lower()
-        offsets = {"w": (-1, 0), "a": (0, -1), "s": (1, 0), "d": (0, 1)}
-        if direction not in offsets:
+        if direction not in DIRECTION_OFFSETS:
             print("Invalid direction.")
             return False
-        dx, dy = offsets[direction]
+        dx, dy = DIRECTION_OFFSETS[direction]
         nx, ny = self.player.x + dx, self.player.y + dy
         if not (0 <= nx < self.board_size and 0 <= ny < self.board_size):
             print("You can't scout past the edge of the board.")
