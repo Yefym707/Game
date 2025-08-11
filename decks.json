@@ -13,7 +13,8 @@
     "firebomb": 1,
     "blizzard": 1,
     "earthquake": 1,
-    "trader": 1
+    "trader": 1,
+    "calm": 1
   },
   "loot": {
     "supply": 8,

@@ -129,6 +129,7 @@ offer a medkit in exchange for two supplies. Rain muffles sound so noise tokens
 are less likely to draw zombies in the following round. Heatwaves parch the survivors, causing extra hunger loss next turn. A sudden
 blizzard both muffles noise and limits everyone to fewer actions with reduced
 visibility on the next turn. Occasional earthquakes may raise or crumble rubble walls, reshaping the paths ahead. Exploring may also
+At times the city falls eerily silent and no new zombies appear that round.
 uncover special locations. Pharmacies (`M`) have a high chance of yielding
   medkits while armories (`W`) are the best spots to find weapons. Hidden traps
   (`!`) may also appear and will injure any survivor that triggers them, though
