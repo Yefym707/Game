@@ -693,6 +693,7 @@ class Game:
         cooperative: bool = False,
         roles: Optional[List[str]] = None,
         board_size: int = BOARD_SIZE,
+        texture_file: Optional[str] = TEXTURE_FILE,
     ) -> None:
         settings = DIFFICULTY_SETTINGS.get(difficulty.lower())
         if settings is None:
@@ -733,7 +734,7 @@ class Game:
         layout = load_board_layout(BOARD_LAYOUT_FILE, self.board_size)
         # Load optional tile textures; missing or malformed files simply use
         # the built-in defaults so gameplay isn't affected.
-        self.textures = load_textures(TEXTURE_FILE)
+        self.textures = load_textures(texture_file or TEXTURE_FILE)
         start_pos = layout.get("start_pos") or (self.board_size // 2, self.board_size // 2)
         offsets = [(0, 0), (0, 1), (1, 0), (-1, 0), (0, -1), (1, 1)]
         self.players: List[Player] = []
