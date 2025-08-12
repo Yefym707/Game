@@ -169,8 +169,9 @@ class MenuScene(Scene):
         self.settings_btn.draw(surface)
         if rules.DEMO_MODE:
             self.demo_btn.draw(surface)
-        for i, (aid, unlocked) in enumerate(achievements.list_achievements()):
-            txt = f"{aid}: {'✔' if unlocked else '✘'}"
+        for i, (aid, unlocked, prog) in enumerate(achievements.list_achievements()):
+            status = "✔" if unlocked else f"{int(prog * 100)}%"
+            txt = f"{aid}: {status}"
             img = self.ach_font.render(txt, True, (255, 255, 255))
             surface.blit(img, (10, 10 + i * 20))
 

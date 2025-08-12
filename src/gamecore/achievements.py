@@ -66,8 +66,21 @@ def on_campaign_win() -> None:
     reset()
 
 
-def list_achievements() -> Iterable[Tuple[str, bool]]:
-    """Return all achievement ids with unlocked state."""
+def list_achievements() -> Iterable[Tuple[str, bool, float]]:
+    """Return all achievement ids with unlocked state and progress.
+
+    Progress is reported as a ``0.0``–``1.0`` float.  Only the ``ACH_KILL_100``
+    achievement currently tracks partial completion while the other entries
+    simply return ``0.0`` or ``1.0``.
+    """
 
     ids = [ACH_WIN_CAMPAIGN, ACH_KILL_100, ACH_FOUR_PLAYERS, ACH_WIN_NO_DAMAGE]
-    return [(aid, _steam.is_achievement_unlocked(aid)) for aid in ids]
+    result = []
+    for aid in ids:
+        unlocked = _steam.is_achievement_unlocked(aid)
+        if aid == ACH_KILL_100 and not unlocked:
+            progress = min(_kill_count, 100) / 100.0
+        else:
+            progress = 1.0 if unlocked else 0.0
+        result.append((aid, unlocked, progress))
+    return result
