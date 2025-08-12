@@ -104,6 +104,16 @@ system. Locale files live in `data/locales/<lang>.json` and the desired
 language is stored in `~/.oko_zombie/config.json` under the `"lang"` key.
 Missing keys default to the lookup key itself.
 
+## Telemetry & Crash Reports (Opt-in)
+
+The game can optionally send anonymous telemetry events and crash reports to a
+user configurable HTTP endpoint. Collection is disabled by default. Enable it
+in the **Settings** screen and specify the endpoint. When the endpoint is
+unreachable, events are stored under ``~/.oko_zombie/telemetry`` and retried on
+the next launch. Crash reports are written to
+``~/.oko_zombie/crashes`` regardless of connectivity and uploaded only when
+opted in.
+
 ## Sandbox Editor & Balance JSON
 
 A built-in sandbox editor lets you place tiles and experiment with custom maps.

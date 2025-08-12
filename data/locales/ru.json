@@ -54,4 +54,10 @@
   ,"error_rate_limited": "Слишком много запросов"
   ,"banned": "Бан: {reason}"
   ,"report_sent": "Жалоба отправлена"
+  ,"telemetry_opt_in": "Включить телеметрию и отчеты об ошибках"
+  ,"telemetry_endpoint": "Endpoint телеметрии"
+  ,"send_test_event": "Отправить тестовое событие"
+  ,"telemetry_status_sent": "отправлено"
+  ,"telemetry_status_queued": "в очереди"
+  ,"telemetry_status_error": "ошибка"
 }
