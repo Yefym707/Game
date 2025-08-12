@@ -82,6 +82,7 @@ class GameScene(Scene):
             self.cfg.get("camera_follow_speed", 5.0),
             self.cfg.get("camera_zoom_speed", 0.25),
             self.cfg.get("camera_shake_scale", 1.0),
+            tuple(self.cfg.get("camera_deadzone", (100, 80))),
         )
         player = self.state.players[self.state.active]
         self.camera.follow(

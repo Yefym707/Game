@@ -81,6 +81,20 @@ A optional minimap gives a quick overview of the board. It encodes tile types
 by color, marks the current camera viewport and allows clicking to jump the
 camera. Both the visibility and size of the minimap are configurable.
 
+## Visual & UX Polish
+
+Camera motion is smoothed with a small deadzone so the view glides when the
+active unit moves. The mouse wheel zooms toward the cursor and subtle screen
+shake triggers on impacts. Movement and attack ranges use different highlight
+styles and preview paths are drawn with dotted lines. Damage or healing values
+float upward and stack vertically to avoid overlap.
+
+Lighting, weather and post effects (vignette, desaturation, bloom and color
+curves) are controlled from the **Settings** menu. Each effect exposes an
+intensity slider and can be disabled entirely if performance drops. Turning off
+post-processing or lowering weather intensity helps maintain a steady 60 FPS on
+mid‑range laptops.
+
 ## Saves & Config
 
 Game data is stored inside the user's home directory in `~/.oko_zombie`.
