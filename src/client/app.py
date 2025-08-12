@@ -9,6 +9,7 @@ from gamecore import config as gconfig
 from . import input as cinput
 from .gfx.anim import FadeTransition
 from .sfx import set_volume
+from .scene_replay import ReplayScene  # imported for routing; used by menu
 
 
 class Scene:

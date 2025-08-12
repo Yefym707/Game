@@ -6,6 +6,7 @@ from typing import Any, Dict
 
 CONFIG_DIR = Path.home() / ".oko_zombie"
 SAVE_DIR = CONFIG_DIR / "saves"
+REPLAY_DIR = CONFIG_DIR / "replays"
 CONFIG_FILE = CONFIG_DIR / "config.json"
 
 DEFAULT_CONFIG: Dict[str, Any] = {
@@ -18,11 +19,13 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "first_run": True,
     "config_version": 1,
     "master_url": "ws://localhost:8080",
+    "record_replays": False,
 }
 
 
 def _ensure_dirs() -> None:
     SAVE_DIR.mkdir(parents=True, exist_ok=True)
+    REPLAY_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def load_config() -> Dict[str, Any]:
@@ -62,3 +65,10 @@ def autosave_path() -> Path:
     """Return path for the auto save file."""
 
     return SAVE_DIR / "autosave.json"
+
+
+def replay_dir() -> Path:
+    """Directory containing recorded replays."""
+
+    _ensure_dirs()
+    return REPLAY_DIR

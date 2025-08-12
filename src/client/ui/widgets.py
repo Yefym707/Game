@@ -198,6 +198,19 @@ class StatusPanel:
         surface.blit(img2, (5, 30))
 
 
+class TimelineSlider(Slider):
+    """Specialised slider used for replay timeline."""
+
+    pass  # CONTINUE
+
+
+class PlayPauseButton(Button):
+    """Small helper button for play/pause."""
+
+    def toggle(self) -> None:
+        pass  # CONTINUE
+
+
 class TilePalette:
     """Horizontal list of selectable tiles for the map editor."""
 

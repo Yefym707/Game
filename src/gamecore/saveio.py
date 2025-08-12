@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import gzip
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 
 from . import board, rules, entities
 from .save_migrations import apply_migrations
@@ -71,6 +71,24 @@ def load_game(path: str | Path) -> board.GameState:
         raise ValueError("Unsupported save version")
     if version < SAVE_VERSION:
         data = apply_migrations(data, SAVE_VERSION)
+    mode = rules.GameMode[data.get("mode", "SOLO")]
+    players = [entities.Player.from_dict(p) for p in data.get("players", [])]
+    return board.GameState.from_dict(data["state"], mode=mode, players=players)
+
+
+def snapshot(state: board.GameState) -> Dict[str, Any]:
+    """Return a serialisable snapshot of ``state`` used for replays."""
+
+    return {
+        "mode": state.mode.name,
+        "players": [p.to_dict() for p in state.players],
+        "state": state.to_dict(),
+    }
+
+
+def restore(data: Dict[str, Any]) -> board.GameState:
+    """Reconstruct a :class:`board.GameState` from ``data``."""
+
     mode = rules.GameMode[data.get("mode", "SOLO")]
     players = [entities.Player.from_dict(p) for p in data.get("players", [])]
     return board.GameState.from_dict(data["state"], mode=mode, players=players)

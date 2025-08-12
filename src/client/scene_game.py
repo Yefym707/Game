@@ -12,6 +12,7 @@ from .sfx import SFX, set_volume
 from .net_client import NetClient
 from gamecore import board as gboard
 from gamecore import rules, saveio, config as gconfig, achievements
+from replay.recorder import Recorder
 
 try:  # pragma: no cover - optional dependency
     import pygame.messagebox as messagebox
@@ -57,6 +58,12 @@ class GameScene(Scene):
         self._last_log = 0
         self.sfx = SFX()
         self.input.set_profile(self.state.active)
+        self.recorder: Recorder | None = None
+        if self.cfg.get("record_replays"):
+            path = gconfig.replay_dir() / "last.jsonl"
+            self.recorder = Recorder(path)
+            self.recorder.start({"seed": 0, "mode": self.state.mode.name})
+            self.recorder.checkpoint(self.state)
 
     def _show_error(self, msg: str) -> None:
         """Display an error message without crashing."""
@@ -77,7 +84,8 @@ class GameScene(Scene):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 from .scene_menu import MenuScene
-
+                if self.recorder:
+                    self.recorder.stop()
                 self.next_scene = MenuScene(self.app)
                 return
             action = self.input.action_from_key(event.key)
@@ -90,6 +98,9 @@ class GameScene(Scene):
                     asyncio.create_task(self.net_client.send({"t": "ACTION", "p": {"end_turn": True}}))
                 else:
                     gboard.end_turn(self.state)
+                    if self.recorder:
+                        self.recorder.record({"type": "END_TURN", "turn": self.state.turn})
+                        self.recorder.checkpoint(self.state)
                     self.input.set_profile(self.state.active)
                     try:
                         saveio.save_game(self.state, self.autosave_path)
@@ -136,6 +147,13 @@ class GameScene(Scene):
             )
         else:
             if gboard.player_move(self.state, mapping[action]):
+                if self.recorder:
+                    self.recorder.record({
+                        "type": "MOVE",
+                        "turn": self.state.turn,
+                        "player": self.state.active,
+                        "dir": mapping[action],
+                    })
                 self.sfx.play("step")
 
     def _handle_click(self, pos) -> None:

@@ -32,7 +32,13 @@
   "PING": "Пинг",
   "BROWSE": "Список",
   "REFRESH": "Обновить",
-  "DISCONNECTED": "Отключен"
+  "DISCONNECTED": "Отключен",
+  "REPLAYS": "Реплеи",
+  "PLAY_REPLAY": "Играть",
+  "PAUSE": "Пауза",
+  "STEP": "Шаг",
+  "SPEED": "Скорость",
+  "GOTO_TURN": "Перейти к ходу"
   ,"ACH_WIN_CAMPAIGN": "Победа в кампании"
   ,"ACH_KILL_100_ZOMBIES": "100 зомби уничтожено"
   ,"ACH_FOUR_PLAYERS": "Игра с 4 игроками"

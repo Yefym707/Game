@@ -114,6 +114,15 @@ Core gameplay numbers such as loot chances or zombie stats are stored in
 `data/balance.json`.  The game validates this file on load so modders can tweak
 values while maintaining sane ranges.
 
+## Replays (Record & Playback)
+
+The engine contains a lightweight system to record deterministic sessions. When
+`record_replays` is enabled in the configuration, completed matches are stored
+as JSON lines under `~/.oko_zombie/replays`. The :mod:`replay.recorder` module
+captures events and regular state checkpoints while
+:mod:`replay.player` can load a file, seek to a specific turn and resume
+playback.
+
 ### Local Co-op (Hot-Seat)
 
 The game now supports a local co-op mode for 2–4 players sharing the same

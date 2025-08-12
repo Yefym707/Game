@@ -32,7 +32,13 @@
   "PING": "Ping",
   "BROWSE": "Browse",
   "REFRESH": "Refresh",
-  "DISCONNECTED": "Disconnected"
+  "DISCONNECTED": "Disconnected",
+  "REPLAYS": "Replays",
+  "PLAY_REPLAY": "Play",
+  "PAUSE": "Pause",
+  "STEP": "Step",
+  "SPEED": "Speed",
+  "GOTO_TURN": "Go to turn"
   ,"ACH_WIN_CAMPAIGN": "Campaign Conqueror"
   ,"ACH_KILL_100_ZOMBIES": "Zombie Slayer"
   ,"ACH_FOUR_PLAYERS": "Full House"
