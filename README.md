@@ -6,6 +6,25 @@
 pip install -r requirements.txt
 ```
 
+## Local build: PyInstaller & Versioning
+
+The project version is derived from git tags via `tools/versioning.py`. When no tags are present it falls back to `0.0.0+dev`.
+
+To create a standalone executable for the current platform:
+
+```bash
+python tools/build_pyinstaller.py --target linux
+```
+
+Replace `linux` with `win` or `mac` as needed. The binary will be placed in `dist/<platform>/`. To assemble a distribution staging area:
+
+```bash
+python tools/package_release.py --target linux
+```
+
+This gathers the built binary and runtime resources in `build/staging/<platform>/`.
+
+
 ## CLI
 
 ```bash
