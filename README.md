@@ -113,6 +113,13 @@ foundation for further development.
 pytest -q
 ```
 
+## Steam Achievements & Cloud Saves
+
+When the environment variable ``STEAM_SDK_PATH`` points to a Steamworks SDK
+installation the game enables achievement tracking and uses
+``ISteamRemoteStorage`` for saves.  Outside of Steam a small stub keeps the
+game fully playable while simply ignoring these features.
+
 ## Build & Steam upload
 
 Create platform-specific executables with PyInstaller:

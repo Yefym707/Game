@@ -11,7 +11,7 @@ from .input import InputManager
 from .sfx import SFX, set_volume
 from .net_client import NetClient
 from gamecore import board as gboard
-from gamecore import rules, saveio, config as gconfig
+from gamecore import rules, saveio, config as gconfig, achievements
 
 try:  # pragma: no cover - optional dependency
     import pygame.messagebox as messagebox
@@ -40,12 +40,14 @@ class GameScene(Scene):
                 for pdata, player in zip(pconf, self.state.players):
                     player.name = pdata.get("name", player.name)
                     player.color = pdata.get("color", player.color)
+            achievements.on_game_start(len(self.state.players))
         else:
             try:
                 self.state = saveio.load_game(self.autosave_path)
             except Exception as exc:
                 self.state = gboard.create_game()
                 self._show_error(str(exc))
+            achievements.on_game_start(len(self.state.players))
         rules.set_seed(0)
         self.camera_x = 0.0
         self.camera_y = 0.0
@@ -112,6 +114,7 @@ class GameScene(Scene):
                 self._handle_move(action)
             elif action == "rest":
                 self.state.add_log("rest")
+                achievements.on_campaign_win()
             elif action == "scavenge":
                 self.state.add_log("scavenge")
         elif event.type == pygame.MOUSEWHEEL:
@@ -144,6 +147,7 @@ class GameScene(Scene):
             msg = f"clicked {(x, y)}"
             self.state.add_log(msg)
             self.sfx.play("pickup")
+            achievements.on_zombie_kill()
 
     # update / draw ----------------------------------------------------
     def update(self, dt: float) -> None:

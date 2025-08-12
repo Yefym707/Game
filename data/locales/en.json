@@ -31,4 +31,8 @@
   "START": "Start",
   "PING": "Ping",
   "DISCONNECTED": "Disconnected"
+  ,"ACH_WIN_CAMPAIGN": "Campaign Conqueror"
+  ,"ACH_KILL_100_ZOMBIES": "Zombie Slayer"
+  ,"ACH_FOUR_PLAYERS": "Full House"
+  ,"ACH_WIN_NO_DAMAGE": "Untouchable"
 }
