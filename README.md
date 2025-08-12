@@ -18,6 +18,25 @@ python -m scripts.run_cli --seed 123
 python -m scripts.run_gui
 ```
 
+## Balance
+
+Core combat and spawn values are configured in `data/balance.json`. The loader
+validates the numbers and applies difficulty presets defined in
+`gamecore.rules` so tests and saved games remain deterministic across
+environments.
+
+## Scenarios
+
+Campaign layouts and starting conditions live in `data/scenarios.json`.
+Selecting the *short*, *medium* or *long* scenario loads the specified map,
+distributes starting items and switches the global difficulty accordingly.
+
+## Save versions
+
+Every save file includes a `save_version` field. When an old save is loaded the
+module `gamecore.save_migrations` upgrades it step by step until it matches the
+current format, ensuring long term compatibility.
+
 ## Demo Mode
 
 A limited demo version is available. Launch it with the ``--demo`` flag:

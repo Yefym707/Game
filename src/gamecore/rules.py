@@ -32,6 +32,10 @@ class GameMode(Enum):
     SOLO = auto()
     LOCAL_COOP = auto()
     ONLINE = auto()
+    # A cut-down build showcased at conventions.  The code treats it as a
+    # distinct mode so save files can record that a session ran with demo
+    # restrictions enabled.
+    DEMO = auto()
 
 
 class TurnStatus(Enum):

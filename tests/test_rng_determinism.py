@@ -1,19 +1,23 @@
-from src.gamecore import board, rules
+from pathlib import Path
+import sys
+import pathlib
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
+
+from gamecore import board, rules, saveio
 
 
-def run(seed: int):
-    rules.set_seed(seed)
-    state = board.create_game()
-    history = []
-    for _ in range(5):
-        direction = rules.RNG.choice(list(rules.DIRECTIONS.keys()))
-        moved = board.player_move(state, direction)
-        board.end_turn(state)
-        history.append((direction, moved, [(p.x, p.y) for p in state.players], [(z.x, z.y) for z in state.zombies]))
-    return history
-
-
-def test_rng_determinism():
-    h1 = run(123)
-    h2 = run(123)
-    assert h1 == h2
+def test_rng_determinism(tmp_path: Path) -> None:
+    """Saving and loading must preserve RNG state."""
+    rules.set_seed(123)
+    state = board.create_game(zombies=0)
+    # Advance RNG and save the state afterwards.
+    first = rules.RNG.randrange(1000)
+    save_path = tmp_path / "save.json"
+    saveio.save_game(state, save_path)
+    # Generate another value so the stream moves forward.
+    second = rules.RNG.randrange(1000)
+    # Reloading the save should restore the RNG to the point right after
+    # ``first`` was generated, making the next value equal to ``second``.
+    saveio.load_game(save_path)
+    assert rules.RNG.randrange(1000) == second

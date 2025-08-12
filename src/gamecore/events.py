@@ -2,12 +2,11 @@
 from __future__ import annotations
 
 import json
-import random
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List
 
-from . import entities
+from . import entities, rules
 
 DATA_PATH = Path(__file__).resolve().parents[2] / "data" / "events.json"
 
@@ -94,7 +93,9 @@ def maybe_trigger(state, balance: Dict[str, Any]) -> Event | None:
     """Return an event that should trigger this turn, if any."""
 
     chance = balance.get("events", {}).get("chance", 0.0)
-    if random.random() >= chance:
+    # All randomness funnels through the global rules.RNG instance so the
+    # sequence can be reproduced when restoring a save.
+    if rules.RNG.next() >= chance:
         return None
     for ev in _events():
         if _check_conditions(state, ev.conditions):

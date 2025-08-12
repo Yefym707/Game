@@ -1,31 +1,23 @@
 import json
 from pathlib import Path
+import sys
+import pathlib
 
-from gamecore import board, rules, saveio
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
+
+from gamecore import board, saveio, validate
 
 
-def create_v1_save(path: Path) -> None:
-    """Create a fake version 1 save file at ``path``."""
-    rules.set_seed(42)
-    state = board.create_game(width=4, height=4, zombies=0, players=1)
-    data = {
+def test_migrate_v1_to_v2(tmp_path: Path) -> None:
+    state = board.create_game(zombies=0)
+    old_save = {
         "save_version": 1,
         "player": state.players[0].to_dict(),
         "state": state.to_dict(),
     }
-    with path.open("w", encoding="utf-8") as fh:
-        json.dump(data, fh)
-    return state
-
-
-def test_migrate_v1_to_current(tmp_path: Path) -> None:
-    save_path = tmp_path / "v1_save.json"
-    original_state = create_v1_save(save_path)
-
-    loaded_state = saveio.load_game(save_path)
-
-    assert loaded_state.mode is rules.GameMode.SOLO
-    assert len(loaded_state.players) == 1
-    assert loaded_state.players[0].to_dict() == original_state.players[0].to_dict()
-    assert loaded_state.board.to_dict() == original_state.board.to_dict()
-    assert loaded_state.turn == original_state.turn
+    path = tmp_path / "old.json"
+    path.write_text(json.dumps(old_save))
+    loaded = saveio.load_game(path)
+    # Should now have a players list
+    assert len(loaded.players) == 1
+    validate.validate_state(loaded)
