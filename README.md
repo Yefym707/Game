@@ -25,6 +25,12 @@ python tools/package_release.py --target linux
 This gathers the built binary and runtime resources in `build/staging/<platform>/`.
 
 
+## CI: Artifacts & Steam Upload
+
+Pushing a git tag runs the `Release` workflow. It builds PyInstaller executables for Windows, macOS and Linux, packages the staging directory and uploads a zipped artifact named `Game-<os>-<tag>.zip`.
+
+The `Steam Upload` workflow is triggered manually. It downloads the chosen artifact, unpacks it into `build/staging/<platform>/` and calls `scripts/steam_upload.py`. Steam credentials and depot IDs are read from GitHub Secrets.
+
 ## CLI
 
 ```bash
