@@ -1,0 +1,26 @@
+[
+  {
+    "id": "short",
+    "name_key": "scenario_short_name",
+    "map_file": "board_layout.json",
+    "goals": ["scenario_short_goal"],
+    "starting_items": ["knife"],
+    "difficulty": "easy"
+  },
+  {
+    "id": "medium",
+    "name_key": "scenario_medium_name",
+    "map_file": "board_layout.json",
+    "goals": ["scenario_medium_goal"],
+    "starting_items": ["knife", "medkit"],
+    "difficulty": "normal"
+  },
+  {
+    "id": "long",
+    "name_key": "scenario_long_name",
+    "map_file": "board_layout.json",
+    "goals": ["scenario_long_goal"],
+    "starting_items": ["knife", "medkit", "ammo"],
+    "difficulty": "hard"
+  }
+]

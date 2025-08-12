@@ -8,12 +8,13 @@ from typing import Any
 from .app import Scene
 from .gfx.tileset import TILE_SIZE, Tileset
 from .gfx import anim
-from .ui.widgets import IconLog, StatusPanel, PauseMenu
+from .ui.widgets import IconLog, StatusPanel, PauseMenu, PopupDialog
 from .input import InputManager
 from . import sfx
 from .net_client import NetClient
 from gamecore import board as gboard
 from gamecore import rules, saveio, config as gconfig, achievements
+from gamecore import balance as gbalance, events as gevents, scenario as gscenario, i18n
 from replay.recorder import Recorder
 
 try:  # pragma: no cover - optional dependency
@@ -51,6 +52,14 @@ class GameScene(Scene):
                 self._show_error(str(exc))
             achievements.on_game_start(len(self.state.players))
         rules.set_seed(0)
+        self.balance = gbalance.load_balance()
+        self.events = gevents.load_events()
+        if new_game:
+            scenarios = gscenario.load_scenarios()
+            sid = self.cfg.get("scenario", "short")
+            scen = scenarios.get(sid) or next(iter(scenarios.values()))
+            gscenario.apply_scenario(self.state, scen)
+        self._maybe_event()
         self.camera_x = 0.0
         self.camera_y = 0.0
         self.scale = 1.0
@@ -61,6 +70,7 @@ class GameScene(Scene):
         self.hover_tile: tuple[int, int] | None = None
         self.paused = False
         self.pause_menu: PauseMenu | None = None
+        self.event_popup: PopupDialog | None = None
         self.input.set_profile(self.state.active)
         self.recorder: Recorder | None = None
         if self.cfg.get("record_replays"):
@@ -82,6 +92,31 @@ class GameScene(Scene):
             print("Error:", msg)
         if hasattr(self, "log"):
             self.log.add("!", msg)
+
+    def _maybe_event(self) -> None:
+        """Trigger a random event if conditions allow."""
+
+        ev = gevents.maybe_trigger(self.state, self.balance)
+        if not ev:
+            return
+        w, h = self.app.screen.get_size()
+        rect = pygame.Rect(w // 2 - 150, h // 2 - 100, 300, 180)
+
+        def make_cb(effect):
+            def _cb() -> None:
+                gevents.apply_effect(self.state, effect)
+                self.event_popup = None
+            return _cb
+
+        choices = [(i18n.gettext(e.text_key), make_cb(e)) for e in ev.effects]
+        self.event_popup = PopupDialog(
+            rect,
+            ev.icon,
+            i18n.gettext(ev.title_key),
+            i18n.gettext(ev.desc_key),
+            choices,
+        )
+        self.log.add(ev.icon, i18n.gettext(ev.title_key))
 
     def _open_pause_menu(self) -> None:
         """Create the pause menu overlay."""
@@ -122,6 +157,9 @@ class GameScene(Scene):
 
     # event handling ---------------------------------------------------
     def handle_event(self, event: pygame.event.Event) -> None:
+        if self.event_popup:
+            self.event_popup.handle_event(event)
+            return
         if self.paused:
             if self.pause_menu:
                 self.pause_menu.handle_event(event)
@@ -153,6 +191,7 @@ class GameScene(Scene):
                         saveio.save_game(self.state, self.autosave_path)
                     except Exception as exc:
                         self._show_error(str(exc))
+                    self._maybe_event()
             elif action == "quick_save":
                 if self.state.mode != rules.GameMode.ONLINE:
                     try:
@@ -285,6 +324,8 @@ class GameScene(Scene):
         log_rect = pygame.Rect(w - 200, 0, 200, h)
         self.log.draw(surface, log_rect)
         self.status.draw(surface, self.state)
+        if self.event_popup:
+            self.event_popup.draw(surface)
         if self.paused and self.pause_menu:
             self.pause_menu.draw(surface)
 

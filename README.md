@@ -104,6 +104,15 @@ system. Locale files live in `data/locales/<lang>.json` and the desired
 language is stored in `~/.oko_zombie/config.json` under the `"lang"` key.
 Missing keys default to the lookup key itself.
 
+## Events & Scenarios
+
+Random encounters are described in `data/events.json` and may trigger at the
+start of a player's turn. Each event defines conditions, effects and a small
+unicode icon shown in the log. Scenarios in `data/scenarios.json` configure
+short, medium and long campaigns with their own goals, starting items and
+difficulty. The chosen scenario loads the specified map and applies its
+parameters when a new game begins.
+
 ## Audio System & SFX
 
 Short sound effects are generated procedurally using ``numpy`` and converted to

@@ -1,0 +1,107 @@
+[
+  {
+    "id": "medkit",
+    "icon": "🩹",
+    "title_key": "event_medkit_title",
+    "desc_key": "event_medkit_desc",
+    "conditions": {"min_day": 0},
+    "effects": [
+      {"text_key": "event_accept", "hp": 5, "add_item": "medkit"},
+      {"text_key": "event_ignore"}
+    ]
+  },
+  {
+    "id": "trap",
+    "icon": "⚠️",
+    "title_key": "event_trap_title",
+    "desc_key": "event_trap_desc",
+    "conditions": {},
+    "effects": [
+      {"text_key": "event_ok", "hp": -3}
+    ]
+  },
+  {
+    "id": "ammo",
+    "icon": "📦",
+    "title_key": "event_ammo_title",
+    "desc_key": "event_ammo_desc",
+    "conditions": {},
+    "effects": [
+      {"text_key": "event_accept", "add_item": "ammo"},
+      {"text_key": "event_ignore"}
+    ]
+  },
+  {
+    "id": "survivor",
+    "icon": "🤝",
+    "title_key": "event_survivor_title",
+    "desc_key": "event_survivor_desc",
+    "conditions": {"min_day": 1},
+    "effects": [
+      {"text_key": "event_accept", "add_item": "ally"},
+      {"text_key": "event_ignore"}
+    ]
+  },
+  {
+    "id": "food",
+    "icon": "🥫",
+    "title_key": "event_food_title",
+    "desc_key": "event_food_desc",
+    "conditions": {},
+    "effects": [
+      {"text_key": "event_ok", "hp": 2}
+    ]
+  },
+  {
+    "id": "radio",
+    "icon": "📻",
+    "title_key": "event_radio_title",
+    "desc_key": "event_radio_desc",
+    "conditions": {},
+    "effects": [
+      {"text_key": "event_accept", "add_item": "radio"},
+      {"text_key": "event_ignore"}
+    ]
+  },
+  {
+    "id": "storm",
+    "icon": "🌧️",
+    "title_key": "event_storm_title",
+    "desc_key": "event_storm_desc",
+    "conditions": {},
+    "effects": [
+      {"text_key": "event_ok", "hp": -1}
+    ]
+  },
+  {
+    "id": "lost",
+    "icon": "🔧",
+    "title_key": "event_lost_title",
+    "desc_key": "event_lost_desc",
+    "conditions": {"has_item": "knife"},
+    "effects": [
+      {"text_key": "event_ok", "remove_item": "knife"}
+    ]
+  },
+  {
+    "id": "car",
+    "icon": "🚗",
+    "title_key": "event_car_title",
+    "desc_key": "event_car_desc",
+    "conditions": {},
+    "effects": [
+      {"text_key": "event_accept", "add_item": "fuel"},
+      {"text_key": "event_ignore"}
+    ]
+  },
+  {
+    "id": "horde",
+    "icon": "🧟",
+    "title_key": "event_horde_title",
+    "desc_key": "event_horde_desc",
+    "conditions": {"min_day": 2},
+    "effects": [
+      {"text_key": "event_ok", "spawn_zombies": 3}
+    ]
+  }
+]

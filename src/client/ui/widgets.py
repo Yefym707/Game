@@ -266,6 +266,42 @@ class IconLog:
             y += self.font.get_linesize()
 
 
+class PopupDialog:
+    """Modal popup displaying text and choice buttons."""
+
+    def __init__(self, rect: pygame.Rect, icon: str, title: str, desc: str, choices) -> None:
+        self.rect = pygame.Rect(rect)
+        self.icon = icon
+        self.title = title
+        self.desc = desc
+        self.font = pygame.font.SysFont(None, 24)
+        self.font_small = pygame.font.SysFont(None, 18)
+        bx = self.rect.left + 20
+        by = self.rect.bottom - 50 * len(choices) - 20
+        bw = self.rect.width - 40
+        bh = 40
+        self.buttons = [
+            Button(text, pygame.Rect(bx, by + i * 50, bw, bh), cb)
+            for i, (text, cb) in enumerate(choices)
+        ]
+
+    def handle_event(self, event: pygame.event.Event) -> None:
+        for b in self.buttons:
+            b.handle_event(event)
+
+    def draw(self, surface: pygame.Surface) -> None:
+        pygame.draw.rect(surface, (20, 20, 20), self.rect)
+        pygame.draw.rect(surface, (200, 200, 200), self.rect, 2)
+        icon_img = self.font.render(self.icon, True, (255, 255, 0))
+        surface.blit(icon_img, (self.rect.left + 5, self.rect.top + 5))
+        title_img = self.font.render(self.title, True, (255, 255, 255))
+        surface.blit(title_img, (self.rect.left + 40, self.rect.top + 5))
+        desc_img = self.font_small.render(self.desc, True, (200, 200, 200))
+        surface.blit(desc_img, desc_img.get_rect(center=(self.rect.centerx, self.rect.top + 60)))
+        for b in self.buttons:
+            b.draw(surface)
+
+
 class PauseMenu:
     """Overlay pause menu with basic options."""
 
