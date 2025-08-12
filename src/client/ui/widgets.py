@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import pygame
 
+from ..sfx import ui_click
 from gamecore.i18n import gettext as _
 
 
@@ -15,16 +16,22 @@ class Button:
         self.callback = callback
         self.font = pygame.font.SysFont(None, 24)
         self.hover = False
+        self.focus = False
 
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.MOUSEMOTION:
             self.hover = self.rect.collidepoint(event.pos)
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.rect.collidepoint(event.pos):
+                ui_click()
+                self.callback()
+        elif event.type == pygame.KEYDOWN and self.focus:
+            if event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                ui_click()
                 self.callback()
 
     def draw(self, surface: pygame.Surface) -> None:
-        color = (100, 100, 100) if self.hover else (60, 60, 60)
+        color = (100, 100, 100) if (self.hover or self.focus) else (60, 60, 60)
         pygame.draw.rect(surface, color, self.rect)
         pygame.draw.rect(surface, (255, 255, 255), self.rect, 2)
         img = self.font.render(self.text, True, (255, 255, 255))
@@ -47,6 +54,24 @@ class Toggle(Button):
 
     def _update(self) -> None:
         self.text = f"{self.text.split(':')[0]}: {'on' if self.value else 'off'}"
+
+
+class Card(Button):
+    """Large button styled as a card with a short description."""
+
+    def __init__(self, title: str, desc: str, rect: pygame.Rect, callback) -> None:
+        super().__init__(title, rect, callback)
+        self.desc = desc
+        self.font_small = pygame.font.SysFont(None, 18)
+
+    def draw(self, surface: pygame.Surface) -> None:
+        color = (80, 80, 120) if (self.hover or self.focus) else (40, 40, 60)
+        pygame.draw.rect(surface, color, self.rect, border_radius=8)
+        pygame.draw.rect(surface, (255, 255, 255), self.rect, 2, border_radius=8)
+        title_img = self.font.render(self.text, True, (255, 255, 255))
+        surface.blit(title_img, title_img.get_rect(center=(self.rect.centerx, self.rect.top + 30)))
+        desc_img = self.font_small.render(self.desc, True, (200, 200, 200))
+        surface.blit(desc_img, desc_img.get_rect(center=(self.rect.centerx, self.rect.top + 60)))
 
 
 class Slider:

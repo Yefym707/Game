@@ -80,6 +80,11 @@ class SettingsScene(Scene):
 
     # scene API ---------------------------------------------------------
     def handle_event(self, event: pygame.event.Event) -> None:
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+            from .scene_menu import MenuScene
+
+            self.next_scene = MenuScene(self.app)
+            return
         for w in self.widgets:
             w.handle_event(event)
 
