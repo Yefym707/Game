@@ -50,4 +50,8 @@
   ,"DEMO_COMPLETE": "Demo Complete"
   ,"BUY_FULL": "Buy Full Version"
   ,"steam_sdk_missing": "Steam SDK not found"
+  ,"error_invalid_action": "Invalid action"
+  ,"error_rate_limited": "Too many requests"
+  ,"banned": "Banned: {reason}"
+  ,"report_sent": "Report sent"
 }

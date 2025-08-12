@@ -4,16 +4,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict
 
-FORMAT_VERSION = 1
+FORMAT_VERSION = 2
 
 
-def make_header(game_build: str = "dev", protocol_version: int = 1) -> Dict[str, Any]:
+def make_header(game_build: str = "dev", protocol_version: int = 1, signature: str | None = None) -> Dict[str, Any]:
     """Return a minimal header describing the replay file."""
 
     return {
         "format_version": FORMAT_VERSION,
         "game_build": game_build,
         "protocol_version": protocol_version,
+        "signature": signature,
     }
 
 

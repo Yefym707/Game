@@ -8,6 +8,7 @@ import pygame
 from gamecore.config import load_config
 from gamecore.i18n import gettext as _
 from net.master_api import MasterMessage, encode_master_message, decode_master_message
+from net.protocol import MessageType
 from .app import Scene
 from .net_client import NetClient
 
@@ -54,8 +55,21 @@ class OnlineScene(Scene):
                 self.status = _("CONNECT")
                 self.connected = True
 
+    async def _poll(self) -> None:
+        if not self.connected:
+            return
+        try:
+            msg = self.client.incoming.get_nowait()
+        except asyncio.QueueEmpty:
+            return
+        if msg.get("t") == MessageType.ERROR.value:
+            self.status = msg.get("p", "error")
+        elif msg.get("t") == "KICK":
+            self.status = _("DISCONNECTED")
+            self.connected = False
+
     def update(self, dt: float) -> None:
-        pass
+        asyncio.create_task(self._poll())
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill((0, 0, 0))

@@ -11,6 +11,7 @@ except Exception:  # pragma: no cover
     websockets = None  # type: ignore
 
 from net.protocol import decode_message, encode_message, MessageType
+from server.security import RateLimiter
 
 
 class NetClient:
@@ -19,12 +20,20 @@ class NetClient:
     def __init__(self) -> None:
         self.ws: "websockets.WebSocketClientProtocol | None" = None
         self.incoming: "asyncio.Queue[Dict[str, Any]]" = asyncio.Queue()
-        self.outgoing: "asyncio.Queue[Dict[str, Any]]" = asyncio.Queue()
+        self.outgoing: "asyncio.Queue[Dict[str, Any]]" = asyncio.Queue(maxsize=32)
+        self._action_rl = RateLimiter(5, 1.0)
 
     async def connect(self, uri: str) -> None:
         if websockets is None:
             raise RuntimeError("websockets library not installed")
-        self.ws = await websockets.connect(uri)
+        delay = 1.0
+        while True:
+            try:
+                self.ws = await websockets.connect(uri)
+                break
+            except Exception:
+                await asyncio.sleep(delay)
+                delay = min(delay * 2, 30)
         asyncio.create_task(self._reader())
         asyncio.create_task(self._writer())
 
@@ -44,7 +53,14 @@ class NetClient:
             await self.ws.send(encode_message(msg))
 
     async def send(self, msg: Dict[str, Any]) -> None:
-        await self.outgoing.put(msg)
+        if msg.get("t") == MessageType.ACTION.value:
+            if not self._action_rl.hit():
+                return  # drop spammy action
+        try:
+            self.outgoing.put_nowait(msg)
+        except asyncio.QueueFull:
+            # dropping messages prevents unbounded growth
+            pass
 
     async def recv(self) -> Dict[str, Any]:
         return await self.incoming.get()
