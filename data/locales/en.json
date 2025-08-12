@@ -10,5 +10,14 @@
   "press_key": "Press key...",
   "tut_step1": "Use arrow keys to move",
   "tut_step2": "Press Space to end turn",
-  "tut_step3": "Good luck!"
+  "tut_step3": "Good luck!",
+  "PLAY": "Play",
+  "CONTINUE": "Continue",
+  "SETTINGS": "Settings",
+  "SOLO": "Solo",
+  "LOCAL_COOP": "Local Coop",
+  "ONLINE": "Online",
+  "SOLO_DESC": "Single player",
+  "LOCAL_COOP_DESC": "Two players on one device",
+  "ONLINE_DESC": "Play over network"
 }

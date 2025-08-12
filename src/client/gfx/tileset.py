@@ -75,3 +75,23 @@ class Tileset:
         else:
             img = tile
         surface.blit(img, pos)
+
+
+_icon_cache: Dict[tuple[str, int, tuple[int, int, int]], pygame.Surface] = {}
+
+
+def render_icon(char: str, size: int, color: tuple[int, int, int] = (255, 255, 255)) -> pygame.Surface:
+    """Return a ``Surface`` containing ``char`` rendered via ``pygame.font``.
+
+    The result is cached based on the character, size and color so repeated
+    calls are inexpensive.  This helper avoids shipping any binary assets for
+    simple UI icons.
+    """
+
+    key = (char, size, color)
+    surf = _icon_cache.get(key)
+    if surf is None:
+        font = pygame.font.SysFont(None, size)
+        surf = font.render(char, True, color)
+        _icon_cache[key] = surf
+    return surf

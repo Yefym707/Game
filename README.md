@@ -18,6 +18,18 @@ python -m scripts.run_cli --seed 123
 python -m scripts.run_gui
 ```
 
+### Main Menu & Navigation
+
+The GUI starts in a lightweight main menu rendered entirely with pygame. The
+background features a procedurally animated parallax grid while game modes are
+presented as selectable cards. Navigation supports both mouse and keyboard
+input – use the arrow keys to move focus and **Enter** to activate a card.
+
+Available cards currently include **Solo**, **Local Coop** and **Online**. A
+separate **Continue** button resumes the latest save, and **Settings** opens
+the configuration screen where volume, language and bindings can be adjusted.
+Scene changes employ short fade transitions for a smooth experience.
+
 ## Saves & Config
 
 Game data is stored inside the user's home directory in `~/.oko_zombie`.

@@ -62,6 +62,11 @@ class GameScene(Scene):
     # event handling ---------------------------------------------------
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                from .scene_menu import MenuScene
+
+                self.next_scene = MenuScene(self.app)
+                return
             action = self.input.action_from_key(event.key)
             if action == "pause":
                 from .scene_menu import MenuScene

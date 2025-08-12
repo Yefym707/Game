@@ -47,3 +47,13 @@ def gettext(key: str) -> str:
     """
 
     return _translations.get(key, key)
+
+
+# common translation keys used by the client -------------------------------
+PLAY = "PLAY"
+CONTINUE = "CONTINUE"
+SETTINGS = "SETTINGS"
+SOLO = "SOLO"
+LOCAL_COOP = "LOCAL_COOP"
+ONLINE = "ONLINE"
+BACK = "BACK"

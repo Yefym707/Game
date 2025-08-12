@@ -76,3 +76,15 @@ def set_volume(v: float) -> None:
         pygame.mixer.music.set_volume(_VOLUME)
     except Exception:
         pass
+
+
+def ui_click() -> None:
+    """Play a short UI click tone respecting global volume."""
+
+    snd = tone(880, 50)
+    if snd:
+        try:  # pragma: no cover - audio playback optional
+            snd.set_volume(_VOLUME)
+            snd.play()
+        except Exception:
+            pass
