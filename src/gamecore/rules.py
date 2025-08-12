@@ -39,6 +39,10 @@ class TurnStatus(Enum):
 
 RNG = random.Random()
 
+# simple monotonically increasing identifiers used by the replay system
+_TICK_COUNTER = 0
+_EVENT_ID = 0
+
 DIRECTIONS: Dict[str, Tuple[int, int]] = {
     "w": (0, -1),
     "s": (0, 1),
@@ -59,3 +63,19 @@ def validate_action(state, action, player_index: int) -> bool:
     """
 
     return True
+
+
+def next_tick() -> int:
+    """Return the next global tick identifier."""
+
+    global _TICK_COUNTER
+    _TICK_COUNTER += 1
+    return _TICK_COUNTER
+
+
+def next_event_id() -> int:
+    """Return a unique event id."""
+
+    global _EVENT_ID
+    _EVENT_ID += 1
+    return _EVENT_ID
