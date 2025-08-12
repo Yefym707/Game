@@ -10,6 +10,7 @@ from .gfx.tileset import TILE_SIZE, Tileset
 from .gfx import anim
 from .gfx.camera import SmoothCamera
 from .gfx.layers import Layer
+from .gfx.lighting import LightMap
 from .ui.widgets import IconLog, StatusPanel, PauseMenu, PopupDialog
 from .input import InputManager
 from . import sfx
@@ -91,6 +92,8 @@ class GameScene(Scene):
             self.recorder = Recorder(path)
             self.recorder.start({"seed": 0, "mode": self.state.mode.name})
             self.recorder.checkpoint(self.state)
+        self.lightmap = LightMap(board.width, board.height)
+        self.time_phase = rules.current_time_of_day()
 
     def _show_error(self, msg: str) -> None:
         """Display an error message without crashing."""
@@ -303,6 +306,12 @@ class GameScene(Scene):
         for a in list(self.animations):
             if a.update(dt):
                 self.animations.remove(a)
+        phase = rules.update_time_of_day(dt)
+        if phase != self.time_phase:
+            self.time_phase = phase
+            key = getattr(i18n, phase.name, None)
+            if key:
+                self.log.add("·", i18n.gettext(key))
 
     def draw(self, surface: pygame.Surface) -> None:
         w, h = surface.get_size()
@@ -319,6 +328,7 @@ class GameScene(Scene):
                 a.draw(layers[Layer.OVERLAY])
         for layer in (Layer.BACKGROUND, Layer.TILE, Layer.ENTITY, Layer.OVERLAY):
             surface.blit(layers[layer], (0, 0))
+        self._apply_lighting(surface)
         log_rect = pygame.Rect(w - 200, 0, 200, h)
         self.log.draw(surface, log_rect)
         self.status.draw(surface, self.state)
@@ -355,11 +365,11 @@ class GameScene(Scene):
                 pygame.draw.rect(surface, (255, 0, 0), rect, 2)
         if self.hover_tile:
             path = self._simple_path((px, py), self.hover_tile)
-            for step in path:
-                sx, sy = self.camera.world_to_screen((step[0] * TILE_SIZE, step[1] * TILE_SIZE))
-                pygame.draw.circle(
-                    surface, (255, 255, 0), (sx + tile_size // 2, sy + tile_size // 2), 3
-                )
+        for step in path:
+            sx, sy = self.camera.world_to_screen((step[0] * TILE_SIZE, step[1] * TILE_SIZE))
+            pygame.draw.circle(
+                surface, (255, 255, 0), (sx + tile_size // 2, sy + tile_size // 2), 3
+            )
 
     def _simple_path(self, start: tuple[int, int], end: tuple[int, int]) -> list[tuple[int, int]]:
         x, y = start
@@ -378,3 +388,63 @@ class GameScene(Scene):
             if len(path) > 100:
                 break
         return path
+
+    # lighting -----------------------------------------------------------
+    def _ambient_for_phase(self) -> float:
+        mapping = {
+            rules.TimeOfDay.DAY: 1.0,
+            rules.TimeOfDay.DUSK: 0.7,
+            rules.TimeOfDay.NIGHT: 0.3,
+            rules.TimeOfDay.DAWN: 0.7,
+        }
+        return mapping.get(self.time_phase, 1.0)
+
+    def _color_for_phase(self) -> tuple[int, int, int]:
+        mapping = {
+            rules.TimeOfDay.DAY: (255, 255, 255),
+            rules.TimeOfDay.DUSK: (255, 200, 150),
+            rules.TimeOfDay.NIGHT: (150, 150, 200),
+            rules.TimeOfDay.DAWN: (255, 220, 200),
+        }
+        return mapping.get(self.time_phase, (255, 255, 255))
+
+    def _apply_lighting(self, surface: pygame.Surface) -> None:
+        ambient = self._ambient_for_phase()
+        self.lightmap.clear(ambient)
+        lconf = self.balance.get("lighting", {})
+        flicker = lconf.get("flicker", 0.0)
+        for p in self.state.players:
+            self.lightmap.add_light(
+                p.x,
+                p.y,
+                int(lconf.get("player_radius", 5)),
+                float(lconf.get("player_intensity", 1.0)),
+            )
+        board = self.state.board
+        for y, row in enumerate(board.tiles):
+            for x, ch in enumerate(row):
+                if ch == "f":
+                    inten = float(lconf.get("campfire_intensity", 1.5))
+                    inten *= rules.RNG.uniform(1 - flicker, 1 + flicker)
+                    self.lightmap.add_light(
+                        x,
+                        y,
+                        int(lconf.get("campfire_radius", 7)),
+                        inten,
+                    )
+                elif ch == "l":
+                    inten = float(lconf.get("lamp_intensity", 1.2))
+                    inten *= rules.RNG.uniform(1 - flicker, 1 + flicker)
+                    self.lightmap.add_light(
+                        x,
+                        y,
+                        int(lconf.get("lamp_radius", 6)),
+                        inten,
+                    )
+        self.lightmap.blur()
+        lm = self.lightmap.to_surface(TILE_SIZE)
+        lm = pygame.transform.scale(lm, surface.get_size())
+        surface.blit(lm, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        tint = pygame.Surface(surface.get_size())
+        tint.fill(self._color_for_phase())
+        surface.blit(tint, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)

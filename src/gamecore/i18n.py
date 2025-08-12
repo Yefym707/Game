@@ -103,3 +103,9 @@ EVENT_OK = "event_ok"
 SCENARIO_SHORT_NAME = "scenario_short_name"
 SCENARIO_MEDIUM_NAME = "scenario_medium_name"
 SCENARIO_LONG_NAME = "scenario_long_name"
+
+# time of day ---------------------------------------------------------------
+DAY = "time_day"
+DUSK = "time_dusk"
+NIGHT = "time_night"
+DAWN = "time_dawn"

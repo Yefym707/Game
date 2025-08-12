@@ -12,5 +12,14 @@
     "damage": 2,
     "agro_range": 5,
     "limit": 30
+  },
+  "lighting": {
+    "player_radius": 4,
+    "player_intensity": 1.0,
+    "campfire_radius": 6,
+    "campfire_intensity": 1.5,
+    "lamp_radius": 5,
+    "lamp_intensity": 1.2,
+    "flicker": 0.15
   }
 }

@@ -60,6 +60,18 @@ RNG = RNG()
 _TICK_COUNTER = 0
 _EVENT_ID = 0
 
+
+class TimeOfDay(Enum):
+    DAY = auto()
+    DUSK = auto()
+    NIGHT = auto()
+    DAWN = auto()
+
+
+_TIME_INDEX = 0
+_TIME_ELAPSED = 0.0
+TIME_PHASE_LENGTH = 30.0  # seconds per phase
+
 DIRECTIONS: Dict[str, Tuple[int, int]] = {
     "w": (0, -1),
     "s": (0, 1),
@@ -111,3 +123,16 @@ def next_event_id() -> int:
     global _EVENT_ID
     _EVENT_ID += 1
     return _EVENT_ID
+
+
+def current_time_of_day() -> TimeOfDay:
+    return list(TimeOfDay)[_TIME_INDEX]
+
+
+def update_time_of_day(dt: float) -> TimeOfDay:
+    global _TIME_ELAPSED, _TIME_INDEX
+    _TIME_ELAPSED += dt
+    if _TIME_ELAPSED >= TIME_PHASE_LENGTH:
+        _TIME_ELAPSED = 0.0
+        _TIME_INDEX = (_TIME_INDEX + 1) % len(TimeOfDay)
+    return current_time_of_day()

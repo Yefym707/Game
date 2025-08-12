@@ -106,4 +106,8 @@
   ,"camera": "Камера"
   ,"zoom": "Зум"
   ,"follow_speed": "Скорость следования"
+  ,"time_day": "День"
+  ,"time_dusk": "Сумерки"
+  ,"time_night": "Ночь"
+  ,"time_dawn": "Рассвет"
 }
