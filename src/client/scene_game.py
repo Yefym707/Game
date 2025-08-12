@@ -1,13 +1,13 @@
 """In-game scene handling rendering and input."""
 from __future__ import annotations
 
-import math
-import numpy as np
 import pygame
 
 from .app import Scene
 from .gfx.tileset import TILE_SIZE, Tileset
 from .ui.widgets import Log, StatusPanel
+from .input import InputManager
+from .sfx import SFX, set_volume
 from gamecore import board as gboard
 from gamecore import rules, saveio, config as gconfig
 
@@ -17,25 +17,14 @@ except Exception:  # pragma: no cover - fallback if missing
     messagebox = None
 
 
-def _tone(freq: int = 440, ms: int = 100) -> pygame.mixer.Sound:
-    """Generate a simple tone sound."""
-
-    sample_rate = 44100
-    t = np.linspace(0, ms / 1000.0, int(sample_rate * ms / 1000.0), False)
-    wave = (np.sin(freq * 2 * math.pi * t) * 32767).astype(np.int16)
-    return pygame.sndarray.make_sound(wave)
-
-
 class GameScene(Scene):
     """Render the board and process user input."""
 
     def __init__(self, app, new_game: bool = True) -> None:
         super().__init__(app)
-        cfg = gconfig.load_config()
-        try:
-            pygame.mixer.music.set_volume(cfg.get("volume", 1.0))
-        except Exception:  # pragma: no cover - mixer may be uninitialised
-            pass
+        self.cfg = app.cfg
+        set_volume(self.cfg.get("volume", 1.0))
+        self.input: InputManager = app.input
         self.tileset = Tileset()
         self.quick_path = gconfig.quicksave_path()
         self.autosave_path = gconfig.autosave_path()
@@ -54,8 +43,7 @@ class GameScene(Scene):
         self.log = Log()
         self.status = StatusPanel()
         self._last_log = 0
-        self.click_sound = _tone(880)
-        self.move_sound = _tone(660)
+        self.sfx = SFX()
 
     def _show_error(self, msg: str) -> None:
         """Display an error message without crashing."""
@@ -74,45 +62,50 @@ class GameScene(Scene):
     # event handling ---------------------------------------------------
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
+            action = self.input.action_from_key(event.key)
+            if action == "pause":
                 from .scene_menu import MenuScene
 
                 self.next_scene = MenuScene(self.app)
-            elif event.key == pygame.K_SPACE:
+            elif action == "end_turn":
                 gboard.end_turn(self.state)
                 try:
                     saveio.save_game(self.state, self.autosave_path)
                 except Exception as exc:
                     self._show_error(str(exc))
-            elif event.key == pygame.K_F5:
+            elif action == "quick_save":
                 try:
                     saveio.save_game(self.state, self.quick_path)
                 except Exception as exc:
                     self._show_error(str(exc))
-            elif event.key == pygame.K_F9:
+            elif action == "quick_load":
                 try:
                     self.state = saveio.load_game(self.quick_path)
                     self.log.lines.clear()
                     self._last_log = 0
                 except Exception as exc:
                     self._show_error(str(exc))
-            elif event.key in (pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT):
-                self._handle_move(event.key)
+            elif action in ("move_up", "move_down", "move_left", "move_right"):
+                self._handle_move(action)
+            elif action == "rest":
+                self.state.add_log("rest")
+            elif action == "scavenge":
+                self.state.add_log("scavenge")
         elif event.type == pygame.MOUSEWHEEL:
             self.scale *= 1.25 if event.y > 0 else 0.8
             self.scale = max(0.75, min(2.0, self.scale))
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             self._handle_click(event.pos)
 
-    def _handle_move(self, key: int) -> None:
+    def _handle_move(self, action: str) -> None:
         mapping = {
-            pygame.K_UP: "w",
-            pygame.K_DOWN: "s",
-            pygame.K_LEFT: "a",
-            pygame.K_RIGHT: "d",
+            "move_up": "w",
+            "move_down": "s",
+            "move_left": "a",
+            "move_right": "d",
         }
-        if gboard.player_move(self.state, mapping[key]):
-            self.move_sound.play()
+        if gboard.player_move(self.state, mapping[action]):
+            self.sfx.play("step")
 
     def _handle_click(self, pos) -> None:
         mx, my = pos
@@ -122,7 +115,7 @@ class GameScene(Scene):
         if self.state.board.in_bounds(x, y):
             msg = f"clicked {(x, y)}"
             self.state.add_log(msg)
-            self.click_sound.play()
+            self.sfx.play("pickup")
 
     # update / draw ----------------------------------------------------
     def update(self, dt: float) -> None:

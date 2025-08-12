@@ -13,6 +13,10 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "lang": "en",
     "window_size": [800, 600],
     "fullscreen": False,
+    "bindings": {},
+    "ui_scale": 1.0,
+    "first_run": True,
+    "config_version": 1,
 }
 
 
@@ -29,10 +33,14 @@ def load_config() -> Dict[str, Any]:
     _ensure_dirs()
     try:
         with CONFIG_FILE.open("r", encoding="utf-8") as fh:
-            return json.load(fh)
+            data = json.load(fh)
     except Exception:
-        save_config(DEFAULT_CONFIG)
-        return DEFAULT_CONFIG.copy()
+        data = DEFAULT_CONFIG.copy()
+        save_config(data)
+    # merge in defaults for missing keys to keep backwards compatibility
+    for key, value in DEFAULT_CONFIG.items():
+        data.setdefault(key, value)
+    return data
 
 
 def save_config(cfg: Dict[str, Any]) -> None:

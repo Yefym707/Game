@@ -31,9 +31,14 @@ class MenuScene(Scene):
 
     # button callbacks -------------------------------------------------
     def start_new(self) -> None:
-        from .scene_game import GameScene
+        if self.app.cfg.get("first_run", True):
+            from .scene_tutorial import TutorialScene
 
-        self.next_scene = GameScene(self.app, new_game=True)
+            self.next_scene = TutorialScene(self.app)
+        else:
+            from .scene_game import GameScene
+
+            self.next_scene = GameScene(self.app, new_game=True)
 
     def continue_game(self) -> None:
         from .scene_game import GameScene
