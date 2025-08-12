@@ -192,6 +192,61 @@ class Dropdown:
         surface.blit(img, img.get_rect(center=self.rect.center))
 
 
+class Tag:
+    """Small label used to display values such as latency."""
+
+    def __init__(self, text: str, rect: pygame.Rect) -> None:
+        self.text = text
+        self.rect = pygame.Rect(rect)
+        self.font = pygame.font.SysFont(None, 18)
+
+    def set_text(self, text: str) -> None:
+        self.text = text
+
+    def draw(self, surface: pygame.Surface) -> None:
+        th = get_theme()
+        pygame.draw.rect(surface, th.colors["panel"], self.rect, border_radius=th.radius)
+        img = self.font.render(self.text, True, th.colors["text"])
+        surface.blit(img, img.get_rect(center=self.rect.center))
+
+
+class ConfirmDialog:
+    """Very small yes/no confirmation dialog."""
+
+    def __init__(self, rect: pygame.Rect, text: str, on_yes, on_no) -> None:
+        self.rect = pygame.Rect(rect)
+        self.text = text
+        self.on_yes = on_yes
+        self.on_no = on_no
+        self.font = pygame.font.SysFont(None, 24)
+        self.visible = False
+
+    def show(self) -> None:
+        self.visible = True
+
+    def hide(self) -> None:
+        self.visible = False
+
+    def handle_event(self, event: pygame.event.Event) -> None:
+        if not self.visible:
+            return
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_y:
+                self.on_yes()
+                self.hide()
+            elif event.key == pygame.K_n:
+                self.on_no()
+                self.hide()
+
+    def draw(self, surface: pygame.Surface) -> None:
+        if not self.visible:
+            return
+        th = get_theme()
+        pygame.draw.rect(surface, th.colors["panel"], self.rect, border_radius=th.radius)
+        img = self.font.render(self.text, True, th.colors["text"])
+        surface.blit(img, img.get_rect(center=self.rect.center))
+
+
 class RebindButton(Button):
     """Button waiting for next key press to rebind an action."""
 

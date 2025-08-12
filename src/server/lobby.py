@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Dict, List, Any
 
 
 @dataclass
@@ -15,7 +15,9 @@ class Lobby:
     region: str = "global"
     seed: int = 0
     players: List[str] = field(default_factory=list)
-    ready: List[str] = field(default_factory=list)
+    ready: Dict[str, bool] = field(default_factory=dict)
+    privacy: str = "public"
+    rtt: Dict[str, float] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, object]:
         return {
@@ -26,6 +28,42 @@ class Lobby:
             "cur_players": self.cur_players,
             "region": self.region,
             "players": list(self.players),
+            "privacy": self.privacy,
+        }
+
+    # ready state management -----------------------------------------
+    def add_player(self, name: str) -> bool:
+        if self.cur_players >= self.max_players:
+            return False
+        self.players.append(name)
+        self.cur_players += 1
+        self.ready[name] = False
+        return True
+
+    def remove_player(self, name: str) -> None:
+        if name in self.players:
+            self.players.remove(name)
+            self.cur_players -= 1
+        self.ready.pop(name, None)
+        self.rtt.pop(name, None)
+
+    def set_ready(self, name: str, is_ready: bool) -> None:
+        if name in self.players:
+            self.ready[name] = is_ready
+
+    def all_ready(self) -> bool:
+        if not self.players:
+            return False
+        return all(self.ready.get(p, False) for p in self.players)
+
+    def status(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "players": [
+                {"name": p, "ready": self.ready.get(p, False), "rtt": self.rtt.get(p, 0.0)}
+                for p in self.players
+            ],
+            "privacy": self.privacy,
         }
 
 

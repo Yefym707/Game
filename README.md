@@ -52,6 +52,15 @@ broadcasts authoritative state updates to connected clients.  All random number
 generation happens on the server to keep sessions deterministic while the
 pygame client simply renders the received state.
 
+### Online UX: Ready, Ping, Reconnect & Invite Management
+
+Online lobbies track a ready flag per player and the match can only start once
+everyone toggles ready.  Clients send periodic ping messages to measure and
+display round-trip latency in milliseconds.  When a connection drops the client
+automatically retries with an exponential backoff and shows a reconnecting
+overlay which can be cancelled.  Invite links can be refreshed with a new
+signature or revoked entirely if access should be removed.
+
 ## Balance
 
 Core combat and spawn values are configured in `data/balance.json`. The loader

@@ -46,6 +46,8 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "fps_cap": 60,
     "perf_overlay": False,
     "last_invite": "",
+    "default_lobby_privacy": "public",
+    "reconnect_backoff": [1, 2, 5, 10],
 }
 
 

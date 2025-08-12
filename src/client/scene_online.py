@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import asyncio
+import time
+from typing import Dict
 
 import pygame
 
@@ -33,6 +35,8 @@ class OnlineScene(Scene):
         self.connected = False
         self.servers = []
         self.invite: str | None = None
+        self.ready = False
+        self.rtts: Dict[str, float] = {}
 
     async def _refresh(self) -> None:
         if websockets is None:
@@ -56,6 +60,8 @@ class OnlineScene(Scene):
                 asyncio.create_task(self.client.connect(self.address))
                 self.status = _("CONNECT")
                 self.connected = True
+            if event.key == pygame.K_SPACE:
+                self.ready = not self.ready
 
     async def _poll(self) -> None:
         if not self.connected:
@@ -69,6 +75,8 @@ class OnlineScene(Scene):
         elif msg.get("t") == "KICK":
             self.status = _("DISCONNECTED")
             self.connected = False
+        elif msg.get("t") == MessageType.PONG.value:
+            self.client.record_rtt(max(0.0, time.perf_counter() - float(msg.get("p", 0))))
 
     def update(self, dt: float) -> None:
         asyncio.create_task(self._poll())

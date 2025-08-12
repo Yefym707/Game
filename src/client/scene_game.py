@@ -132,6 +132,8 @@ class GameScene(Scene):
         self._minimap_rect: pygame.Rect | None = None
         if self.minimap_enabled:
             self._build_minimap()
+        self.reconnecting = False
+        self.reconnect_progress = 0.0
 
     def _show_error(self, msg: str) -> None:
         """Display an error message without crashing."""
@@ -203,6 +205,14 @@ class GameScene(Scene):
         if self.recorder:
             self.recorder.stop()
         self.next_scene = MenuScene(self.app)
+
+    # reconnection overlay -------------------------------------------
+    def show_reconnect(self) -> None:
+        self.reconnecting = True
+        self.reconnect_progress = 0.0
+
+    def cancel_reconnect(self) -> None:
+        self.reconnecting = False
 
     def _restart(self) -> None:
         self.state = saveio.restart_state(self.state, 0, self.cfg)
@@ -360,6 +370,8 @@ class GameScene(Scene):
             for msg in self.state.log[self._last_log :]:
                 self.log.add("·", msg)
             self._last_log = len(self.state.log)
+        if self.reconnecting:
+            self.reconnect_progress += dt
         for a in list(self.animations):
             if a.update(dt):
                 self.animations.remove(a)

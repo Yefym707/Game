@@ -60,6 +60,7 @@ class App:
         self.scene: Scene = MenuScene(self)
         self.transition: FadeTransition | None = None
         steam.on_join_request(self._steam_join)
+        self._global_toasts: list[str] = []
 
     def run(self) -> None:
         log_dir = Path.home() / ".oko_zombie" / "logs"
@@ -121,6 +122,12 @@ class App:
         scene = OnlineScene(self)
         scene.join_from_invite(data)
         self.scene = scene
+
+    # global toast helper ---------------------------------------------
+    def toast(self, text: str) -> None:
+        """Record a toast message (placeholder implementation)."""
+
+        self._global_toasts.append(text)
 
 
 def main(demo: bool = False) -> None:

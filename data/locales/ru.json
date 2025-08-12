@@ -136,4 +136,11 @@
     ,"INVITE_INVALID": "Неверный инвайт"
     ,"INVITE_EXPIRED": "Инвайт просрочен"
     ,"COPIED": "Скопировано!"
+    ,"NOT_READY": "Не готов"
+    ,"PUBLIC": "Публичное"
+    ,"PRIVATE": "Приватное"
+    ,"PING_MS": "Пинг: {ms} мс"
+    ,"RECONNECTING": "Переподключение..."
+    ,"INVITE_REVOKED": "Инвайт аннулирован"
+    ,"INVITE_UPDATED": "Инвайт обновлён"
   }

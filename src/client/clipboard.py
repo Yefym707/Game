@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+
 try:  # pragma: no cover - optional
     import pygame
     pygame.scrap.init()
@@ -24,16 +25,16 @@ except Exception:  # pragma: no cover
 FALLBACK_FILE = Path.home() / ".oko_zombie" / "clipboard.txt"
 
 
-def copy(text: str) -> None:
-    """Copy ``text`` to the clipboard."""
+def copy(text: str) -> bool:
+    """Copy ``text`` to the clipboard returning ``True`` on success."""
 
     if pygame and pygame.scrap.get_init():  # pragma: no cover - UI path
         pygame.scrap.put(pygame.SCRAP_TEXT, text.encode("utf-8"))
-        return
+        return True
     if _tk is not None:  # pragma: no cover - UI path
         _tk.clipboard_clear()
         _tk.clipboard_append(text)
-        return
+        return True
     cmd: list[str] | None = None
     if os.name == "nt":
         cmd = ["clip"]
@@ -46,11 +47,12 @@ def copy(text: str) -> None:
             proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
             proc.communicate(text.encode("utf-8"))
             if proc.returncode == 0:
-                return
+                return True
     except Exception:
         pass
     FALLBACK_FILE.parent.mkdir(parents=True, exist_ok=True)
     FALLBACK_FILE.write_text(text, encoding="utf-8")
+    return False
 
 
 def paste() -> Optional[str]:

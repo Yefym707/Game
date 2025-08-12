@@ -52,15 +52,22 @@ def validate_master_payload(data: Dict[str, Any]) -> None:
 class SessionGuard:
     """Per session/IP flood protection."""
 
-    def __init__(self, *, actions_per_sec: int = 10, bytes_per_min: int = 65536) -> None:
+    def __init__(self, *, actions_per_sec: int = 10, bytes_per_min: int = 65536, pings_per_sec: int = 5) -> None:
         self.action_rl = RateLimiter(actions_per_sec, 1.0)
         self.byte_rl = RateLimiter(bytes_per_min, 60.0)
+        self.ping_rl = RateLimiter(pings_per_sec, 1.0)
 
     def check(self, size: int = 0) -> None:
         if not self.action_rl.hit():
             raise ValueError("rate limit exceeded")
         if size and not self.byte_rl.hit(size):
             raise ValueError("traffic limit exceeded")
+
+    def check_ping(self) -> None:
+        """Guard against excessive ping messages."""
+
+        if not self.ping_rl.hit():
+            raise ValueError("ping limit exceeded")
 
 
 class InviteLimiter:
