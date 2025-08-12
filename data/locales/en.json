@@ -54,4 +54,10 @@
   ,"error_rate_limited": "Too many requests"
   ,"banned": "Banned: {reason}"
   ,"report_sent": "Report sent"
+  ,"telemetry_opt_in": "Enable telemetry & crash reports"
+  ,"telemetry_endpoint": "Telemetry endpoint"
+  ,"send_test_event": "Send test event"
+  ,"telemetry_status_sent": "sent"
+  ,"telemetry_status_queued": "queued"
+  ,"telemetry_status_error": "error"
 }

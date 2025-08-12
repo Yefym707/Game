@@ -6,6 +6,7 @@ from typing import Optional
 
 from gamecore.i18n import gettext as _
 from gamecore import config as gconfig
+from telemetry import init as telemetry_init, shutdown as telemetry_shutdown
 from . import input as cinput
 from .gfx.anim import FadeTransition
 from .sfx import set_volume
@@ -36,6 +37,7 @@ class App:
         pygame.init()
         # configuration -------------------------------------------------
         self.cfg = gconfig.load_config()
+        telemetry_init(self.cfg)
         flags = pygame.FULLSCREEN if self.cfg.get("fullscreen") else 0
         w, h = self.cfg.get("window_size", [width, height])
         pygame.display.set_caption(_("window_title"))
@@ -73,6 +75,7 @@ class App:
                     self.transition = None
             pygame.display.flip()
         pygame.quit()
+        telemetry_shutdown("quit")
 
 
 def main(demo: bool = False) -> None:

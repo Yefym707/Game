@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import uuid
 from pathlib import Path
 from typing import Any, Dict
 
@@ -20,6 +21,9 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "config_version": 1,
     "master_url": "ws://localhost:8080",
     "record_replays": False,
+    "telemetry_opt_in": False,
+    "telemetry_endpoint": "",
+    "telemetry_anonymous_id": "",
 }
 
 
@@ -44,6 +48,9 @@ def load_config() -> Dict[str, Any]:
     # merge in defaults for missing keys to keep backwards compatibility
     for key, value in DEFAULT_CONFIG.items():
         data.setdefault(key, value)
+    if not data.get("telemetry_anonymous_id"):
+        data["telemetry_anonymous_id"] = str(uuid.uuid4())
+        save_config(data)
     return data
 
 
