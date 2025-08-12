@@ -157,6 +157,16 @@ and snow use a small particle system influenced by a configurable wind vector
 while fog draws a pulsating noise based overlay.  Scenarios or configuration
 options can enable or disable weather and adjust its default intensity.
 
+## Post FX & Performance
+
+The rendering pipeline can apply a small stack of post effects directly on
+``pygame`` surfaces. Available options include a vignette, simple desaturation,
+an RGB color matrix and a lightweight bloom achieved through downsampling and a
+box blur.  Individual effects and their intensities can be toggled in the
+settings menu and persist via ``config.json``. A configurable FPS cap limits the
+main loop and an optional overlay displays frame time, draw calls and the time
+spent on post-processing.
+
 ## Telemetry & Crash Reports (Opt-in)
 
 The game can optionally send anonymous telemetry events and crash reports to a
