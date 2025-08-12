@@ -19,13 +19,24 @@ def _load_lang() -> str:
         return DEFAULT_LANG
 
 
+def _load_translations(lang: str) -> Dict[str, str]:
+    try:
+        with (LOCALES_DIR / f"{lang}.json").open("r", encoding="utf-8") as fh:
+            return json.load(fh)
+    except FileNotFoundError:  # pragma: no cover - missing locale
+        return {}
+
+
 _LANG = _load_lang()
-_translations: Dict[str, str] = {}
-try:
-    with (LOCALES_DIR / f"{_LANG}.json").open("r", encoding="utf-8") as fh:
-        _translations = json.load(fh)
-except FileNotFoundError:  # pragma: no cover - missing locale
-    _translations = {}
+_translations: Dict[str, str] = _load_translations(_LANG)
+
+
+def set_language(lang: str) -> None:
+    """Reload translations for ``lang`` and remember it globally."""
+
+    global _LANG, _translations
+    _LANG = lang
+    _translations = _load_translations(lang)
 
 
 def gettext(key: str) -> str:

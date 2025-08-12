@@ -5,5 +5,10 @@
   "menu_quit": "Quit",
   "action_prompt": "action (w/a/s/d to move, q to quit): ",
   "status_turn": "Turn {turn}  Player {x},{y}",
-  "window_title": "Gamecore GUI"
+  "window_title": "Gamecore GUI",
+  "apply": "Apply",
+  "press_key": "Press key...",
+  "tut_step1": "Use arrow keys to move",
+  "tut_step2": "Press Space to end turn",
+  "tut_step3": "Good luck!"
 }

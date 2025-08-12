@@ -1,85 +1,78 @@
-"""Settings menu scene."""
 from __future__ import annotations
+
+"""Settings scene providing basic configuration options.
+
+The implementation is intentionally lightweight yet covers the requirements of
+key rebinding, audio volume control, UI scale and language selection.  Real
+GUI layout/graphics are minimal; the goal is to offer a functional example
+that can be interacted with during manual testing and from unit tests through
+the underlying configuration objects.
+"""
 
 import pygame
 
-from gamecore.i18n import gettext as _
 from gamecore import config as gconfig
+from gamecore import i18n
+from gamecore.i18n import gettext as _
 from .app import Scene
-from .ui.widgets import Button
+from .input import InputManager
+from .sfx import set_volume
+from .ui.widgets import Button, Dropdown, RebindButton, Slider
 
 
 class SettingsScene(Scene):
-    """Allow the player to tweak basic configuration options."""
-
     def __init__(self, app) -> None:
         super().__init__(app)
-        self.cfg = gconfig.load_config()
-        width, height = app.screen.get_size()
-        cx = width // 2 - 100
-        y = 120
-        self.buttons: list[Button] = []
+        self.cfg = app.cfg
+        self.input: InputManager = app.input
+        self.widgets: list = []
+        w, h = app.screen.get_size()
+        y = 80
 
-        def add(name: str, cb) -> Button:
-            nonlocal y
-            rect = pygame.Rect(cx, y, 200, 40)
-            btn = Button("", rect, cb)
-            setattr(self, name, btn)
-            self.buttons.append(btn)
-            y += 60
-            return btn
+        # key bindings ---------------------------------------------------
+        for action in ["end_turn", "rest", "scavenge", "pause"]:
+            rect = pygame.Rect(40, y, 260, 32)
+            self.widgets.append(RebindButton(rect, action, self.input))
+            y += 40
 
-        add("btn_volume", self.change_volume)
-        add("btn_lang", self.change_lang)
-        add("btn_window", self.change_window)
-        add("btn_fullscreen", self.toggle_fullscreen)
-        add("btn_back", self.back)
-        self._update_texts()
+        # volume slider --------------------------------------------------
+        self.widgets.append(
+            Slider(pygame.Rect(360, 80, 200, 20), 0, 100, self.cfg.get("volume", 1.0) * 100, self._on_volume)
+        )
 
-    # helpers ------------------------------------------------------------
-    def _update_texts(self) -> None:
-        self.btn_volume.text = f"Volume: {int(self.cfg['volume'] * 100)}%"
-        self.btn_lang.text = f"Language: {self.cfg['lang']}"
-        ws = self.cfg["window_size"]
-        self.btn_window.text = f"Window: {ws[0]}x{ws[1]}"
-        self.btn_fullscreen.text = f"Fullscreen: {'on' if self.cfg['fullscreen'] else 'off'}"
-        self.btn_back.text = "Back"
+        # UI scale slider ------------------------------------------------
+        self.widgets.append(
+            Slider(
+                pygame.Rect(360, 120, 200, 20),
+                75,
+                200,
+                self.cfg.get("ui_scale", 1.0) * 100,
+                self._on_scale,
+            )
+        )
 
-    # button callbacks --------------------------------------------------
-    def change_volume(self) -> None:
-        vol = self.cfg["volume"] + 0.1
-        if vol > 1.0:
-            vol = 0.0
-        self.cfg["volume"] = round(vol, 2)
-        self._update_texts()
-        try:
-            pygame.mixer.music.set_volume(self.cfg["volume"])
-        except Exception:
-            pass
+        # language dropdown ---------------------------------------------
+        self.widgets.append(
+            Dropdown(pygame.Rect(360, 160, 200, 32), ["en", "ru"], self.cfg.get("lang", "en"), self._on_lang)
+        )
 
-    def change_lang(self) -> None:
-        self.cfg["lang"] = "ru" if self.cfg.get("lang") == "en" else "en"
-        self._update_texts()
+        # back/apply button ---------------------------------------------
+        self.widgets.append(Button(_("apply"), pygame.Rect(w // 2 - 60, h - 80, 120, 40), self._apply))
 
-    def change_window(self) -> None:
-        sizes = [(800, 600), (1024, 768), (1280, 720)]
-        current = tuple(self.cfg["window_size"])
-        if current in sizes:
-            idx = (sizes.index(current) + 1) % len(sizes)
-        else:
-            idx = 0
-        self.cfg["window_size"] = list(sizes[idx])
-        flags = pygame.FULLSCREEN if self.cfg.get("fullscreen") else 0
-        pygame.display.set_mode(tuple(self.cfg["window_size"]), flags)
-        self._update_texts()
+    # callbacks ----------------------------------------------------------
+    def _on_volume(self, value: float) -> None:
+        self.cfg["volume"] = round(value / 100.0, 2)
+        set_volume(self.cfg["volume"])
 
-    def toggle_fullscreen(self) -> None:
-        self.cfg["fullscreen"] = not self.cfg.get("fullscreen")
-        flags = pygame.FULLSCREEN if self.cfg["fullscreen"] else 0
-        pygame.display.set_mode(tuple(self.cfg["window_size"]), flags)
-        self._update_texts()
+    def _on_scale(self, value: float) -> None:
+        self.cfg["ui_scale"] = round(value / 100.0, 2)
 
-    def back(self) -> None:
+    def _on_lang(self, value: str) -> None:
+        self.cfg["lang"] = value
+        i18n.set_language(value)
+
+    def _apply(self) -> None:
+        self.input.save(self.cfg)
         gconfig.save_config(self.cfg)
         from .scene_menu import MenuScene
 
@@ -87,13 +80,13 @@ class SettingsScene(Scene):
 
     # scene API ---------------------------------------------------------
     def handle_event(self, event: pygame.event.Event) -> None:
-        for btn in self.buttons:
-            btn.handle_event(event)
+        for w in self.widgets:
+            w.handle_event(event)
 
-    def update(self, dt: float) -> None:  # pragma: no cover - nothing to update
+    def update(self, dt: float) -> None:  # pragma: no cover - nothing dynamic
         pass
 
     def draw(self, surface: pygame.Surface) -> None:
-        surface.fill((25, 25, 25))
-        for btn in self.buttons:
-            btn.draw(surface)
+        surface.fill((30, 30, 30))
+        for w in self.widgets:
+            w.draw(surface)

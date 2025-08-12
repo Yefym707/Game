@@ -5,5 +5,10 @@
   "menu_quit": "Выход",
   "action_prompt": "действие (w/a/s/d — движение, q — выход): ",
   "status_turn": "Ход {turn}  Игрок {x},{y}",
-  "window_title": "Gamecore GUI"
+  "window_title": "Gamecore GUI",
+  "apply": "Применить",
+  "press_key": "Нажмите клавишу...",
+  "tut_step1": "Используйте стрелки для движения",
+  "tut_step2": "Пробел — завершить ход",
+  "tut_step3": "Удачи!"
 }

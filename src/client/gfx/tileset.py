@@ -52,3 +52,26 @@ class Tileset:
     # public -----------------------------------------------------------
     def get(self, key: str) -> pygame.Surface | None:
         return self.tiles.get(key)
+
+    def draw(
+        self,
+        surface: pygame.Surface,
+        key: str,
+        pos: tuple[int, int],
+        scale: float = 1.0,
+    ) -> None:
+        """Draw ``key`` tile at ``pos`` with optional ``scale``.
+
+        Scaling uses nearest-neighbour filtering via ``pygame.transform.scale``
+        which keeps the pixel art crisp even when enlarged.
+        """
+
+        tile = self.get(key)
+        if not tile:
+            return
+        if scale != 1.0:
+            size = int(TILE_SIZE * scale)
+            img = pygame.transform.scale(tile, (size, size))
+        else:
+            img = tile
+        surface.blit(img, pos)

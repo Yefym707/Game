@@ -31,6 +31,110 @@ class Button:
         surface.blit(img, img.get_rect(center=self.rect.center))
 
 
+class Toggle(Button):
+    """Simple on/off button."""
+
+    def __init__(self, text: str, rect: pygame.Rect, value: bool, callback) -> None:
+        super().__init__(text, rect, self._toggle)
+        self.value = value
+        self.callback = callback
+        self._update()
+
+    def _toggle(self) -> None:
+        self.value = not self.value
+        self._update()
+        self.callback(self.value)
+
+    def _update(self) -> None:
+        self.text = f"{self.text.split(':')[0]}: {'on' if self.value else 'off'}"
+
+
+class Slider:
+    """Horizontal slider used for volume/UI scale."""
+
+    def __init__(self, rect: pygame.Rect, min_val: float, max_val: float, value: float, callback) -> None:
+        self.rect = pygame.Rect(rect)
+        self.min = min_val
+        self.max = max_val
+        self.value = value
+        self.callback = callback
+        self.grabbed = False
+
+    def handle_event(self, event: pygame.event.Event) -> None:
+        if event.type == pygame.MOUSEBUTTONDOWN and self.rect.collidepoint(event.pos):
+            self.grabbed = True
+            self._set_from_pos(event.pos[0])
+        elif event.type == pygame.MOUSEBUTTONUP:
+            self.grabbed = False
+        elif event.type == pygame.MOUSEMOTION and self.grabbed:
+            self._set_from_pos(event.pos[0])
+
+    def _set_from_pos(self, x: int) -> None:
+        rel = max(0.0, min(1.0, (x - self.rect.left) / self.rect.width))
+        self.value = self.min + rel * (self.max - self.min)
+        self.callback(self.value)
+
+    def draw(self, surface: pygame.Surface) -> None:
+        pygame.draw.rect(surface, (80, 80, 80), self.rect)
+        rel = (self.value - self.min) / (self.max - self.min)
+        knob_x = int(self.rect.left + rel * self.rect.width)
+        pygame.draw.rect(surface, (160, 160, 160), pygame.Rect(knob_x - 3, self.rect.top, 6, self.rect.height))
+
+
+class Dropdown:
+    """Cycle-through dropdown used for language selection."""
+
+    def __init__(self, rect: pygame.Rect, options: list[str], value: str, callback) -> None:
+        self.rect = pygame.Rect(rect)
+        self.options = options
+        self.value = value
+        self.callback = callback
+        self.font = pygame.font.SysFont(None, 24)
+
+    def handle_event(self, event: pygame.event.Event) -> None:
+        if event.type == pygame.MOUSEBUTTONDOWN and self.rect.collidepoint(event.pos):
+            idx = (self.options.index(self.value) + 1) % len(self.options)
+            self.value = self.options[idx]
+            self.callback(self.value)
+
+    def draw(self, surface: pygame.Surface) -> None:
+        pygame.draw.rect(surface, (60, 60, 60), self.rect)
+        pygame.draw.rect(surface, (255, 255, 255), self.rect, 2)
+        img = self.font.render(self.value, True, (255, 255, 255))
+        surface.blit(img, img.get_rect(center=self.rect.center))
+
+
+class RebindButton(Button):
+    """Button waiting for next key press to rebind an action."""
+
+    def __init__(self, rect: pygame.Rect, action: str, manager, label: str | None = None) -> None:
+        text = label or action
+        super().__init__(text, rect, self._begin)
+        self.action = action
+        self.manager = manager
+        self.waiting = False
+        self._update()
+
+    def _begin(self) -> None:
+        self.waiting = True
+        self.text = _("press_key")
+
+    def _finish(self, key: int) -> None:
+        self.manager.rebind(self.action, key)
+        self.waiting = False
+        self._update()
+
+    def _update(self) -> None:
+        key = self.manager.bindings.get(self.action, 0)
+        self.text = f"{self.action}: {pygame.key.name(key)}"
+
+    def handle_event(self, event: pygame.event.Event) -> None:
+        if self.waiting and event.type == pygame.KEYDOWN:
+            self._finish(event.key)
+        else:
+            super().handle_event(event)
+
+
 class Log:
     """Scrolling log widget."""
 
