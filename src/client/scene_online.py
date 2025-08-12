@@ -10,7 +10,8 @@ from gamecore.i18n import gettext as _
 from net.master_api import MasterMessage, encode_master_message, decode_master_message
 from net.protocol import MessageType
 from .app import Scene
-from .net_client import NetClient
+from .net_client import NetClient, parse_invite_url
+from . import clipboard
 
 try:  # pragma: no cover - optional dependency
     import websockets
@@ -31,6 +32,7 @@ class OnlineScene(Scene):
         self.status = ""
         self.connected = False
         self.servers = []
+        self.invite: str | None = None
 
     async def _refresh(self) -> None:
         if websockets is None:
@@ -76,3 +78,25 @@ class OnlineScene(Scene):
         font = pygame.font.SysFont(None, 24)
         txt = font.render(self.status or _("Online"), True, (255, 255, 255))
         surface.blit(txt, (10, 10))
+
+    # invite helpers ----------------------------------------------------
+    async def create_invite(self) -> None:
+        if not self.connected:
+            return
+        await self.client.send({"t": MessageType.INVITE_CREATE.value, "room": "1"})
+        resp = await self.client.recv()
+        if resp.get("t") == MessageType.INVITE_INFO.value:
+            self.invite = resp.get("url")
+
+    def copy_invite_link(self) -> None:
+        if self.invite:
+            clipboard.copy(self.invite)
+
+    def join_from_invite(self, text: str) -> None:
+        try:
+            data = parse_invite_url(text)
+        except Exception:
+            return
+        self.address = f"ws://{data['host']}:{data['port']}"
+        asyncio.create_task(self.client.connect(self.address))
+        self.connected = True

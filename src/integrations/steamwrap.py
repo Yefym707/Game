@@ -26,6 +26,7 @@ class Steam:
         self._achievements: set[str] = set()
         self._progress: Dict[str, float] = {}
         self._rich: Dict[str, str] = {}
+        self._join_cb = None
         sdk_path = os.environ.get("STEAM_SDK_PATH")
         try:
             if sdk_path:
@@ -130,6 +131,19 @@ class Steam:
                 except Exception:
                     pass
         self._rich[key] = val
+
+    # --------------------------------------------------------------- join reqs
+    def on_join_request(self, cb) -> None:
+        """Register callback for join requests."""
+
+        self._join_cb = cb
+
+    def _emit_join(self, data: str) -> None:
+        if self._join_cb:
+            try:
+                self._join_cb(data)
+            except Exception:
+                pass
 
     # ------------------------------------------------------------------ cloud
     def cloud_write(self, key: str, data: bytes) -> bool:

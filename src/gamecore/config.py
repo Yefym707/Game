@@ -45,6 +45,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "fx_bloom_intensity": 0.5,
     "fps_cap": 60,
     "perf_overlay": False,
+    "last_invite": "",
 }
 
 

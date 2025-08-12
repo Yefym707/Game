@@ -129,3 +129,12 @@ THEME_APOCALYPSE = "theme_apocalypse"
 UI_THEME = "ui_theme"
 SHOW_MINIMAP = "show_minimap"
 MINIMAP_SIZE = "minimap_size"
+
+# invite related --------------------------------------------------------------
+INVITE = "INVITE"
+COPY_LINK = "COPY_LINK"
+COPY_CODE = "COPY_CODE"
+JOIN_BY_CODE = "JOIN_BY_CODE"
+INVITE_INVALID = "INVITE_INVALID"
+INVITE_EXPIRED = "INVITE_EXPIRED"
+COPIED = "COPIED"

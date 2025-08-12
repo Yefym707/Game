@@ -17,6 +17,9 @@ class MessageType(str, Enum):
     STATE = "STATE"
     PING = "PING"
     ERROR = "ERROR"
+    INVITE_CREATE = "INVITE_CREATE"
+    INVITE_INFO = "INVITE_INFO"
+    INVITE_JOIN = "INVITE_JOIN"
 
 
 _ALLOWED_TYPES = {t.value for t in MessageType}

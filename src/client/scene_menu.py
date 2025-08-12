@@ -8,6 +8,7 @@ from gamecore import achievements, rules
 from integrations import steam
 from .app import Scene
 from .ui.widgets import Button, Card, NameField, ColorPicker
+from . import clipboard
 from .sfx import set_volume
 
 
@@ -65,10 +66,13 @@ class MenuScene(Scene):
         self.ach_btn = Button(
             _("ACHIEVEMENTS"), pygame.Rect(20, h - 80, 120, 40), self._toggle_ach
         )
+        self.join_invite_btn = Button(
+            _("JOIN_BY_CODE"), pygame.Rect(w - 180, h - 80, 160, 40), self._join_invite
+        )
         self.focusables = (
             [self.scenario_btn, self.diff_btn]
             + self.cards
-            + [self.continue_btn, self.settings_btn, self.ach_btn]
+            + [self.continue_btn, self.settings_btn, self.ach_btn, self.join_invite_btn]
         )
         if rules.DEMO_MODE:
             self.demo_btn = Button(
@@ -120,6 +124,15 @@ class MenuScene(Scene):
 
     def _toggle_ach(self) -> None:
         self.show_achievements = not self.show_achievements
+
+    def _join_invite(self) -> None:
+        text = clipboard.paste() or ""
+        from .scene_online import OnlineScene
+
+        scene = OnlineScene(self.app)
+        if text:
+            scene.join_from_invite(text)
+        self.next_scene = scene
 
     def _next_scenario(self) -> None:
         """Cycle through available scenarios."""
@@ -176,6 +189,7 @@ class MenuScene(Scene):
         self.continue_btn.draw(surface)
         self.settings_btn.draw(surface)
         self.ach_btn.draw(surface)
+        self.join_invite_btn.draw(surface)
         if rules.DEMO_MODE:
             self.demo_btn.draw(surface)
         if self.show_achievements:
