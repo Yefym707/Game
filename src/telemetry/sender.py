@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 import urllib.request
 from pathlib import Path
 from typing import Dict, List
@@ -18,6 +19,8 @@ class TelemetrySender:
         self.endpoint = endpoint
         self.anon_id = anon_id
         self.queue: List[Dict] = []
+        self._backoff = 1.0
+        self._next_attempt = 0.0
         TELEMETRY_DIR.mkdir(parents=True, exist_ok=True)
         self._load_pending()
 
@@ -43,6 +46,11 @@ class TelemetrySender:
         if not self.endpoint:
             self.queue.clear()
             return
+        if time.time() < self._next_attempt:
+            if self.queue:
+                self._persist(self.queue)
+                self.queue = []
+            return
         remaining: List[Dict] = []
         for evt in self.queue:
             try:
@@ -57,7 +65,11 @@ class TelemetrySender:
                 remaining.append(evt)
         self.queue = []
         if remaining:
+            self._backoff = min(self._backoff * 2, 60.0)
+            self._next_attempt = time.time() + self._backoff
             self._persist(remaining)
+        else:
+            self._backoff = 1.0
 
     # ------------------------------------------------------------------
     def _persist(self, events: List[Dict]) -> None:

@@ -220,8 +220,8 @@ automatically.
 The game can optionally send anonymous telemetry events and crash reports to a
 user configurable HTTP endpoint. Collection is disabled by default. Enable it
 in the **Settings** screen and specify the endpoint. When the endpoint is
-unreachable, events are stored under ``~/.oko_zombie/telemetry`` and retried on
-the next launch. Crash reports are written to
+unreachable, events are stored under ``~/.oko_zombie/telemetry`` and retried
+with exponential backoff on the next launch. Crash reports are written to
 ``~/.oko_zombie/crashes`` regardless of connectivity and uploaded only when
 opted in.
 

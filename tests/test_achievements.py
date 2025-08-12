@@ -40,6 +40,13 @@ def test_kill_counter():
     assert achievements.ACH_KILL_100 in steam.achievements
 
 
+def test_kill_progress():
+    for _ in range(10):
+        achievements.on_zombie_kill()
+    progress = dict((aid, prog) for aid, _, prog in achievements.list_achievements())
+    assert progress[achievements.ACH_KILL_100] == 0.1
+
+
 def test_four_players_on_start():
     achievements.on_game_start(4)
     steam = achievements._steam  # type: ignore
