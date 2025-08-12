@@ -117,4 +117,10 @@
   ,"fx_desaturate": "Обесцвечивание"
   ,"fx_bloom": "Свечение"
   ,"fx_color": "Цветокор"
+  ,"ui_theme": "Тема UI"
+  ,"theme_light": "Светлая"
+  ,"theme_dark": "Тёмная"
+  ,"theme_apocalypse": "Апокалипсис"
+  ,"show_minimap": "Мини-карта"
+  ,"minimap_size": "Размер мини-карты"
 }

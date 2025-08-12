@@ -12,7 +12,14 @@ from .gfx.camera import SmoothCamera
 from .gfx.layers import Layer
 from .gfx.lighting import LightMap
 from .gfx import weather as gweather
-from .ui.widgets import IconLog, StatusPanel, PauseMenu, PopupDialog
+from .ui.widgets import (
+    IconLog,
+    StatusPanel,
+    PauseMenu,
+    PopupDialog,
+    ToastManager,
+    hover_hints,
+)
 from .input import InputManager
 from . import sfx
 from .net_client import NetClient
@@ -87,6 +94,7 @@ class GameScene(Scene):
         self.paused = False
         self.pause_menu: PauseMenu | None = None
         self.event_popup: PopupDialog | None = None
+        self.toasts = ToastManager()
         self.input.set_profile(self.state.active)
         self.recorder: Recorder | None = None
         if self.cfg.get("record_replays"):
@@ -116,6 +124,12 @@ class GameScene(Scene):
             self.state.weather = wtype
             self.state.weather_intensity = intensity
             self.state.wind = wind
+        # minimap ------------------------------------------------------
+        self.minimap_enabled = self.cfg.get("minimap_enabled", True)
+        self.minimap_size = self.cfg.get("minimap_size", 200)
+        self._minimap_rect: pygame.Rect | None = None
+        if self.minimap_enabled:
+            self._build_minimap()
 
     def _show_error(self, msg: str) -> None:
         """Display an error message without crashing."""
@@ -154,7 +168,9 @@ class GameScene(Scene):
             i18n.gettext(ev.desc_key),
             choices,
         )
-        self.log.add(ev.icon, i18n.gettext(ev.title_key))
+        msg = i18n.gettext(ev.title_key)
+        self.log.add(ev.icon, msg)
+        self.toasts.show(msg)
 
     def _open_pause_menu(self) -> None:
         """Create the pause menu overlay."""
@@ -204,6 +220,14 @@ class GameScene(Scene):
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 self.paused = False
             return
+        if self.minimap_enabled and event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if self._minimap_rect and self._minimap_rect.collidepoint(event.pos):
+                mx = event.pos[0] - self._minimap_rect.x
+                my = event.pos[1] - self._minimap_rect.y
+                tx = mx / self.minimap_scale * TILE_SIZE
+                ty = my / self.minimap_scale * TILE_SIZE
+                self.camera.follow((tx, ty))
+                return
         if event.type == pygame.MOUSEMOTION:
             wx, wy = self.camera.screen_to_world(event.pos)
             x = int(wx // TILE_SIZE)
@@ -336,6 +360,11 @@ class GameScene(Scene):
                 self.log.add("·", i18n.gettext(key))
         if self.weather:
             self.weather.update(dt)
+        if self.pause_menu:
+            self.pause_menu.update(dt)
+        if self.event_popup:
+            self.event_popup.update(dt)
+        self.toasts.update(dt)
 
     def draw(self, surface: pygame.Surface) -> None:
         w, h = surface.get_size()
@@ -362,6 +391,48 @@ class GameScene(Scene):
             self.event_popup.draw(surface)
         if self.paused and self.pause_menu:
             self.pause_menu.draw(surface)
+        self._draw_minimap(surface)
+        self.toasts.draw(surface)
+        hover_hints.draw(surface)
+
+    def _build_minimap(self) -> None:
+        board = self.state.board
+        scale = self.minimap_size / max(board.width, board.height)
+        self.minimap_scale = scale
+        surf = pygame.Surface((int(board.width * scale), int(board.height * scale)))
+        for y, row in enumerate(board.tiles):
+            for x, tile in enumerate(row):
+                color = self._tile_color(tile)
+                rect = pygame.Rect(int(x * scale), int(y * scale), int(scale) + 1, int(scale) + 1)
+                surf.fill(color, rect)
+        self._minimap_surface = surf
+
+    def _tile_color(self, tile: str) -> tuple[int, int, int]:
+        if tile == ".":
+            return (60, 60, 60)
+        if tile == "#":
+            return (100, 100, 100)
+        if tile == "T":
+            return (0, 120, 0)
+        if tile == "W":
+            return (0, 0, 120)
+        return (120, 120, 120)
+
+    def _draw_minimap(self, surface: pygame.Surface) -> None:
+        if not self.minimap_enabled:
+            return
+        mm = self._minimap_surface.copy()
+        view_rect = pygame.Rect(
+            self.camera.x / TILE_SIZE * self.minimap_scale,
+            self.camera.y / TILE_SIZE * self.minimap_scale,
+            (self.camera.screen_w / self.camera.zoom) / TILE_SIZE * self.minimap_scale,
+            (self.camera.screen_h / self.camera.zoom) / TILE_SIZE * self.minimap_scale,
+        )
+        pygame.draw.rect(mm, (255, 0, 0), view_rect, 1)
+        x = surface.get_width() - mm.get_width() - 10
+        y = 10
+        self._minimap_rect = pygame.Rect(x, y, mm.get_width(), mm.get_height())
+        surface.blit(mm, (x, y))
 
     def _draw_entity(self, surface: pygame.Surface, ent) -> None:
         tile = self.tileset.get(ent.symbol)

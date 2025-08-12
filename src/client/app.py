@@ -13,6 +13,7 @@ from .gfx.anim import FadeTransition
 from . import sfx
 from .scene_replay import ReplayScene  # imported for routing; used by menu
 from .gfx import postfx
+from .ui import theme as ui_theme
 
 
 class Scene:
@@ -39,6 +40,7 @@ class App:
         pygame.init()
         # configuration -------------------------------------------------
         self.cfg = gconfig.load_config()
+        ui_theme.set_theme(self.cfg.get("theme", "dark"))
         telemetry_init(self.cfg)
         flags = pygame.FULLSCREEN if self.cfg.get("fullscreen") else 0
         w, h = self.cfg.get("window_size", [width, height])

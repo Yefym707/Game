@@ -17,7 +17,8 @@ from gamecore.i18n import gettext as _
 from .app import Scene
 from .input import InputManager
 from . import sfx
-from .ui.widgets import Button, Dropdown, RebindButton, Slider, Toggle
+from .ui.widgets import Button, Dropdown, RebindButton, Slider, Toggle, hover_hints
+from .ui.theme import set_theme
 
 
 class InputField:
@@ -57,6 +58,7 @@ class SettingsScene(Scene):
         self.widgets: list = []
         w, h = app.screen.get_size()
         y = 80
+        set_theme(self.cfg.get("theme", "dark"))
 
         # key bindings ---------------------------------------------------
         for action in ["end_turn", "rest", "scavenge", "pause"]:
@@ -86,8 +88,50 @@ class SettingsScene(Scene):
 
         # language dropdown ---------------------------------------------
         self.widgets.append(
-            Dropdown(pygame.Rect(360, 160, 200, 32), ["en", "ru"], self.cfg.get("lang", "en"), self._on_lang)
+            Dropdown(
+                pygame.Rect(360, 160, 200, 32),
+                [
+                    ("en", "en"),
+                    ("ru", "ru"),
+                ],
+                self.cfg.get("lang", "en"),
+                self._on_lang,
+            )
         )
+
+        # theme dropdown -----------------------------------------------
+        self.widgets.append(
+            Dropdown(
+                pygame.Rect(40, y, 260, 32),
+                [
+                    ("light", _("theme_light")),
+                    ("dark", _("theme_dark")),
+                    ("apocalypse", _("theme_apocalypse")),
+                ],
+                self.cfg.get("theme", "dark"),
+                self._on_theme,
+            )
+        )
+        y += 40
+        # minimap toggle & size ---------------------------------------
+        self.widgets.append(
+            Toggle(
+                _("show_minimap"),
+                pygame.Rect(40, y, 260, 32),
+                self.cfg.get("minimap_enabled", True),
+                self._on_minimap,
+            )
+        )
+        self.widgets.append(
+            Slider(
+                pygame.Rect(360, y, 200, 20),
+                100,
+                300,
+                self.cfg.get("minimap_size", 200),
+                self._on_minimap_size,
+            )
+        )
+        y += 40
 
         # telemetry toggle ----------------------------------------------
         self.widgets.append(
@@ -178,6 +222,16 @@ class SettingsScene(Scene):
         self.cfg["lang"] = value
         i18n.set_language(value)
 
+    def _on_theme(self, value: str) -> None:
+        self.cfg["theme"] = value
+        set_theme(value)
+
+    def _on_minimap(self, value: bool) -> None:
+        self.cfg["minimap_enabled"] = value
+
+    def _on_minimap_size(self, value: float) -> None:
+        self.cfg["minimap_size"] = int(value)
+
     def _on_tel_opt(self, value: bool) -> None:
         self.cfg["telemetry_opt_in"] = value
 
@@ -225,6 +279,9 @@ class SettingsScene(Scene):
         pass
 
     def draw(self, surface: pygame.Surface) -> None:
-        surface.fill((30, 30, 30))
+        from .ui.theme import get_theme
+
+        surface.fill(get_theme().colors["bg"])
         for w in self.widgets:
             w.draw(surface)
+        hover_hints.draw(surface)
