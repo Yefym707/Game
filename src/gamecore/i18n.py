@@ -95,3 +95,11 @@ TOOLTIP_MOVE = "tooltip_move"
 TOOLTIP_ATTACK = "tooltip_attack"
 LOG_EXPAND = "log_expand"
 LOG_COLLAPSE = "log_collapse"
+
+# events and scenarios -------------------------------------------------------
+EVENT_ACCEPT = "event_accept"
+EVENT_IGNORE = "event_ignore"
+EVENT_OK = "event_ok"
+SCENARIO_SHORT_NAME = "scenario_short_name"
+SCENARIO_MEDIUM_NAME = "scenario_medium_name"
+SCENARIO_LONG_NAME = "scenario_long_name"
