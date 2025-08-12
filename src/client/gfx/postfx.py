@@ -3,6 +3,7 @@ from __future__ import annotations
 """Simple post processing effects operating on :mod:`pygame` surfaces."""
 
 from typing import Iterable
+from pathlib import Path
 import pygame
 import numpy as np
 
@@ -109,3 +110,32 @@ def count_enabled(cfg) -> int:
         if cfg.get(key):
             count += 1
     return count
+
+
+def export_frame(
+    surface: pygame.Surface,
+    path: Path,
+    cfg,
+    watermark: pygame.Surface | None = None,
+) -> None:
+    """Apply post effects and save ``surface`` to ``path``.
+
+    Parameters
+    ----------
+    surface:
+        The surface representing the raw frame.
+    path:
+        Target file path where the PNG will be written.
+    cfg:
+        Configuration dictionary controlling enabled post effects.
+    watermark:
+        Optional surface blended in the bottom right corner before saving,
+        used for the demo watermark.
+    """
+
+    frame = apply_chain(surface, cfg)
+    if watermark:
+        x = frame.get_width() - watermark.get_width() - 8
+        y = frame.get_height() - watermark.get_height() - 8
+        frame.blit(watermark, (x, y))
+    pygame.image.save(frame, str(path))

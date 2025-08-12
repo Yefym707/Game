@@ -12,6 +12,7 @@ from . import input as cinput
 from .gfx.anim import FadeTransition
 from . import sfx
 from .scene_replay import ReplayScene  # imported for routing; used by menu
+from .scene_photo import PhotoScene  # imported for hotkey access
 from .gfx import postfx
 from .ui import theme as ui_theme
 

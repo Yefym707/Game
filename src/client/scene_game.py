@@ -26,6 +26,7 @@ from .net_client import NetClient
 from gamecore import board as gboard
 from gamecore import rules, saveio, config as gconfig, achievements
 from gamecore import balance as gbalance, events as gevents, scenario as gscenario, i18n
+from gamecore.i18n import gettext as _
 from replay.recorder import Recorder
 
 try:  # pragma: no cover - optional dependency
@@ -237,6 +238,11 @@ class GameScene(Scene):
             if event.key == pygame.K_ESCAPE:
                 self._open_pause_menu()
                 return
+            if event.key == pygame.K_F10:
+                from .scene_photo import PhotoScene
+
+                self.next_scene = PhotoScene(self.app, self)
+                return
             action = self.input.action_from_key(event.key)
             if action == "pause":
                 self._open_pause_menu()
@@ -366,7 +372,7 @@ class GameScene(Scene):
             self.event_popup.update(dt)
         self.toasts.update(dt)
 
-    def draw(self, surface: pygame.Surface) -> None:
+    def draw(self, surface: pygame.Surface, ui: bool = True) -> None:
         w, h = surface.get_size()
         layers = {layer: pygame.Surface((w, h), pygame.SRCALPHA) for layer in Layer}
         layers[Layer.BACKGROUND].fill((0, 0, 0))
@@ -384,16 +390,19 @@ class GameScene(Scene):
         self._apply_lighting(surface)
         if self.weather:
             self.weather.draw(surface, (self.camera.x, self.camera.y))
-        log_rect = pygame.Rect(w - 200, 0, 200, h)
-        self.log.draw(surface, log_rect)
-        self.status.draw(surface, self.state)
-        if self.event_popup:
-            self.event_popup.draw(surface)
-        if self.paused and self.pause_menu:
-            self.pause_menu.draw(surface)
-        self._draw_minimap(surface)
-        self.toasts.draw(surface)
-        hover_hints.draw(surface)
+        if ui:
+            log_rect = pygame.Rect(w - 200, 0, 200, h)
+            self.log.draw(surface, log_rect)
+            self.status.draw(surface, self.state)
+            if self.event_popup:
+                self.event_popup.draw(surface)
+            if self.paused and self.pause_menu:
+                self.pause_menu.draw(surface)
+            self._draw_minimap(surface)
+            self.toasts.draw(surface)
+            hover_hints.draw(surface)
+            hint = self.app.font.render(_("photo_hint"), True, (255, 255, 255))
+            surface.blit(hint, (8, h - hint.get_height() - 8))
 
     def _build_minimap(self) -> None:
         board = self.state.board
