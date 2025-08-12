@@ -28,6 +28,9 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "telemetry_opt_in": False,
     "telemetry_endpoint": "",
     "telemetry_anonymous_id": "",
+    "camera_follow_speed": 5.0,
+    "camera_zoom_speed": 0.25,
+    "camera_shake_scale": 1.0,
 }
 
 

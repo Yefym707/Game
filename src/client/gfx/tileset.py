@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Mapping
 
 import pygame
+from .layers import Layer
 
 TILE_SIZE = 64
 
@@ -75,6 +76,25 @@ class Tileset:
         else:
             img = tile
         surface.blit(img, pos)
+
+    def draw_map(
+        self,
+        board,
+        camera,
+        layers: Mapping[Layer, pygame.Surface],
+    ) -> None:
+        tile_size = int(TILE_SIZE * camera.zoom)
+        for y, row in enumerate(board.tiles):
+            for x, ch in enumerate(row):
+                tile = self.get(ch)
+                if not tile:
+                    continue
+                if tile_size != TILE_SIZE:
+                    img = pygame.transform.scale(tile, (tile_size, tile_size))
+                else:
+                    img = tile
+                sx, sy = camera.world_to_screen((x * TILE_SIZE, y * TILE_SIZE))
+                layers[Layer.TILE].blit(img, (sx, sy))
 
 
 _icon_cache: Dict[tuple[str, int, tuple[int, int, int]], pygame.Surface] = {}

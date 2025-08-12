@@ -8,6 +8,8 @@ from typing import Any
 from .app import Scene
 from .gfx.tileset import TILE_SIZE, Tileset
 from .gfx import anim
+from .gfx.camera import SmoothCamera
+from .gfx.layers import Layer
 from .ui.widgets import IconLog, StatusPanel, PauseMenu, PopupDialog
 from .input import InputManager
 from . import sfx
@@ -60,9 +62,20 @@ class GameScene(Scene):
             scen = scenarios.get(sid) or next(iter(scenarios.values()))
             gscenario.apply_scenario(self.state, scen)
         self._maybe_event()
-        self.camera_x = 0.0
-        self.camera_y = 0.0
-        self.scale = 1.0
+        board = self.state.board
+        w_px = board.width * TILE_SIZE
+        h_px = board.height * TILE_SIZE
+        self.camera = SmoothCamera(
+            app.screen.get_size(),
+            (w_px, h_px),
+            self.cfg.get("camera_follow_speed", 5.0),
+            self.cfg.get("camera_zoom_speed", 0.25),
+            self.cfg.get("camera_shake_scale", 1.0),
+        )
+        player = self.state.players[self.state.active]
+        self.camera.follow(
+            (player.x * TILE_SIZE + TILE_SIZE / 2, player.y * TILE_SIZE + TILE_SIZE / 2)
+        )
         self.log = IconLog()
         self.status = StatusPanel()
         self._last_log = 0
@@ -167,9 +180,9 @@ class GameScene(Scene):
                 self.paused = False
             return
         if event.type == pygame.MOUSEMOTION:
-            tile_size = int(TILE_SIZE * self.scale)
-            x = int((event.pos[0] + self.camera_x) // tile_size)
-            y = int((event.pos[1] + self.camera_y) // tile_size)
+            wx, wy = self.camera.screen_to_world(event.pos)
+            x = int(wx // TILE_SIZE)
+            y = int(wy // TILE_SIZE)
             self.hover_tile = (x, y)
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
@@ -215,8 +228,7 @@ class GameScene(Scene):
             elif action == "scavenge":
                 self.state.add_log("scavenge")
         elif event.type == pygame.MOUSEWHEEL:
-            self.scale *= 1.25 if event.y > 0 else 0.8
-            self.scale = max(0.75, min(2.0, self.scale))
+            self.camera.zoom_at(event.y, event.pos)
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             self.log.handle_event(event)
             self._handle_click(event.pos)
@@ -247,26 +259,30 @@ class GameScene(Scene):
                     )
                 tile = self.tileset.get(player.symbol)
                 if tile:
-                    size = int(TILE_SIZE * self.scale)
-                    img = pygame.transform.scale(tile, (size, size)) if size != TILE_SIZE else tile
-                    start = (old[0] * size - self.camera_x, old[1] * size - self.camera_y)
-                    end = (player.x * size - self.camera_x, player.y * size - self.camera_y)
+                    size = int(TILE_SIZE * self.camera.zoom)
+                    img = (
+                        pygame.transform.scale(tile, (size, size))
+                        if size != TILE_SIZE
+                        else tile
+                    )
+                    start = self.camera.world_to_screen((old[0] * TILE_SIZE, old[1] * TILE_SIZE))
+                    end = self.camera.world_to_screen((player.x * TILE_SIZE, player.y * TILE_SIZE))
                     self.animations.append(anim.Slide(img, start, end, 0.2))
                 sfx.play_step()
 
     def _handle_click(self, pos) -> None:
-        mx, my = pos
-        tile_size = int(TILE_SIZE * self.scale)
-        x = int((mx + self.camera_x) // tile_size)
-        y = int((my + self.camera_y) // tile_size)
+        wx, wy = self.camera.screen_to_world(pos)
+        x = int(wx // TILE_SIZE)
+        y = int(wy // TILE_SIZE)
         if self.state.board.in_bounds(x, y):
             msg = f"clicked {(x, y)}"
             self.state.add_log(msg)
             sfx.play_hit()
             achievements.on_zombie_kill()
-            sx = x * tile_size - self.camera_x + tile_size // 2
-            sy = y * tile_size - self.camera_y
-            self.animations.append(anim.FloatText("+1", (sx, sy)))
+            sx, sy = self.camera.world_to_screen((x * TILE_SIZE, y * TILE_SIZE))
+            size = int(TILE_SIZE * self.camera.zoom)
+            self.animations.append(anim.FloatText("+1", (sx + size // 2, sy)))
+            self.camera.shake(0.2, 5.0, 25.0)
 
     # update / draw ----------------------------------------------------
     def update(self, dt: float) -> None:
@@ -275,16 +291,11 @@ class GameScene(Scene):
 
             self.next_scene = DemoEndScene(self.app)
             return
-        pressed = pygame.key.get_pressed()
-        speed = 400 * dt
-        if pressed[pygame.K_w]:
-            self.camera_y -= speed
-        if pressed[pygame.K_s]:
-            self.camera_y += speed
-        if pressed[pygame.K_a]:
-            self.camera_x -= speed
-        if pressed[pygame.K_d]:
-            self.camera_x += speed
+        player = self.state.players[self.state.active]
+        self.camera.follow(
+            (player.x * TILE_SIZE + TILE_SIZE / 2, player.y * TILE_SIZE + TILE_SIZE / 2)
+        )
+        self.camera.update(dt)
         if len(self.state.log) > self._last_log:
             for msg in self.state.log[self._last_log :]:
                 self.log.add("·", msg)
@@ -294,33 +305,20 @@ class GameScene(Scene):
                 self.animations.remove(a)
 
     def draw(self, surface: pygame.Surface) -> None:
-        surface.fill((0, 0, 0))
-        tile_size = int(TILE_SIZE * self.scale)
-        board = self.state.board
-        for y, row in enumerate(board.tiles):
-            for x, ch in enumerate(row):
-                tile = self.tileset.get(ch)
-                if tile:
-                    if tile_size != TILE_SIZE:
-                        img = pygame.transform.scale(tile, (tile_size, tile_size))
-                    else:
-                        img = tile
-                    sx = x * tile_size - self.camera_x
-                    sy = y * tile_size - self.camera_y
-                    surface.blit(img, (sx, sy))
-        # highlights
-        self._draw_highlights(surface, tile_size)
-        # entities
+        w, h = surface.get_size()
+        layers = {layer: pygame.Surface((w, h), pygame.SRCALPHA) for layer in Layer}
+        layers[Layer.BACKGROUND].fill((0, 0, 0))
+        self.tileset.draw_map(self.state.board, self.camera, layers)
+        self._draw_highlights(layers[Layer.OVERLAY])
         for p in self.state.players:
-            self._draw_entity(surface, p, tile_size)
+            self._draw_entity(layers[Layer.ENTITY], p)
         for z in self.state.zombies:
-            self._draw_entity(surface, z, tile_size)
-        # animations overlay
+            self._draw_entity(layers[Layer.ENTITY], z)
         for a in self.animations:
             if hasattr(a, "draw"):
-                a.draw(surface)
-        # UI
-        w, h = surface.get_size()
+                a.draw(layers[Layer.OVERLAY])
+        for layer in (Layer.BACKGROUND, Layer.TILE, Layer.ENTITY, Layer.OVERLAY):
+            surface.blit(layers[layer], (0, 0))
         log_rect = pygame.Rect(w - 200, 0, 200, h)
         self.log.draw(surface, log_rect)
         self.status.draw(surface, self.state)
@@ -329,44 +327,39 @@ class GameScene(Scene):
         if self.paused and self.pause_menu:
             self.pause_menu.draw(surface)
 
-    def _draw_entity(self, surface: pygame.Surface, ent, tile_size: int) -> None:
+    def _draw_entity(self, surface: pygame.Surface, ent) -> None:
         tile = self.tileset.get(ent.symbol)
         if tile:
-            if tile_size != TILE_SIZE:
-                img = pygame.transform.scale(tile, (tile_size, tile_size))
-            else:
-                img = tile
-            sx = ent.x * tile_size - self.camera_x
-            sy = ent.y * tile_size - self.camera_y
+            size = int(TILE_SIZE * self.camera.zoom)
+            img = (
+                pygame.transform.scale(tile, (size, size))
+                if size != TILE_SIZE
+                else tile
+            )
+            sx, sy = self.camera.world_to_screen((ent.x * TILE_SIZE, ent.y * TILE_SIZE))
             surface.blit(img, (sx, sy))
 
-    def _draw_highlights(self, surface: pygame.Surface, tile_size: int) -> None:
+    def _draw_highlights(self, surface: pygame.Surface) -> None:
+        tile_size = int(TILE_SIZE * self.camera.zoom)
         player = self.state.players[self.state.active]
         px, py = player.x, player.y
         for dx, dy in rules.DIRECTIONS.values():
             tx, ty = px + dx, py + dy
-            rect = pygame.Rect(
-                tx * tile_size - self.camera_x,
-                ty * tile_size - self.camera_y,
-                tile_size,
-                tile_size,
-            )
+            sx, sy = self.camera.world_to_screen((tx * TILE_SIZE, ty * TILE_SIZE))
+            rect = pygame.Rect(sx, sy, tile_size, tile_size)
             pygame.draw.rect(surface, (0, 255, 0), rect, 1)
         for z in self.state.zombies:
             if abs(z.x - px) + abs(z.y - py) == 1:
-                rect = pygame.Rect(
-                    z.x * tile_size - self.camera_x,
-                    z.y * tile_size - self.camera_y,
-                    tile_size,
-                    tile_size,
-                )
+                sx, sy = self.camera.world_to_screen((z.x * TILE_SIZE, z.y * TILE_SIZE))
+                rect = pygame.Rect(sx, sy, tile_size, tile_size)
                 pygame.draw.rect(surface, (255, 0, 0), rect, 2)
         if self.hover_tile:
             path = self._simple_path((px, py), self.hover_tile)
             for step in path:
-                cx = step[0] * tile_size - self.camera_x + tile_size // 2
-                cy = step[1] * tile_size - self.camera_y + tile_size // 2
-                pygame.draw.circle(surface, (255, 255, 0), (cx, cy), 3)
+                sx, sy = self.camera.world_to_screen((step[0] * TILE_SIZE, step[1] * TILE_SIZE))
+                pygame.draw.circle(
+                    surface, (255, 255, 0), (sx + tile_size // 2, sy + tile_size // 2), 3
+                )
 
     def _simple_path(self, start: tuple[int, int], end: tuple[int, int]) -> list[tuple[int, int]]:
         x, y = start

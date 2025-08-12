@@ -103,4 +103,7 @@
   ,"scenario_medium_goal": "Выжить 10 дней"
   ,"scenario_long_name": "Последний бой"
   ,"scenario_long_goal": "Выжить 20 дней"
+  ,"camera": "Камера"
+  ,"zoom": "Зум"
+  ,"follow_speed": "Скорость следования"
 }

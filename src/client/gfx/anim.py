@@ -8,6 +8,7 @@ complete.
 """
 
 from dataclasses import dataclass
+import math
 import pygame
 
 # ---------------------------------------------------------------------------
@@ -37,6 +38,10 @@ class Tween:
         t = min(self.time / self.duration, 1.0) if self.duration > 0 else 1.0
         self.value = self.start + (self.end - self.start) * t
         return self.time >= self.duration
+
+
+def lerp(a: float, b: float, t: float) -> float:
+    return a + (b - a) * t
 
 
 def ease_in_out(t: float) -> float:
@@ -199,3 +204,22 @@ class FloatText:
         img = self.font.render(self.text, True, self.color)
         img.set_alpha(alpha)
         surface.blit(img, (self.pos[0], y))
+
+
+@dataclass
+class Shake:
+    duration: float
+    amplitude: float
+    freq: float
+    time: float = 0.0
+    offset: tuple[float, float] = (0.0, 0.0)
+
+    def update(self, dt: float) -> bool:
+        self.time += dt
+        decay = 1.0 - min(self.time / self.duration, 1.0)
+        ang = self.time * self.freq * 2.0 * math.pi
+        self.offset = (
+            math.sin(ang) * self.amplitude * decay,
+            math.cos(ang) * self.amplitude * decay,
+        )
+        return self.time >= self.duration
