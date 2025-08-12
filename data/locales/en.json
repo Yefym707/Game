@@ -35,4 +35,7 @@
   ,"ACH_KILL_100_ZOMBIES": "Zombie Slayer"
   ,"ACH_FOUR_PLAYERS": "Full House"
   ,"ACH_WIN_NO_DAMAGE": "Untouchable"
+  ,"save_map": "Save Map"
+  ,"load_map": "Load Map"
+  ,"test_map": "Test Map"
 }

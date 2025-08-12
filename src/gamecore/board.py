@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
+import json
 from typing import Dict, List, Set, Tuple, Iterable
 
 from . import rules, entities
@@ -61,6 +63,22 @@ class Board:
             noise[(x, y)] = v
         visible = {tuple(v) for v in data.get("visible", [])}
         return cls(data["width"], data["height"], data["tiles"], noise, visible)
+
+
+def export_map(board: Board, path: str | Path) -> None:
+    """Write ``board`` layout to ``path`` in JSON format."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as fh:
+        json.dump(board.to_dict(), fh)
+
+
+def import_map(path: str | Path) -> Board:
+    """Load a board layout from ``path``."""
+    path = Path(path)
+    with path.open("r", encoding="utf-8") as fh:
+        data = json.load(fh)
+    return Board.from_dict(data)
 
 
 @dataclass

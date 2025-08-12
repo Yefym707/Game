@@ -10,6 +10,9 @@ from integrations import steam
 
 SAVE_VERSION = 2
 
+# Directory where user-created maps are stored
+MOD_MAPS_DIR = Path("mods") / "maps"
+
 
 def save_game(state: board.GameState, path: str | Path) -> None:
     """Persist ``state`` to ``path``.
@@ -67,3 +70,17 @@ def load_game(path: str | Path) -> board.GameState:
     mode = rules.GameMode[data.get("mode", "SOLO")]
     players = [entities.Player.from_dict(p) for p in data.get("players", [])]
     return board.GameState.from_dict(data["state"], mode=mode, players=players)
+
+
+def export_map(b: board.Board, name: str) -> Path:
+    """Export ``b`` to ``mods/maps`` using ``name`` as filename."""
+    MOD_MAPS_DIR.mkdir(parents=True, exist_ok=True)
+    path = MOD_MAPS_DIR / f"{name}.json"
+    board.export_map(b, path)
+    return path
+
+
+def import_map(name: str) -> board.Board:
+    """Load a map previously exported with :func:`export_map`."""
+    path = MOD_MAPS_DIR / f"{name}.json"
+    return board.import_map(path)

@@ -198,6 +198,48 @@ class StatusPanel:
         surface.blit(img2, (5, 30))
 
 
+class TilePalette:
+    """Horizontal list of selectable tiles for the map editor."""
+
+    def __init__(self, tiles: list[str], rect: pygame.Rect, cell: int = 32) -> None:
+        self.tiles = tiles
+        self.rect = pygame.Rect(rect)
+        self.cell = cell
+        self.selected = tiles[0] if tiles else "."
+        self.font = pygame.font.SysFont(None, 18)
+
+    def handle_event(self, event: pygame.event.Event) -> None:
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if self.rect.collidepoint(event.pos):
+                idx = (event.pos[0] - self.rect.x) // self.cell
+                if 0 <= idx < len(self.tiles):
+                    self.selected = self.tiles[idx]
+
+    def draw(self, surface: pygame.Surface) -> None:
+        for i, tile in enumerate(self.tiles):
+            r = pygame.Rect(self.rect.x + i * self.cell, self.rect.y, self.cell, self.cell)
+            color = (120, 120, 120) if tile == self.selected else (80, 80, 80)
+            pygame.draw.rect(surface, color, r)
+            pygame.draw.rect(surface, (255, 255, 255), r, 1)
+            img = self.font.render(tile, True, (0, 0, 0))
+            surface.blit(img, img.get_rect(center=r.center))
+
+
+class Toolbar:
+    """Simple container for buttons used in the sandbox editor."""
+
+    def __init__(self, buttons: list[Button]) -> None:
+        self.buttons = buttons
+
+    def handle_event(self, event: pygame.event.Event) -> None:
+        for btn in self.buttons:
+            btn.handle_event(event)
+
+    def draw(self, surface: pygame.Surface) -> None:
+        for btn in self.buttons:
+            btn.draw(surface)
+
+
 class NameField:
     """Very small text input widget for player names."""
 
