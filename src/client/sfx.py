@@ -24,19 +24,21 @@ import pygame
 
 _SAMPLE_RATE = 44100
 _INITIALISED = False
+_AVAILABLE = False
 
 
 def _ensure_init() -> None:
     """Initialise the pygame mixer if possible."""
 
-    global _INITIALISED
+    global _INITIALISED, _AVAILABLE
     if _INITIALISED:
         return
+    _INITIALISED = True
     try:  # pragma: no cover - audio may be unavailable
         pygame.mixer.init(frequency=_SAMPLE_RATE, size=-16, channels=1)
+        _AVAILABLE = True
     except Exception:
-        return
-    _INITIALISED = True
+        _AVAILABLE = False
 
 
 # volume handling --------------------------------------------------------------
@@ -126,7 +128,7 @@ def _play(channel: str, waveform: str, freq: float, ms: int, adsr: Tuple[int, in
     """Generate and play a sound respecting channel volume."""
 
     _ensure_init()
-    if not pygame.mixer.get_init():
+    if not _AVAILABLE or not pygame.mixer.get_init():
         return
     try:
         snd = pygame.sndarray.make_sound(generate_buffer(waveform, freq, ms, adsr))

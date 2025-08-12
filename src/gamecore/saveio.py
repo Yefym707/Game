@@ -43,12 +43,18 @@ def save_game(state: board.GameState, path: str | Path) -> None:
             payload = text.encode("utf-8")
         steam.save(path.name, payload)
     else:
-        if path.suffix == ".gz":
-            with gzip.open(path, "wt", encoding="utf-8") as fh:
-                fh.write(text)
-        else:
-            with path.open("w", encoding="utf-8") as fh:
-                fh.write(text)
+        tmp = path.with_suffix(path.suffix + ".tmp")
+        try:
+            if path.suffix == ".gz":
+                with gzip.open(tmp, "wt", encoding="utf-8") as fh:
+                    fh.write(text)
+            else:
+                with tmp.open("w", encoding="utf-8") as fh:
+                    fh.write(text)
+            tmp.replace(path)
+        finally:
+            if tmp.exists():
+                tmp.unlink(missing_ok=True)
 
 
 def load_game(path: str | Path) -> board.GameState:

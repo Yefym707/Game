@@ -160,6 +160,13 @@ each have individual volume controls plus a global master level.  An ADSR
 envelope provides gentle fades so tones start and end smoothly without clicks.
 Volumes can be adjusted in the **Settings** menu and are applied immediately.
 
+## Stability & Debug
+
+The client logs fatal errors to ``~/.oko_zombie/logs/app.log``.  The file is
+rotated when it grows beyond ~256 KB.  Run the game with Python's ``-O`` flag to
+disable additional validation; in normal mode invariant checks may raise
+exceptions to help diagnose corrupt saves or illegal moves.
+
 ## UX polish & Difficulty Presets
 
 The client features small touches to make the board feel alive: movement and

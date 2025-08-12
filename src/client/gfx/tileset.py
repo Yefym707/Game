@@ -8,6 +8,7 @@ import pygame
 from .layers import Layer
 
 TILE_SIZE = 64
+_GENERATED = False
 
 
 class Tileset:
@@ -22,9 +23,11 @@ class Tileset:
 
     # internal ---------------------------------------------------------
     def _load(self, root: Path) -> None:
+        global _GENERATED
         pngs = list(self.folder.glob("*.png"))
-        if not pngs:
+        if not pngs and not _GENERATED:
             self._generate_from_json(root)
+            _GENERATED = True
             pngs = list(self.folder.glob("*.png"))
         for path in pngs:
             self.tiles[path.stem] = pygame.image.load(path.as_posix()).convert_alpha()
