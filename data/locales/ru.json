@@ -110,4 +110,7 @@
   ,"time_dusk": "Сумерки"
   ,"time_night": "Ночь"
   ,"time_dawn": "Рассвет"
+  ,"weather_rain": "Дождь"
+  ,"weather_snow": "Снег"
+  ,"weather_fog": "Туман"
 }

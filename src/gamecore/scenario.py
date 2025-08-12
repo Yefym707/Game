@@ -20,6 +20,9 @@ class Scenario:
     goals: List[str]
     starting_items: List[str]
     difficulty: str
+    weather: str | None = None
+    wind: tuple[float, float] = (0.0, 0.0)
+    weather_intensity: float = 1.0
 
 
 def load_scenarios(path: str | Path = DATA_PATH) -> Dict[str, Scenario]:
@@ -37,6 +40,9 @@ def load_scenarios(path: str | Path = DATA_PATH) -> Dict[str, Scenario]:
             item.get("goals", []),
             item.get("starting_items", []),
             item.get("difficulty", "normal"),
+            item.get("weather"),
+            tuple(item.get("wind", [0.0, 0.0])),
+            float(item.get("weather_intensity", 1.0)),
         )
     return res
 
@@ -69,3 +75,6 @@ def apply_scenario(state, scen: Scenario) -> None:
         p.inventory.extend(scen.starting_items)
     diff = rules.Difficulty[scen.difficulty.upper()]
     rules.set_difficulty(diff)
+    state.weather = scen.weather
+    state.wind = scen.wind
+    state.weather_intensity = scen.weather_intensity

@@ -11,6 +11,7 @@ from .gfx import anim
 from .gfx.camera import SmoothCamera
 from .gfx.layers import Layer
 from .gfx.lighting import LightMap
+from .gfx import weather as gweather
 from .ui.widgets import IconLog, StatusPanel, PauseMenu, PopupDialog
 from .input import InputManager
 from . import sfx
@@ -57,6 +58,7 @@ class GameScene(Scene):
         rules.set_seed(0)
         self.balance = gbalance.load_balance()
         self.events = gevents.load_events()
+        scen = None
         if new_game:
             scenarios = gscenario.load_scenarios()
             sid = self.cfg.get("scenario", "short")
@@ -94,6 +96,26 @@ class GameScene(Scene):
             self.recorder.checkpoint(self.state)
         self.lightmap = LightMap(board.width, board.height)
         self.time_phase = rules.current_time_of_day()
+        # weather ------------------------------------------------------
+        self.weather = None
+        if self.cfg.get("weather_enabled", True):
+            wtype = getattr(self.state, "weather", None)
+            intensity = getattr(
+                self.state, "weather_intensity", self.cfg.get("weather_intensity", 1.0)
+            )
+            wind = getattr(self.state, "wind", (0.0, 0.0))
+            if not wtype:
+                wtype = rules.RNG.choice(["rain", "snow", "fog"])
+            size = self.app.screen.get_size()
+            if wtype == "rain":
+                self.weather = gweather.Rain(size, intensity, wind)
+            elif wtype == "snow":
+                self.weather = gweather.Snow(size, intensity, wind)
+            elif wtype == "fog":
+                self.weather = gweather.Fog(size, intensity, wind)
+            self.state.weather = wtype
+            self.state.weather_intensity = intensity
+            self.state.wind = wind
 
     def _show_error(self, msg: str) -> None:
         """Display an error message without crashing."""
@@ -312,6 +334,8 @@ class GameScene(Scene):
             key = getattr(i18n, phase.name, None)
             if key:
                 self.log.add("·", i18n.gettext(key))
+        if self.weather:
+            self.weather.update(dt)
 
     def draw(self, surface: pygame.Surface) -> None:
         w, h = surface.get_size()
@@ -329,6 +353,8 @@ class GameScene(Scene):
         for layer in (Layer.BACKGROUND, Layer.TILE, Layer.ENTITY, Layer.OVERLAY):
             surface.blit(layers[layer], (0, 0))
         self._apply_lighting(surface)
+        if self.weather:
+            self.weather.draw(surface, (self.camera.x, self.camera.y))
         log_rect = pygame.Rect(w - 200, 0, 200, h)
         self.log.draw(surface, log_rect)
         self.status.draw(surface, self.state)
