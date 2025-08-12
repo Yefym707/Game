@@ -8,6 +8,20 @@ BOARD_SIZE = 10
 STARTING_ZOMBIES = 3
 MAX_TURNS = 100
 
+# Demo configuration -----------------------------------------------------
+
+# Flag toggled when the game runs in limited demo mode.  Set by the client
+# when ``--demo`` is passed on the command line.
+DEMO_MODE = False
+
+# Maximum number of in-game days/turns allowed in the demo.
+DEMO_MAX_DAYS = 3
+
+# The demo ships with a single map and uses a reduced loot multiplier.  The
+# actual systems consuming these values are free to interpret them as needed.
+DEMO_MAX_MAPS = 1
+DEMO_LOOT_FACTOR = 0.5
+
 
 class GameMode(Enum):
     """Supported game modes."""

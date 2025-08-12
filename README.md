@@ -18,6 +18,18 @@ python -m scripts.run_cli --seed 123
 python -m scripts.run_gui
 ```
 
+## Demo Mode
+
+A limited demo version is available. Launch it with the ``--demo`` flag:
+
+```bash
+python -m scripts.run_gui --demo
+```
+
+The demo restricts the campaign to three in-game days, a single map and
+reduced loot drops. When the limit is reached an end screen offers a shortcut
+to purchase the full version via the Steam overlay.
+
 ### Main Menu & Navigation
 
 The GUI starts in a lightweight main menu rendered entirely with pygame. The

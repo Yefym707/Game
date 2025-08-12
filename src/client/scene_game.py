@@ -151,6 +151,11 @@ class GameScene(Scene):
 
     # update / draw ----------------------------------------------------
     def update(self, dt: float) -> None:
+        if rules.DEMO_MODE and self.state.turn >= rules.DEMO_MAX_DAYS:
+            from .scene_demo_end import DemoEndScene
+
+            self.next_scene = DemoEndScene(self.app)
+            return
         pressed = pygame.key.get_pressed()
         speed = 400 * dt
         if pressed[pygame.K_w]:

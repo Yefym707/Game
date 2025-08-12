@@ -4,7 +4,7 @@ from __future__ import annotations
 import pygame
 
 from gamecore.i18n import gettext as _
-from gamecore import achievements
+from gamecore import achievements, rules
 from .app import Scene
 from .ui.widgets import Button, Card, NameField, ColorPicker
 from .sfx import set_volume
@@ -45,6 +45,13 @@ class MenuScene(Scene):
             _("SETTINGS"), pygame.Rect(w // 2 - 60, h - 80, 120, 40), self._settings
         )
         self.focusables = self.cards + [self.continue_btn, self.settings_btn]
+        if rules.DEMO_MODE:
+            self.demo_btn = Button(
+                _("PLAY_DEMO"),
+                pygame.Rect(w // 2 - 60, cy + card_h + 90, 120, 40),
+                self._start_demo,
+            )
+            self.focusables.append(self.demo_btn)
         self.focus_idx = 0
         self.focusables[0].focus = True
         self.bg_time = 0.0
@@ -60,6 +67,13 @@ class MenuScene(Scene):
 
             self.next_scene = OnlineScene(self.app)
             return
+        from .scene_game import GameScene
+
+        self.next_scene = GameScene(self.app, new_game=True)
+
+    def _start_demo(self) -> None:
+        """Launch a new demo game."""
+
         from .scene_game import GameScene
 
         self.next_scene = GameScene(self.app, new_game=True)
@@ -110,6 +124,8 @@ class MenuScene(Scene):
             card.draw(surface)
         self.continue_btn.draw(surface)
         self.settings_btn.draw(surface)
+        if rules.DEMO_MODE:
+            self.demo_btn.draw(surface)
         for i, (aid, unlocked) in enumerate(achievements.list_achievements()):
             txt = f"{aid}: {'✔' if unlocked else '✘'}"
             img = self.ach_font.render(txt, True, (255, 255, 255))

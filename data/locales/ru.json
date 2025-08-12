@@ -38,4 +38,8 @@
   ,"save_map": "Сохранить карту"
   ,"load_map": "Загрузить карту"
   ,"test_map": "Тест карты"
+  ,"PLAY_DEMO": "Играть демо"
+  ,"DEMO_COMPLETE": "Демо завершено"
+  ,"BUY_FULL": "Купить полную версию"
+  ,"steam_sdk_missing": "Steam SDK не найден"
 }
