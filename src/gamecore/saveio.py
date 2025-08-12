@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from . import board, rules, entities
+from integrations import steam
 
 SAVE_VERSION = 2
 
@@ -29,17 +30,33 @@ def save_game(state: board.GameState, path: str | Path) -> None:
         "state": state.to_dict(),
     }
     text = json.dumps(data)
-    if path.suffix == ".gz":
-        with gzip.open(path, "wt", encoding="utf-8") as fh:
-            fh.write(text)
+    if steam.cloud_saves:
+        payload: bytes
+        if path.suffix == ".gz":
+            payload = gzip.compress(text.encode("utf-8"))
+        else:
+            payload = text.encode("utf-8")
+        steam.save(path.name, payload)
     else:
-        with path.open("w", encoding="utf-8") as fh:
-            fh.write(text)
+        if path.suffix == ".gz":
+            with gzip.open(path, "wt", encoding="utf-8") as fh:
+                fh.write(text)
+        else:
+            with path.open("w", encoding="utf-8") as fh:
+                fh.write(text)
 
 
 def load_game(path: str | Path) -> board.GameState:
     path = Path(path)
-    if path.suffix == ".gz":
+    if steam.cloud_saves:
+        raw = steam.load(path.name)
+        if raw is None:
+            raise FileNotFoundError(path.name)
+        if path.suffix == ".gz":
+            data = json.loads(gzip.decompress(raw).decode("utf-8"))
+        else:
+            data = json.loads(raw.decode("utf-8"))
+    elif path.suffix == ".gz":
         with gzip.open(path, "rt", encoding="utf-8") as fh:
             data = json.load(fh)
     else:

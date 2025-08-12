@@ -31,4 +31,8 @@
   "START": "Старт",
   "PING": "Пинг",
   "DISCONNECTED": "Отключен"
+  ,"ACH_WIN_CAMPAIGN": "Победа в кампании"
+  ,"ACH_KILL_100_ZOMBIES": "100 зомби уничтожено"
+  ,"ACH_FOUR_PLAYERS": "Игра с 4 игроками"
+  ,"ACH_WIN_NO_DAMAGE": "Победа без урона"
 }

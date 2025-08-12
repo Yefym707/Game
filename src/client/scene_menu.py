@@ -4,6 +4,7 @@ from __future__ import annotations
 import pygame
 
 from gamecore.i18n import gettext as _
+from gamecore import achievements
 from .app import Scene
 from .ui.widgets import Button, Card, NameField, ColorPicker
 from .sfx import set_volume
@@ -47,6 +48,7 @@ class MenuScene(Scene):
         self.focus_idx = 0
         self.focusables[0].focus = True
         self.bg_time = 0.0
+        self.ach_font = pygame.font.Font(None, 20)
 
     # callbacks ---------------------------------------------------------
     def _start_mode(self, mode: str) -> None:
@@ -108,6 +110,10 @@ class MenuScene(Scene):
             card.draw(surface)
         self.continue_btn.draw(surface)
         self.settings_btn.draw(surface)
+        for i, (aid, unlocked) in enumerate(achievements.list_achievements()):
+            txt = f"{aid}: {'✔' if unlocked else '✘'}"
+            img = self.ach_font.render(txt, True, (255, 255, 255))
+            surface.blit(img, (10, 10 + i * 20))
 
 
 class LocalCoopScene(Scene):
