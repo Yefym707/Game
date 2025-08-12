@@ -103,4 +103,7 @@
   ,"scenario_medium_goal": "Survive 10 days"
   ,"scenario_long_name": "Last Stand"
   ,"scenario_long_goal": "Survive 20 days"
+  ,"camera": "Camera"
+  ,"zoom": "Zoom"
+  ,"follow_speed": "Follow Speed"
 }

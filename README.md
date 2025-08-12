@@ -133,6 +133,14 @@ Before starting a match the player may select between **Easy**, **Normal** and
 and spawn rates. Restarts are gated behind a configuration flag and reuse the
 original random seed for deterministic sessions.
 
+## Cinematic Camera & Layers
+
+A smooth camera follows the active player with configurable inertia and bounds.
+Zooming centers on the mouse cursor and can range between 0.75× and 2×. Combat
+events trigger subtle screen shake which stacks across impacts. Rendering is
+split into ordered layers – background, tiles, entities and overlays – before
+the UI is composited on top.
+
 ## Telemetry & Crash Reports (Opt-in)
 
 The game can optionally send anonymous telemetry events and crash reports to a
