@@ -150,6 +150,13 @@ The lightmap is blended multiplicatively over the scene and tinted depending on
 the current time of day. A simple cycle transitions through day, dusk, night
 and dawn adjusting both color temperature and ambient brightness.
 
+## Weather FX
+
+Basic weather effects add atmosphere without relying on external assets.  Rain
+and snow use a small particle system influenced by a configurable wind vector
+while fog draws a pulsating noise based overlay.  Scenarios or configuration
+options can enable or disable weather and adjust its default intensity.
+
 ## Telemetry & Crash Reports (Opt-in)
 
 The game can optionally send anonymous telemetry events and crash reports to a

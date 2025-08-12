@@ -31,6 +31,8 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "camera_follow_speed": 5.0,
     "camera_zoom_speed": 0.25,
     "camera_shake_scale": 1.0,
+    "weather_enabled": True,
+    "weather_intensity": 1.0,
 }
 
 

@@ -110,4 +110,7 @@
   ,"time_dusk": "Dusk"
   ,"time_night": "Night"
   ,"time_dawn": "Dawn"
+  ,"weather_rain": "Rain"
+  ,"weather_snow": "Snow"
+  ,"weather_fog": "Fog"
 }
