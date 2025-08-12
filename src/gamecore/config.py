@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import json
 import uuid
+import time
 from pathlib import Path
 from typing import Any, Dict
 
 CONFIG_DIR = Path.home() / ".oko_zombie"
 SAVE_DIR = CONFIG_DIR / "saves"
 REPLAY_DIR = CONFIG_DIR / "replays"
+SCREENSHOT_DIR = CONFIG_DIR / "screenshots"
 CONFIG_FILE = CONFIG_DIR / "config.json"
 
 DEFAULT_CONFIG: Dict[str, Any] = {
@@ -49,6 +51,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
 def _ensure_dirs() -> None:
     SAVE_DIR.mkdir(parents=True, exist_ok=True)
     REPLAY_DIR.mkdir(parents=True, exist_ok=True)
+    SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def load_config() -> Dict[str, Any]:
@@ -101,3 +104,21 @@ def replay_dir() -> Path:
 
     _ensure_dirs()
     return REPLAY_DIR
+
+
+def screenshot_dir() -> Path:
+    """Directory containing captured screenshots."""
+
+    _ensure_dirs()
+    return SCREENSHOT_DIR
+
+
+def screenshot_path(seed: int) -> Path:
+    """Return a unique path for a screenshot.
+
+    Filenames are composed of the current date/time and the supplied ``seed``
+    to make runs with different seeds easier to identify.
+    """
+
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    return screenshot_dir() / f"{timestamp}_{seed}.png"

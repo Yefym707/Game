@@ -14,6 +14,8 @@ MAX_TURNS = 100
 # Flag toggled when the game runs in limited demo mode.  Set by the client
 # when ``--demo`` is passed on the command line.
 DEMO_MODE = False
+# Optional watermark text used on screenshots when in demo mode.
+DEMO_WATERMARK = "DEMO"
 
 # Maximum number of in-game days/turns allowed in the demo.
 DEMO_MAX_DAYS = 3

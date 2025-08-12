@@ -178,6 +178,15 @@ settings menu and persist via ``config.json``. A configurable FPS cap limits the
 main loop and an optional overlay displays frame time, draw calls and the time
 spent on post-processing.
 
+## Photo Mode & Screenshots
+
+Press **F10** in-game to pause time and enter a free camera mode. The mouse and
+W/A/S/D keys pan the view while **H** toggles the UI overlay. Capture the
+current frame with **F12** – images are stored as PNG files under
+`~/.oko_zombie/screenshots/` and include the session's seed in their filename.
+When running the demo build a semi-transparent watermark is added
+automatically.
+
 ## Telemetry & Crash Reports (Opt-in)
 
 The game can optionally send anonymous telemetry events and crash reports to a
