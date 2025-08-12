@@ -71,10 +71,21 @@ class InputManager:
 
     def __init__(self, cfg: Dict[str, object]):
         self.cfg = cfg
-        saved: Dict[str, int] = cfg.get("bindings", {}) if isinstance(cfg.get("bindings"), dict) else {}
-        self.bindings: Dict[str, int] = {}
-        for action, key in DEFAULT_BINDINGS.items():
-            self.bindings[action] = int(saved.get(action, key))
+        saved = cfg.get("bindings", {})
+        self.profiles: Dict[int, Dict[str, int]] = {}
+        if isinstance(saved, dict) and saved and all(k.isdigit() for k in saved.keys()):
+            for pid, binds in saved.items():
+                self.profiles[int(pid)] = {
+                    action: int(binds.get(action, key))
+                    for action, key in DEFAULT_BINDINGS.items()
+                }
+        else:
+            self.profiles[0] = {
+                action: int(saved.get(action, key))
+                for action, key in DEFAULT_BINDINGS.items()
+            }
+        self.active = 0
+        self.bindings = self.profiles[self.active]
         # optional gamepad
         self.gamepad: Optional[pygame.joystick.Joystick] = None
         try:
@@ -91,13 +102,15 @@ class InputManager:
         """Write current bindings into ``cfg`` (default: stored cfg)."""
 
         target = cfg if cfg is not None else self.cfg
-        target["bindings"] = {action: int(key) for action, key in self.bindings.items()}
+        target["bindings"] = {str(pid): binds for pid, binds in self.profiles.items()}
 
     def reset_defaults(self) -> None:
         """Reset all bindings to :data:`DEFAULT_BINDINGS`."""
 
-        for action, key in DEFAULT_BINDINGS.items():
-            self.bindings[action] = key
+        for pid in self.profiles:
+            for action, key in DEFAULT_BINDINGS.items():
+                self.profiles[pid][action] = key
+        self.bindings = self.profiles[self.active]
 
     # ------------------------------------------------------------------
     # basic query interface
@@ -115,6 +128,17 @@ class InputManager:
             if k == key:
                 return action
         return None
+
+    # ------------------------------------------------------------------
+    # profile switching -------------------------------------------------
+    # ------------------------------------------------------------------
+    def set_profile(self, pid: int) -> None:
+        """Switch to bindings for ``pid``."""
+
+        if pid not in self.profiles:
+            self.profiles[pid] = {action: key for action, key in DEFAULT_BINDINGS.items()}
+        self.active = pid
+        self.bindings = self.profiles[pid]
 
 
 class InputState:

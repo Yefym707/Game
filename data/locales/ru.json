@@ -4,7 +4,11 @@
   "menu_settings": "Настройки",
   "menu_quit": "Выход",
   "action_prompt": "действие (w/a/s/d — движение, q — выход): ",
-  "status_turn": "Ход {turn}  Игрок {x},{y}",
+  "status_turn": "Ход {turn}",
+  "active_player": "Активный: {name}",
+  "num_players": "Игроки",
+  "player_name": "Имя",
+  "player_color": "Цвет",
   "window_title": "Gamecore GUI",
   "apply": "Применить",
   "press_key": "Нажмите клавишу...",
@@ -18,6 +22,6 @@
   "LOCAL_COOP": "Локальный кооп",
   "ONLINE": "Онлайн",
   "SOLO_DESC": "Одиночный режим",
-  "LOCAL_COOP_DESC": "Два игрока за одним устройством",
+  "LOCAL_COOP_DESC": "2-4 игрока за одним устройством",
   "ONLINE_DESC": "Игра по сети"
 }

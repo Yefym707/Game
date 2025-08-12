@@ -5,7 +5,7 @@ import pygame
 
 from gamecore.i18n import gettext as _
 from .app import Scene
-from .ui.widgets import Button, Card
+from .ui.widgets import Button, Card, NameField, ColorPicker
 from .sfx import set_volume
 
 
@@ -50,6 +50,9 @@ class MenuScene(Scene):
 
     # callbacks ---------------------------------------------------------
     def _start_mode(self, mode: str) -> None:
+        if mode == "local":
+            self.next_scene = LocalCoopScene(self.app)
+            return
         from .scene_game import GameScene
 
         self.next_scene = GameScene(self.app, new_game=True)
@@ -100,3 +103,65 @@ class MenuScene(Scene):
             card.draw(surface)
         self.continue_btn.draw(surface)
         self.settings_btn.draw(surface)
+
+
+class LocalCoopScene(Scene):
+    """Simple setup screen for local co-op."""
+
+    def __init__(self, app) -> None:
+        super().__init__(app)
+        self.player_data = [{"name": "P1", "color": "red"}, {"name": "P2", "color": "blue"}]
+        w, h = app.screen.get_size()
+        self.start_btn = Button(_("PLAY"), pygame.Rect(w // 2 - 60, h - 60, 120, 40), self._start)
+        self.inc_btn = Button("+", pygame.Rect(50, 50, 30, 30), self._inc)
+        self.dec_btn = Button("-", pygame.Rect(90, 50, 30, 30), self._dec)
+        self.fields: list[NameField] = []
+        self.pickers: list[ColorPicker] = []
+        self._rebuild_widgets()
+
+    def _rebuild_widgets(self) -> None:
+        self.fields.clear()
+        self.pickers.clear()
+        for i, pdata in enumerate(self.player_data):
+            y = 100 + i * 50
+            nf = NameField(pygame.Rect(100, y, 120, 30), pdata["name"], lambda t, i=i: self._set_name(i, t))
+            cp = ColorPicker(pygame.Rect(230, y, 80, 30), pdata["color"], lambda c, i=i: self._set_color(i, c))
+            self.fields.append(nf)
+            self.pickers.append(cp)
+
+    def _set_name(self, idx: int, text: str) -> None:
+        self.player_data[idx]["name"] = text
+
+    def _set_color(self, idx: int, color: str) -> None:
+        self.player_data[idx]["color"] = color
+
+    def _inc(self) -> None:
+        if len(self.player_data) < 4:
+            self.player_data.append({"name": f"P{len(self.player_data)+1}", "color": "red"})
+            self._rebuild_widgets()
+
+    def _dec(self) -> None:
+        if len(self.player_data) > 2:
+            self.player_data.pop()
+            self._rebuild_widgets()
+
+    def handle_event(self, event: pygame.event.Event) -> None:
+        for w in self.fields + self.pickers + [self.start_btn, self.inc_btn, self.dec_btn]:
+            w.handle_event(event)
+
+    def update(self, dt: float) -> None:  # pragma: no cover - trivial
+        pass
+
+    def draw(self, surface: pygame.Surface) -> None:
+        surface.fill((0, 0, 0))
+        for w in self.fields + self.pickers:
+            w.draw(surface)
+        self.start_btn.draw(surface)
+        self.inc_btn.draw(surface)
+        self.dec_btn.draw(surface)
+
+    def _start(self) -> None:
+        self.app.cfg["players"] = list(self.player_data)
+        from .scene_game import GameScene
+
+        self.next_scene = GameScene(self.app, new_game=True)

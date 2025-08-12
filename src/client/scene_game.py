@@ -29,7 +29,14 @@ class GameScene(Scene):
         self.quick_path = gconfig.quicksave_path()
         self.autosave_path = gconfig.autosave_path()
         if new_game:
-            self.state = gboard.create_game()
+            pconf = self.cfg.get("players")
+            count = len(pconf) if isinstance(pconf, list) and pconf else 1
+            mode = rules.GameMode.LOCAL_COOP if count > 1 else rules.GameMode.SOLO
+            self.state = gboard.create_game(players=count, mode=mode)
+            if isinstance(pconf, list):
+                for pdata, player in zip(pconf, self.state.players):
+                    player.name = pdata.get("name", player.name)
+                    player.color = pdata.get("color", player.color)
         else:
             try:
                 self.state = saveio.load_game(self.autosave_path)
@@ -44,6 +51,7 @@ class GameScene(Scene):
         self.status = StatusPanel()
         self._last_log = 0
         self.sfx = SFX()
+        self.input.set_profile(self.state.active)
 
     def _show_error(self, msg: str) -> None:
         """Display an error message without crashing."""
@@ -74,6 +82,7 @@ class GameScene(Scene):
                 self.next_scene = MenuScene(self.app)
             elif action == "end_turn":
                 gboard.end_turn(self.state)
+                self.input.set_profile(self.state.active)
                 try:
                     saveio.save_game(self.state, self.autosave_path)
                 except Exception as exc:
@@ -88,6 +97,7 @@ class GameScene(Scene):
                     self.state = saveio.load_game(self.quick_path)
                     self.log.lines.clear()
                     self._last_log = 0
+                    self.input.set_profile(self.state.active)
                 except Exception as exc:
                     self._show_error(str(exc))
             elif action in ("move_up", "move_down", "move_left", "move_right"):
@@ -155,7 +165,8 @@ class GameScene(Scene):
                     sy = y * tile_size - self.camera_y
                     surface.blit(img, (sx, sy))
         # entities
-        self._draw_entity(surface, self.state.player, tile_size)
+        for p in self.state.players:
+            self._draw_entity(surface, p, tile_size)
         for z in self.state.zombies:
             self._draw_entity(surface, z, tile_size)
         # UI
