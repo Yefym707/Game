@@ -48,6 +48,10 @@ def on_game_start(players: int) -> None:
 def on_zombie_kill() -> None:
     global _kill_count
     _kill_count += 1
+    try:
+        _steam.indicate_progress(ACH_KILL_100, _kill_count / 100.0)
+    except AttributeError:
+        pass
     if _kill_count >= 100:
         _steam.set_achievement(ACH_KILL_100)
         _steam.store_stats()

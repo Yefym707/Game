@@ -5,6 +5,7 @@ import pygame
 
 from gamecore.i18n import gettext as _
 from gamecore import achievements, rules
+from integrations import steam
 from .app import Scene
 from .ui.widgets import Button, Card, NameField, ColorPicker
 from .sfx import set_volume
@@ -61,10 +62,13 @@ class MenuScene(Scene):
         self.settings_btn = Button(
             _("SETTINGS"), pygame.Rect(w // 2 - 60, h - 80, 120, 40), self._settings
         )
+        self.ach_btn = Button(
+            _("ACHIEVEMENTS"), pygame.Rect(20, h - 80, 120, 40), self._toggle_ach
+        )
         self.focusables = (
             [self.scenario_btn, self.diff_btn]
             + self.cards
-            + [self.continue_btn, self.settings_btn]
+            + [self.continue_btn, self.settings_btn, self.ach_btn]
         )
         if rules.DEMO_MODE:
             self.demo_btn = Button(
@@ -77,6 +81,7 @@ class MenuScene(Scene):
         self.focusables[0].focus = True
         self.bg_time = 0.0
         self.ach_font = pygame.font.Font(None, 20)
+        self.show_achievements = False
 
     # callbacks ---------------------------------------------------------
     def _start_mode(self, mode: str) -> None:
@@ -112,6 +117,9 @@ class MenuScene(Scene):
         from .scene_settings import SettingsScene
 
         self.next_scene = SettingsScene(self.app)
+
+    def _toggle_ach(self) -> None:
+        self.show_achievements = not self.show_achievements
 
     def _next_scenario(self) -> None:
         """Cycle through available scenarios."""
@@ -167,13 +175,24 @@ class MenuScene(Scene):
             card.draw(surface)
         self.continue_btn.draw(surface)
         self.settings_btn.draw(surface)
+        self.ach_btn.draw(surface)
         if rules.DEMO_MODE:
             self.demo_btn.draw(surface)
-        for i, (aid, unlocked, prog) in enumerate(achievements.list_achievements()):
-            status = "✔" if unlocked else f"{int(prog * 100)}%"
-            txt = f"{aid}: {status}"
-            img = self.ach_font.render(txt, True, (255, 255, 255))
-            surface.blit(img, (10, 10 + i * 20))
+        if self.show_achievements:
+            panel = pygame.Rect(40, 100, 300, 160)
+            pygame.draw.rect(surface, (0, 0, 0), panel)
+            pygame.draw.rect(surface, (255, 255, 255), panel, 1)
+            for i, (aid, unlocked, prog) in enumerate(achievements.list_achievements()):
+                status = "✔" if unlocked else f"{int(prog * 100)}%"
+                txt = f"{_(aid)}: {status}"
+                img = self.ach_font.render(txt, True, (255, 255, 255))
+                surface.blit(img, (panel.x + 10, panel.y + 10 + i * 20))
+        overlay_txt = f"{_('OVERLAY')}: {'✔' if steam.is_overlay_active() else '✖'}"
+        cloud_txt = f"{_('CLOUD')}: {'✔' if steam.is_available() else '✖'}"
+        ov_img = self.ach_font.render(overlay_txt, True, (255, 255, 255))
+        cl_img = self.ach_font.render(cloud_txt, True, (255, 255, 255))
+        surface.blit(ov_img, (10, 10))
+        surface.blit(cl_img, (10, 30))
 
 
 class LocalCoopScene(Scene):

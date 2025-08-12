@@ -124,6 +124,9 @@
   ,"show_minimap": "Мини-карта"
   ,"minimap_size": "Размер мини-карты"
   ,"photo_hint": "F10 — Фото режим"
-  ,"scenario": "Сценарий"
-  ,"difficulty": "Сложность"
-}
+    ,"scenario": "Сценарий"
+    ,"difficulty": "Сложность"
+    ,"ACHIEVEMENTS": "Достижения"
+    ,"CLOUD": "Облако"
+    ,"OVERLAY": "Оверлей"
+  }
