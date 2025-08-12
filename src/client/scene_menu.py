@@ -36,6 +36,23 @@ class MenuScene(Scene):
         add("LOCAL_COOP", "PLAY", lambda: self._start_mode("local"))
         add("ONLINE", "PLAY", lambda: self._start_mode("online"))
 
+        # scenario / difficulty selectors --------------------------------
+        self.scenarios = ["short", "medium", "long"]
+        self.scenario_idx = self.scenarios.index(app.cfg.get("scenario", "short"))
+        scen_text = _("scenario") + ": " + _(
+            f"scenario_{self.scenarios[self.scenario_idx]}_name"
+        )
+        self.scenario_btn = Button(
+            scen_text, pygame.Rect(20, 20, 200, 32), self._next_scenario
+        )
+
+        self.difficulties = ["easy", "normal", "hard"]
+        self.diff_idx = self.difficulties.index(app.cfg.get("difficulty", "normal"))
+        diff_text = _("difficulty") + ": " + _(self.difficulties[self.diff_idx])
+        self.diff_btn = Button(
+            diff_text, pygame.Rect(20, 60, 200, 32), self._next_difficulty
+        )
+
         self.continue_btn = Button(
             _("CONTINUE"),
             pygame.Rect(w // 2 - 60, cy + card_h + 40, 120, 40),
@@ -44,7 +61,11 @@ class MenuScene(Scene):
         self.settings_btn = Button(
             _("SETTINGS"), pygame.Rect(w // 2 - 60, h - 80, 120, 40), self._settings
         )
-        self.focusables = self.cards + [self.continue_btn, self.settings_btn]
+        self.focusables = (
+            [self.scenario_btn, self.diff_btn]
+            + self.cards
+            + [self.continue_btn, self.settings_btn]
+        )
         if rules.DEMO_MODE:
             self.demo_btn = Button(
                 _("PLAY_DEMO"),
@@ -69,6 +90,8 @@ class MenuScene(Scene):
             return
         from .scene_game import GameScene
 
+        self.app.cfg["scenario"] = self.scenarios[self.scenario_idx]
+        self.app.cfg["difficulty"] = self.difficulties[self.diff_idx]
         self.next_scene = GameScene(self.app, new_game=True)
 
     def _start_demo(self) -> None:
@@ -76,6 +99,8 @@ class MenuScene(Scene):
 
         from .scene_game import GameScene
 
+        self.app.cfg["scenario"] = self.scenarios[self.scenario_idx]
+        self.app.cfg["difficulty"] = self.difficulties[self.diff_idx]
         self.next_scene = GameScene(self.app, new_game=True)
 
     def _continue(self) -> None:
@@ -87,6 +112,22 @@ class MenuScene(Scene):
         from .scene_settings import SettingsScene
 
         self.next_scene = SettingsScene(self.app)
+
+    def _next_scenario(self) -> None:
+        """Cycle through available scenarios."""
+
+        self.scenario_idx = (self.scenario_idx + 1) % len(self.scenarios)
+        name = _(
+            f"scenario_{self.scenarios[self.scenario_idx]}_name"
+        )
+        self.scenario_btn.text = f"{_('scenario')}: {name}"
+
+    def _next_difficulty(self) -> None:
+        """Cycle between easy/normal/hard."""
+
+        self.diff_idx = (self.diff_idx + 1) % len(self.difficulties)
+        name = _(self.difficulties[self.diff_idx])
+        self.diff_btn.text = f"{_('difficulty')}: {name}"
 
     # event handling ----------------------------------------------------
     def _move_focus(self, step: int) -> None:
@@ -120,6 +161,8 @@ class MenuScene(Scene):
 
     def draw(self, surface: pygame.Surface) -> None:
         self._draw_bg(surface)
+        self.scenario_btn.draw(surface)
+        self.diff_btn.draw(surface)
         for card in self.cards:
             card.draw(surface)
         self.continue_btn.draw(surface)

@@ -87,7 +87,16 @@ _EFFECTS = [
 
 
 def apply_chain(surface: pygame.Surface, cfg) -> pygame.Surface:
-    """Apply enabled effects in a fixed order returning a new surface."""
+    """Apply enabled effects in a fixed order.
+
+    The original ``surface`` is not modified; when no effects are enabled a
+    shallow copy is returned so callers can always blit the result without
+    accidentally altering the source image.
+    """
+
+    if count_enabled(cfg) == 0:
+        return surface.copy()
+
     result = surface
     for name, func in _EFFECTS:
         enabled_key = f"fx_{name}" if name != "color" else "fx_color"

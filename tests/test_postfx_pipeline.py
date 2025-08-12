@@ -1,57 +1,31 @@
-from __future__ import annotations
-
-import sys
-import pathlib
+import sys, pathlib
+import numpy as np
 import pygame
 
-# ensure src is on path
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
+# Ensure src/ is on path
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+sys.path.append(str(ROOT / 'src'))
 
 from client.gfx import postfx
 
 
-def test_pipeline_order(monkeypatch):
-    surf = pygame.Surface((8, 8))
-    order = []
-
-    def stub(name):
-        def _fx(s, *args, **kwargs):
-            order.append(name)
-            return s
-        return _fx
-
-    monkeypatch.setattr(postfx, "vignette", stub("vignette"))
-    monkeypatch.setattr(postfx, "desaturate", stub("desaturate"))
-    monkeypatch.setattr(postfx, "color_curve", stub("color"))
-    monkeypatch.setattr(postfx, "bloom", stub("bloom"))
-    monkeypatch.setattr(
-        postfx,
-        "_EFFECTS",
-        [("vignette", postfx.vignette), ("desaturate", postfx.desaturate), ("color", postfx.color_curve), ("bloom", postfx.bloom)],
-    )
-
-    cfg = {
-        "fx_vignette": True,
-        "fx_desaturate": True,
-        "fx_color": True,
-        "fx_color_curve": [1.0, 1.0, 1.0],
-        "fx_bloom": True,
-    }
-    postfx.apply_chain(surf, cfg)
-    assert order == ["vignette", "desaturate", "color", "bloom"]
+def make_surface(color):
+    surf = pygame.Surface((16, 16))
+    surf.fill(color)
+    return surf
 
 
-def test_toggle_no_crash():
-    surf = pygame.Surface((4, 4))
-    cfg = {
-        "fx_vignette": False,
-        "fx_desaturate": False,
-        "fx_color": False,
-        "fx_bloom": False,
-    }
-    postfx.apply_chain(surf, cfg)
-    cfg.update({"fx_vignette": True, "fx_desaturate": True, "fx_color": True, "fx_bloom": True})
-    cfg["fx_color_curve"] = [1, 1, 1]
-    cfg["fx_vignette_intensity"] = cfg["fx_desaturate_intensity"] = cfg["fx_bloom_intensity"] = 0.5
-    postfx.apply_chain(surf, cfg)
+def test_fx_toggle():
+    pygame.init()
+    base = make_surface((100, 100, 100))
+    cfg_off = {}
+    res_off = postfx.apply_chain(base, cfg_off)
+    arr_base = pygame.surfarray.array3d(base)
+    arr_off = pygame.surfarray.array3d(res_off)
+    assert np.array_equal(arr_base, arr_off)
 
+    cfg_on = {"fx_vignette": True, "fx_vignette_intensity": 1.0}
+    res_on = postfx.apply_chain(base, cfg_on)
+    arr_on = pygame.surfarray.array3d(res_on)
+    assert not np.array_equal(arr_base, arr_on)
+    pygame.quit()

@@ -65,6 +65,11 @@ class App:
                 if event.type == pygame.QUIT:
                     running = False
                     break
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_F3:
+                    # Toggle the lightweight profiling overlay at runtime so
+                    # it can be enabled temporarily when investigating frame
+                    # time issues without cluttering normal gameplay.
+                    self.cfg["perf_overlay"] = not self.cfg.get("perf_overlay", False)
                 if not self.transition:
                     self.scene.handle_event(event)
             if self.transition:

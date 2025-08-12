@@ -471,11 +471,11 @@ class GameScene(Scene):
                 pygame.draw.rect(surface, (255, 0, 0), rect, 2)
         if self.hover_tile:
             path = self._simple_path((px, py), self.hover_tile)
-        for step in path:
-            sx, sy = self.camera.world_to_screen((step[0] * TILE_SIZE, step[1] * TILE_SIZE))
-            pygame.draw.circle(
-                surface, (255, 255, 0), (sx + tile_size // 2, sy + tile_size // 2), 3
-            )
+            for step in path:
+                sx, sy = self.camera.world_to_screen((step[0] * TILE_SIZE, step[1] * TILE_SIZE))
+                pygame.draw.circle(
+                    surface, (255, 255, 0), (sx + tile_size // 2, sy + tile_size // 2), 3
+                )
 
     def _simple_path(self, start: tuple[int, int], end: tuple[int, int]) -> list[tuple[int, int]]:
         x, y = start
