@@ -113,4 +113,8 @@
   ,"weather_rain": "Rain"
   ,"weather_snow": "Snow"
   ,"weather_fog": "Fog"
+  ,"fx_vignette": "Vignette"
+  ,"fx_desaturate": "Desaturate"
+  ,"fx_bloom": "Bloom"
+  ,"fx_color": "Color Curve"
 }

@@ -116,6 +116,49 @@ class SettingsScene(Scene):
             )
         )
 
+        # post FX -------------------------------------------------------
+        for fx in ["vignette", "desaturate", "bloom"]:
+            self.widgets.append(
+                Toggle(
+                    _(f"fx_{fx}"),
+                    pygame.Rect(40, y, 260, 32),
+                    self.cfg.get(f"fx_{fx}", False),
+                    lambda v, k=fx: self._on_fx_toggle(k, v),
+                )
+            )
+            self.widgets.append(
+                Slider(
+                    pygame.Rect(360, y, 200, 20),
+                    0,
+                    100,
+                    self.cfg.get(f"fx_{fx}_intensity", 0.5) * 100,
+                    lambda v, k=fx: self._on_fx_intensity(k, v),
+                )
+            )
+            y += 40
+
+        # color curve ---------------------------------------------------
+        self.widgets.append(
+            Toggle(
+                _("fx_color"),
+                pygame.Rect(40, y, 260, 32),
+                self.cfg.get("fx_color", False),
+                lambda v: self._on_fx_toggle("color", v),
+            )
+        )
+        curve = self.cfg.get("fx_color_curve", [1.0, 1.0, 1.0])
+        for i, name in enumerate(["R", "G", "B"]):
+            self.widgets.append(
+                Slider(
+                    pygame.Rect(360, y, 200, 20),
+                    0,
+                    200,
+                    curve[i] * 100,
+                    lambda v, idx=i: self._on_curve(idx, v),
+                )
+            )
+            y += 40
+
         # back/apply button ---------------------------------------------
         self.widgets.append(Button(_("apply"), pygame.Rect(w // 2 - 60, h - 80, 120, 40), self._apply))
 
@@ -140,6 +183,17 @@ class SettingsScene(Scene):
 
     def _on_endpoint(self, value: str) -> None:
         self.cfg["telemetry_endpoint"] = value
+
+    def _on_fx_toggle(self, key: str, value: bool) -> None:
+        self.cfg[f"fx_{key}" if key != "color" else "fx_color"] = value
+
+    def _on_fx_intensity(self, key: str, value: float) -> None:
+        self.cfg[f"fx_{key}_intensity"] = round(value / 100.0, 2)
+
+    def _on_curve(self, idx: int, value: float) -> None:
+        curve = self.cfg.get("fx_color_curve", [1.0, 1.0, 1.0])
+        curve[idx] = round(value / 100.0, 2)
+        self.cfg["fx_color_curve"] = curve
 
     def _send_test_event(self) -> None:
         from telemetry import send, events

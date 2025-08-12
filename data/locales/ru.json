@@ -113,4 +113,8 @@
   ,"weather_rain": "Дождь"
   ,"weather_snow": "Снег"
   ,"weather_fog": "Туман"
+  ,"fx_vignette": "Виньетка"
+  ,"fx_desaturate": "Обесцвечивание"
+  ,"fx_bloom": "Свечение"
+  ,"fx_color": "Цветокор"
 }

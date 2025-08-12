@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import pygame
+import time
 from typing import Optional
 
 from gamecore.i18n import gettext as _
@@ -11,6 +12,7 @@ from . import input as cinput
 from .gfx.anim import FadeTransition
 from . import sfx
 from .scene_replay import ReplayScene  # imported for routing; used by menu
+from .gfx import postfx
 
 
 class Scene:
@@ -46,6 +48,7 @@ class App:
         # unified input layer
         self.input = cinput.InputManager(self.cfg)
         self.clock = pygame.time.Clock()
+        self.font = pygame.font.SysFont(None, 24)
         from .scene_menu import MenuScene
 
         self.scene: Scene = MenuScene(self)
@@ -54,7 +57,7 @@ class App:
     def run(self) -> None:
         running = True
         while running:
-            dt = self.clock.tick(60) / 1000.0
+            dt = self.clock.tick(self.cfg.get("fps_cap", 60)) / 1000.0
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
@@ -73,6 +76,20 @@ class App:
                 self.transition.draw(self.screen)
                 if self.transition.finished:
                     self.transition = None
+
+            fx_time = 0.0
+            if postfx.count_enabled(self.cfg):
+                start = time.perf_counter()
+                frame = self.screen.copy()
+                frame = postfx.apply_chain(frame, self.cfg)
+                fx_time = (time.perf_counter() - start) * 1000.0
+                self.screen.blit(frame, (0, 0))
+
+            if self.cfg.get("perf_overlay"):
+                txt = f"dt:{dt*1000:.1f}ms fps:{1.0/dt if dt else 0:.1f} calls:{1+postfx.count_enabled(self.cfg)} fx:{fx_time:.1f}ms"
+                img = self.font.render(txt, True, (255, 255, 255))
+                self.screen.blit(img, (8, 8))
+
             pygame.display.flip()
         pygame.quit()
         telemetry_shutdown("quit")

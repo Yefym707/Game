@@ -33,6 +33,16 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "camera_shake_scale": 1.0,
     "weather_enabled": True,
     "weather_intensity": 1.0,
+    "fx_vignette": False,
+    "fx_vignette_intensity": 0.5,
+    "fx_desaturate": False,
+    "fx_desaturate_intensity": 0.5,
+    "fx_color": False,
+    "fx_color_curve": [1.0, 1.0, 1.0],
+    "fx_bloom": False,
+    "fx_bloom_intensity": 0.5,
+    "fps_cap": 60,
+    "perf_overlay": False,
 }
 
 
