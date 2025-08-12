@@ -4,7 +4,11 @@
   "menu_settings": "Settings",
   "menu_quit": "Quit",
   "action_prompt": "action (w/a/s/d to move, q to quit): ",
-  "status_turn": "Turn {turn}  Player {x},{y}",
+  "status_turn": "Turn {turn}",
+  "active_player": "Active: {name}",
+  "num_players": "Players",
+  "player_name": "Name",
+  "player_color": "Color",
   "window_title": "Gamecore GUI",
   "apply": "Apply",
   "press_key": "Press key...",
@@ -18,6 +22,6 @@
   "LOCAL_COOP": "Local Coop",
   "ONLINE": "Online",
   "SOLO_DESC": "Single player",
-  "LOCAL_COOP_DESC": "Two players on one device",
+  "LOCAL_COOP_DESC": "2-4 players on one device",
   "ONLINE_DESC": "Play over network"
 }

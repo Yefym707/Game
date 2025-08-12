@@ -84,6 +84,14 @@ system. Locale files live in `data/locales/<lang>.json` and the desired
 language is stored in `~/.oko_zombie/config.json` under the `"lang"` key.
 Missing keys default to the lookup key itself.
 
+### Local Co-op (Hot-Seat)
+
+The game now supports a local co-op mode for 2–4 players sharing the same
+screen. Players take turns on one device and the status panel highlights the
+currently active survivor. Save files record the game mode and player order so
+hot-seat sessions can be resumed later without losing track of whose turn it
+is.
+
 ## Tests
 
 ```bash

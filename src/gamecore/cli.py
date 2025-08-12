@@ -18,8 +18,9 @@ def render(state: board.GameState, textures: dict[str, str]) -> str:
             for z in state.zombies:
                 if z.x == x and z.y == y:
                     ch = z.symbol
-            if state.player.x == x and state.player.y == y:
-                ch = state.player.symbol
+            for p in state.players:
+                if p.x == x and p.y == y:
+                    ch = p.symbol
             row += textures.get(ch, ch)
         lines.append(row)
     return "\n".join(lines)

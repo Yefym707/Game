@@ -33,14 +33,16 @@ def _find_path(board: board_mod.Board, state: board_mod.GameState, start: Tuple[
 
 
 def zombie_turns(state: board_mod.GameState) -> None:
+    player_positions = {(p.x, p.y) for p in state.players}
     for z in state.zombies:
         targets = set(state.board.noise.keys())
         path = _find_path(state.board, state, (z.x, z.y), targets, z)
         if not path:
-            path = _find_path(state.board, state, (z.x, z.y), {(state.player.x, state.player.y)}, z)
+            path = _find_path(state.board, state, (z.x, z.y), player_positions, z)
         if path:
             nx, ny = path[0]
             z.x, z.y = nx, ny
-        if z.x == state.player.x and z.y == state.player.y:
-            state.player.health -= 1
-            state.add_log("zombie attack")
+        for p in state.players:
+            if z.x == p.x and z.y == p.y:
+                p.health -= 1
+                state.add_log("zombie attack")

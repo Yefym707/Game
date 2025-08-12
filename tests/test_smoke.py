@@ -18,7 +18,10 @@ def test_smoke(tmp_path):
     path = tmp_path / "save.json"
     saveio.save_game(state, path)
     loaded = saveio.load_game(path)
-    assert (loaded.player.x, loaded.player.y) == (state.player.x, state.player.y)
+    assert [(p.x, p.y) for p in loaded.players] == [
+        (p.x, p.y) for p in state.players
+    ]
+    assert loaded.active == state.active
     assert len(loaded.zombies) == len(state.zombies)
     for z1, z2 in zip(loaded.zombies, state.zombies):
         assert (z1.x, z1.y) == (z2.x, z2.y)

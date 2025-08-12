@@ -190,6 +190,62 @@ class StatusPanel:
         self.font = pygame.font.SysFont(None, 24)
 
     def draw(self, surface: pygame.Surface, state) -> None:
-        text = _("status_turn").format(turn=state.turn, x=state.player.x, y=state.player.y)
+        text = _("status_turn").format(turn=state.turn)
         img = self.font.render(text, True, (255, 255, 0))
         surface.blit(img, (5, 5))
+        active = _("active_player").format(name=state.current.name)
+        img2 = self.font.render(active, True, (255, 255, 255))
+        surface.blit(img2, (5, 30))
+
+
+class NameField:
+    """Very small text input widget for player names."""
+
+    def __init__(self, rect: pygame.Rect, text: str, callback) -> None:
+        self.rect = pygame.Rect(rect)
+        self.text = text
+        self.callback = callback
+        self.font = pygame.font.SysFont(None, 24)
+        self.active = False
+
+    def handle_event(self, event: pygame.event.Event) -> None:
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            self.active = self.rect.collidepoint(event.pos)
+        elif event.type == pygame.KEYDOWN and self.active:
+            if event.key == pygame.K_RETURN:
+                self.callback(self.text)
+                self.active = False
+            elif event.key == pygame.K_BACKSPACE:
+                self.text = self.text[:-1]
+            else:
+                self.text += event.unicode
+
+    def draw(self, surface: pygame.Surface) -> None:
+        pygame.draw.rect(surface, (60, 60, 60), self.rect)
+        pygame.draw.rect(surface, (255, 255, 255), self.rect, 1)
+        img = self.font.render(self.text, True, (255, 255, 255))
+        surface.blit(img, (self.rect.x + 4, self.rect.y + 4))
+
+
+class ColorPicker:
+    """Cycle through a small set of colors."""
+
+    COLORS = ["red", "green", "blue", "yellow"]
+
+    def __init__(self, rect: pygame.Rect, color: str, callback) -> None:
+        self.rect = pygame.Rect(rect)
+        self.index = self.COLORS.index(color) if color in self.COLORS else 0
+        self.callback = callback
+        self.font = pygame.font.SysFont(None, 24)
+
+    def handle_event(self, event: pygame.event.Event) -> None:
+        if event.type == pygame.MOUSEBUTTONDOWN and self.rect.collidepoint(event.pos):
+            self.index = (self.index + 1) % len(self.COLORS)
+            self.callback(self.COLORS[self.index])
+
+    def draw(self, surface: pygame.Surface) -> None:
+        color_name = self.COLORS[self.index]
+        pygame.draw.rect(surface, pygame.Color(color_name), self.rect)
+        pygame.draw.rect(surface, (255, 255, 255), self.rect, 1)
+        img = self.font.render(color_name, True, (0, 0, 0))
+        surface.blit(img, img.get_rect(center=self.rect.center))

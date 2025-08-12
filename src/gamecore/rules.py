@@ -8,7 +8,18 @@ BOARD_SIZE = 10
 STARTING_ZOMBIES = 3
 MAX_TURNS = 100
 
-class TurnState(Enum):
+
+class GameMode(Enum):
+    """Supported game modes."""
+
+    SOLO = auto()
+    LOCAL_COOP = auto()
+    ONLINE = auto()
+
+
+class TurnStatus(Enum):
+    """Phases during a single round."""
+
     PLAYER = auto()
     ZOMBIE = auto()
 
