@@ -195,7 +195,7 @@ an RGB color matrix and a lightweight bloom achieved through downsampling and a
 box blur.  Individual effects and their intensities can be toggled in the
 settings menu and persist via ``config.json``. A configurable FPS cap limits the
 main loop and an optional overlay displays frame time, draw calls and the time
-spent on post-processing.
+spent on post-processing. Press **F3** at any time to toggle this overlay.
 
 ## Photo Mode & Screenshots
 
