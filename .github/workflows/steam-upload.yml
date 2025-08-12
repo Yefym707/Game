@@ -1,0 +1,76 @@
+name: Steam Upload
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Target platform
+        type: choice
+        required: true
+        options:
+          - win
+          - mac
+          - linux
+      channel:
+        description: Release channel
+        type: choice
+        required: true
+        options:
+          - beta
+          - public
+      description:
+        description: Build description
+        required: true
+        type: string
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Determine artifact name
+        id: vars
+        run: |
+          tag=$(git describe --tags)
+          case "${{ inputs.platform }}" in
+            win) os=windows-latest ;;
+            mac) os=macos-latest ;;
+            linux) os=ubuntu-latest ;;
+          esac
+          echo "artifact=Game-${os}-${tag}.zip" >> $GITHUB_OUTPUT
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ steps.vars.outputs.artifact }}
+          path: build
+
+      - name: Unpack artifact
+        run: |
+          mkdir -p build/staging/${{ inputs.platform }}
+          unzip -q build/${{ steps.vars.outputs.artifact }} -d build/staging/${{ inputs.platform }}
+
+      - name: Upload to Steam
+        env:
+          STEAM_USERNAME: ${{ secrets.STEAM_USERNAME }}
+          STEAM_PASSWORD: ${{ secrets.STEAM_PASSWORD }}
+          STEAM_GUARD: ${{ secrets.STEAM_GUARD }}
+          STEAM_APP_ID: ${{ secrets.STEAM_APP_ID }}
+          STEAM_DEPOT_WIN: ${{ secrets.STEAM_DEPOT_WIN }}
+          STEAM_DEPOT_MAC: ${{ secrets.STEAM_DEPOT_MAC }}
+          STEAM_DEPOT_LINUX: ${{ secrets.STEAM_DEPOT_LINUX }}
+        run: |
+          python scripts/steam_upload.py \
+            --platform ${{ inputs.platform }} \
+            --channel ${{ inputs.channel }} \
+            --description "${{ inputs.description }}"
+

@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            target: win
+          - os: macos-latest
+            target: mac
+          - os: ubuntu-latest
+            target: linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Get tag
+        id: version
+        run: echo "tag=${GITHUB_REF##*/}" >> $GITHUB_OUTPUT
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pyinstaller
+
+      - name: Build with PyInstaller
+        run: python tools/build_pyinstaller.py --target ${{ matrix.target }}
+
+      - name: Package release
+        run: python tools/package_release.py --target ${{ matrix.target }}
+
+      - name: Zip staging
+        run: |
+          cd build/staging/${{ matrix.target }}
+          zip -r ../../../Game-${{ matrix.os }}-${{ steps.version.outputs.tag }}.zip .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Game-${{ matrix.os }}-${{ steps.version.outputs.tag }}.zip
+          path: Game-${{ matrix.os }}-${{ steps.version.outputs.tag }}.zip
