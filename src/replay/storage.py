@@ -26,6 +26,15 @@ def open_read(path: str | Path) -> IO[str]:
     return p.open("r", encoding="utf-8")
 
 
+def open_append(path: str | Path) -> IO[str]:
+    """Open ``path`` for appending, handling optional gzip compression."""
+
+    p = Path(path)
+    if p.suffix == ".gz":
+        return gzip.open(p, "at", encoding="utf-8")
+    return p.open("a", encoding="utf-8")
+
+
 def write_jsonl(fh: IO[str], obj: Dict[str, Any]) -> None:
     fh.write(json.dumps(obj) + "\n")
 

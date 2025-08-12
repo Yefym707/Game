@@ -242,7 +242,8 @@ The engine contains a lightweight system to record deterministic sessions. When
 as JSON lines under `~/.oko_zombie/replays`. The :mod:`replay.recorder` module
 captures events and regular state checkpoints while
 :mod:`replay.player` can load a file, seek to a specific turn and resume
-playback.
+playback.  If the environment variable ``REPLAY_HMAC_KEY`` is set, recordings
+are appended with an HMAC signature and the player verifies it on load.
 
 ### Local Co-op (Hot-Seat)
 
@@ -278,13 +279,18 @@ python -m scripts.run_master --host 0.0.0.0 --port 8080
 ```
 
 Game servers started with the ``--master`` option will automatically
-register, send periodic heartbeats and unregister on shutdown.  Clients can
-query the master via the **Browse** tab in the online menu which lists
-available servers and displays basic metadata.
+register, send periodic heartbeats and unregister on shutdown.  The service
+also exposes a simple ``/list`` HTTP endpoint returning JSON lobby data.
+Clients can query the master via the **Browse** tab in the online menu which
+lists available servers and displays basic metadata.
 
 ## Anti-Cheat, Validation & Moderation
 
-The server validates actions and enforces per-IP rate limits. A JSON based ban list allows temporary or permanent bans. Replays are signed with HMAC and players may submit in-game reports stored on the server.
+The server validates incoming actions and rejects unsupported or out-of-bounds
+requests with human readable error messages. A JSON based ban list stored in
+``data/banlist.json`` allows temporary or permanent bans, and players can file
+reports which are written to ``data/reports/`` for later review. Replays are
+signed with HMAC and verified during playback.
 
 ## Determinism & Tests
 
