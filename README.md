@@ -84,6 +84,16 @@ system. Locale files live in `data/locales/<lang>.json` and the desired
 language is stored in `~/.oko_zombie/config.json` under the `"lang"` key.
 Missing keys default to the lookup key itself.
 
+## Sandbox Editor & Balance JSON
+
+A built-in sandbox editor lets you place tiles and experiment with custom maps.
+Use the **Save Map**, **Load Map** and **Test Map** buttons to manage maps.
+Saved layouts are written as JSON files under `mods/maps/` for easy sharing.
+
+Core gameplay numbers such as loot chances or zombie stats are stored in
+`data/balance.json`.  The game validates this file on load so modders can tweak
+values while maintaining sane ranges.
+
 ### Local Co-op (Hot-Seat)
 
 The game now supports a local co-op mode for 2–4 players sharing the same

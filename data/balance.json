@@ -1,0 +1,16 @@
+{
+  "loot": {
+    "ammo": 0.2,
+    "medkit": 0.1
+  },
+  "player": {
+    "hp": 20,
+    "damage": 5
+  },
+  "zombie": {
+    "hp": 10,
+    "damage": 2,
+    "agro_range": 5,
+    "limit": 30
+  }
+}
