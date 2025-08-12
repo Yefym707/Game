@@ -23,5 +23,12 @@
   "ONLINE": "Онлайн",
   "SOLO_DESC": "Одиночный режим",
   "LOCAL_COOP_DESC": "2-4 игрока за одним устройством",
-  "ONLINE_DESC": "Игра по сети"
+  "ONLINE_DESC": "Игра по сети",
+  "CONNECT": "Подключиться",
+  "ADDRESS": "Адрес",
+  "LOBBY": "Лобби",
+  "READY": "Готов",
+  "START": "Старт",
+  "PING": "Пинг",
+  "DISCONNECTED": "Отключен"
 }

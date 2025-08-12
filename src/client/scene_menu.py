@@ -53,6 +53,11 @@ class MenuScene(Scene):
         if mode == "local":
             self.next_scene = LocalCoopScene(self.app)
             return
+        if mode == "online":
+            from .scene_online import OnlineScene
+
+            self.next_scene = OnlineScene(self.app)
+            return
         from .scene_game import GameScene
 
         self.next_scene = GameScene(self.app, new_game=True)

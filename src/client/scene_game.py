@@ -1,6 +1,7 @@
 """In-game scene handling rendering and input."""
 from __future__ import annotations
 
+import asyncio
 import pygame
 
 from .app import Scene
@@ -8,6 +9,7 @@ from .gfx.tileset import TILE_SIZE, Tileset
 from .ui.widgets import Log, StatusPanel
 from .input import InputManager
 from .sfx import SFX, set_volume
+from .net_client import NetClient
 from gamecore import board as gboard
 from gamecore import rules, saveio, config as gconfig
 
@@ -20,7 +22,7 @@ except Exception:  # pragma: no cover - fallback if missing
 class GameScene(Scene):
     """Render the board and process user input."""
 
-    def __init__(self, app, new_game: bool = True) -> None:
+    def __init__(self, app, new_game: bool = True, net_client: NetClient | None = None) -> None:
         super().__init__(app)
         self.cfg = app.cfg
         set_volume(self.cfg.get("volume", 1.0))
@@ -28,6 +30,7 @@ class GameScene(Scene):
         self.tileset = Tileset()
         self.quick_path = gconfig.quicksave_path()
         self.autosave_path = gconfig.autosave_path()
+        self.net_client = net_client
         if new_game:
             pconf = self.cfg.get("players")
             count = len(pconf) if isinstance(pconf, list) and pconf else 1
@@ -81,25 +84,30 @@ class GameScene(Scene):
 
                 self.next_scene = MenuScene(self.app)
             elif action == "end_turn":
-                gboard.end_turn(self.state)
-                self.input.set_profile(self.state.active)
-                try:
-                    saveio.save_game(self.state, self.autosave_path)
-                except Exception as exc:
-                    self._show_error(str(exc))
-            elif action == "quick_save":
-                try:
-                    saveio.save_game(self.state, self.quick_path)
-                except Exception as exc:
-                    self._show_error(str(exc))
-            elif action == "quick_load":
-                try:
-                    self.state = saveio.load_game(self.quick_path)
-                    self.log.lines.clear()
-                    self._last_log = 0
+                if self.state.mode == rules.GameMode.ONLINE and self.net_client:
+                    asyncio.create_task(self.net_client.send({"t": "ACTION", "p": {"end_turn": True}}))
+                else:
+                    gboard.end_turn(self.state)
                     self.input.set_profile(self.state.active)
-                except Exception as exc:
-                    self._show_error(str(exc))
+                    try:
+                        saveio.save_game(self.state, self.autosave_path)
+                    except Exception as exc:
+                        self._show_error(str(exc))
+            elif action == "quick_save":
+                if self.state.mode != rules.GameMode.ONLINE:
+                    try:
+                        saveio.save_game(self.state, self.quick_path)
+                    except Exception as exc:
+                        self._show_error(str(exc))
+            elif action == "quick_load":
+                if self.state.mode != rules.GameMode.ONLINE:
+                    try:
+                        self.state = saveio.load_game(self.quick_path)
+                        self.log.lines.clear()
+                        self._last_log = 0
+                        self.input.set_profile(self.state.active)
+                    except Exception as exc:
+                        self._show_error(str(exc))
             elif action in ("move_up", "move_down", "move_left", "move_right"):
                 self._handle_move(action)
             elif action == "rest":
@@ -119,8 +127,13 @@ class GameScene(Scene):
             "move_left": "a",
             "move_right": "d",
         }
-        if gboard.player_move(self.state, mapping[action]):
-            self.sfx.play("step")
+        if self.state.mode == rules.GameMode.ONLINE and self.net_client:
+            asyncio.create_task(
+                self.net_client.send({"t": "ACTION", "p": {"move": mapping[action]}})
+            )
+        else:
+            if gboard.player_move(self.state, mapping[action]):
+                self.sfx.play("step")
 
     def _handle_click(self, pos) -> None:
         mx, my = pos

@@ -11,6 +11,15 @@ SAVE_VERSION = 2
 
 
 def save_game(state: board.GameState, path: str | Path) -> None:
+    """Persist ``state`` to ``path``.
+
+    Network matches are intentionally not saved to disk to avoid accidental
+    spoilers or cheating.  The caller can still create manual snapshots by
+    serialising the state with :mod:`net.serialization` if required.
+    """
+
+    if state.mode is rules.GameMode.ONLINE:
+        return
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     data = {

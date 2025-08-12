@@ -34,3 +34,14 @@ DIRECTIONS: Dict[str, Tuple[int, int]] = {
 
 def set_seed(seed: int) -> None:
     RNG.seed(seed)
+
+
+def validate_action(state, action, player_index: int) -> bool:
+    """Placeholder hook for server-side action validation.
+
+    The real game logic would inspect ``state`` and ``action`` to ensure the
+    move is legal for the active player.  For now the function only returns
+    ``True`` to indicate that all actions are accepted.
+    """
+
+    return True
