@@ -5,7 +5,7 @@ from pathlib import Path
 import json
 from typing import Dict, List, Set, Tuple, Iterable
 
-from . import rules, entities
+from . import rules, entities, validate
 
 
 @dataclass
@@ -150,14 +150,33 @@ def create_game(
 
 
 def player_move(state: GameState, direction: str) -> bool:
+    if __debug__:
+        validate.validate_state(state)
     offset = rules.DIRECTIONS.get(direction)
     if not offset:
         return False
     dx, dy = offset
     player = state.current
     nx, ny = player.x + dx, player.y + dy
+    # strict bounds
     if not state.board.in_bounds(nx, ny):
         return False
+    # diagonal corner clipping check
+    if dx != 0 and dy != 0:
+        hx, hy = player.x + dx, player.y
+        vx, vy = player.x, player.y + dy
+        if not (state.board.in_bounds(hx, hy) and state.board.in_bounds(vx, vy)):
+            return False
+        if not state.board.is_empty(hx, hy) or not state.board.is_empty(vx, vy):
+            return False
+        if any(z.x == hx and z.y == hy for z in state.zombies) or any(
+            z.x == vx and z.y == vy for z in state.zombies
+        ):
+            return False
+        if any(p is not player and p.x == hx and p.y == hy for p in state.players) or any(
+            p is not player and p.x == vx and p.y == vy for p in state.players
+        ):
+            return False
     if not state.board.is_empty(nx, ny):
         return False
     if any(z.x == nx and z.y == ny for z in state.zombies):
@@ -168,6 +187,8 @@ def player_move(state: GameState, direction: str) -> bool:
     state.board.add_noise((nx, ny))
     state.board.reveal(nx, ny)
     state.add_log(f"player {player.id} to {(nx, ny)}")
+    if __debug__:
+        validate.validate_state(state)
     return True
 
 

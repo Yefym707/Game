@@ -187,7 +187,12 @@ available servers and displays basic metadata.
 
 The server validates actions and enforces per-IP rate limits. A JSON based ban list allows temporary or permanent bans. Replays are signed with HMAC and players may submit in-game reports stored on the server.
 
-## Tests
+## Determinism & Tests
+
+The engine uses a single random number generator whose state is serialised in
+save files. Loading a game restores the sequence so sessions remain
+reproducible across runs. A small test-suite verifies deterministic behaviour,
+movement bounds and save/load round-trips.
 
 ```bash
 pytest -q

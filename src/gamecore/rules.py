@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import random
 from enum import Enum, auto
 from typing import Dict, Tuple
+
+from .rng import RNG
 
 BOARD_SIZE = 10
 STARTING_ZOMBIES = 3
@@ -52,7 +53,8 @@ DIFFICULTY_PRESETS = {
 
 CURRENT_DIFFICULTY = Difficulty.NORMAL
 
-RNG = random.Random()
+# single deterministic RNG ---------------------------------------------------
+RNG = RNG()
 
 # simple monotonically increasing identifiers used by the replay system
 _TICK_COUNTER = 0
@@ -63,6 +65,10 @@ DIRECTIONS: Dict[str, Tuple[int, int]] = {
     "s": (0, 1),
     "a": (-1, 0),
     "d": (1, 0),
+    "q": (-1, -1),
+    "e": (1, -1),
+    "z": (-1, 1),
+    "c": (1, 1),
 }
 
 def set_seed(seed: int) -> None:

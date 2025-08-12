@@ -32,6 +32,7 @@ def save_game(state: board.GameState, path: str | Path) -> None:
         "mode": state.mode.name,
         "players": [p.to_dict() for p in state.players],
         "state": state.to_dict(),
+        "rng": rules.RNG.get_state(),
     }
     text = json.dumps(data)
     if steam.cloud_saves:
@@ -73,6 +74,9 @@ def load_game(path: str | Path) -> board.GameState:
         data = apply_migrations(data, SAVE_VERSION)
     mode = rules.GameMode[data.get("mode", "SOLO")]
     players = [entities.Player.from_dict(p) for p in data.get("players", [])]
+    rng_state = data.get("rng")
+    if rng_state:
+        rules.RNG.set_state(rng_state)
     return board.GameState.from_dict(data["state"], mode=mode, players=players)
 
 
@@ -83,6 +87,7 @@ def snapshot(state: board.GameState) -> Dict[str, Any]:
         "mode": state.mode.name,
         "players": [p.to_dict() for p in state.players],
         "state": state.to_dict(),
+        "rng": rules.RNG.get_state(),
     }
 
 
@@ -91,6 +96,9 @@ def restore(data: Dict[str, Any]) -> board.GameState:
 
     mode = rules.GameMode[data.get("mode", "SOLO")]
     players = [entities.Player.from_dict(p) for p in data.get("players", [])]
+    rng_state = data.get("rng")
+    if rng_state:
+        rules.RNG.set_state(rng_state)
     return board.GameState.from_dict(data["state"], mode=mode, players=players)
 
 
