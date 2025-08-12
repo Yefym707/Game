@@ -92,6 +92,21 @@ currently active survivor. Save files record the game mode and player order so
 hot-seat sessions can be resumed later without losing track of whose turn it
 is.
 
+## Online mode (Server/Client)
+
+An experimental online mode is included.  A lightweight authoritative server
+built on ``asyncio`` and ``websockets`` keeps the official game state and
+relays actions between players.  To start the server locally run:
+
+```bash
+python -m scripts.run_server --host 0.0.0.0 --port 8765
+```
+
+Clients connect through the **Online** option in the main menu.  The protocol
+uses JSON messages with a small set of types such as ``HELLO``, ``ACTION`` and
+``STATE``.  The implementation is intentionally minimal but provides a solid
+foundation for further development.
+
 ## Tests
 
 ```bash

@@ -23,5 +23,12 @@
   "ONLINE": "Online",
   "SOLO_DESC": "Single player",
   "LOCAL_COOP_DESC": "2-4 players on one device",
-  "ONLINE_DESC": "Play over network"
+  "ONLINE_DESC": "Play over network",
+  "CONNECT": "Connect",
+  "ADDRESS": "Address",
+  "LOBBY": "Lobby",
+  "READY": "Ready",
+  "START": "Start",
+  "PING": "Ping",
+  "DISCONNECTED": "Disconnected"
 }
