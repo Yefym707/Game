@@ -1,0 +1,11 @@
+"appbuild"
+{
+    "appid" "${APP_ID}"
+    "desc" "${BUILD_DESCRIPTION}"
+    "buildoutput" "build/tmp"
+    "setlive" "${CHANNEL}"
+    "depots"
+    {
+        "${DEPOT_ID}" "depot_build_linux.vdf"
+    }
+}
