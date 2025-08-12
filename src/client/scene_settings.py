@@ -16,7 +16,7 @@ from gamecore import i18n
 from gamecore.i18n import gettext as _
 from .app import Scene
 from .input import InputManager
-from .sfx import set_volume
+from . import sfx
 from .ui.widgets import Button, Dropdown, RebindButton, Slider, Toggle
 
 
@@ -64,15 +64,19 @@ class SettingsScene(Scene):
             self.widgets.append(RebindButton(rect, action, self.input))
             y += 40
 
-        # volume slider --------------------------------------------------
-        self.widgets.append(
-            Slider(pygame.Rect(360, 80, 200, 20), 0, 100, self.cfg.get("volume", 1.0) * 100, self._on_volume)
-        )
+        # volume sliders -------------------------------------------------
+        vol_y = 80
+        for key in ["master", "step", "hit", "ui"]:
+            val = self.cfg.get(f"volume_{key}", self.cfg.get("volume", 1.0))
+            self.widgets.append(
+                Slider(pygame.Rect(360, vol_y, 200, 20), 0, 100, val * 100, lambda v, k=key: self._on_volume(k, v))
+            )
+            vol_y += 40
 
         # UI scale slider ------------------------------------------------
         self.widgets.append(
             Slider(
-                pygame.Rect(360, 120, 200, 20),
+                pygame.Rect(360, vol_y, 200, 20),
                 75,
                 200,
                 self.cfg.get("ui_scale", 1.0) * 100,
@@ -116,9 +120,13 @@ class SettingsScene(Scene):
         self.widgets.append(Button(_("apply"), pygame.Rect(w // 2 - 60, h - 80, 120, 40), self._apply))
 
     # callbacks ----------------------------------------------------------
-    def _on_volume(self, value: float) -> None:
-        self.cfg["volume"] = round(value / 100.0, 2)
-        set_volume(self.cfg["volume"])
+    def _on_volume(self, channel: str, value: float) -> None:
+        vol = round(value / 100.0, 2)
+        self.cfg[f"volume_{channel}"] = vol
+        if channel == "master":
+            # legacy key used by menu scene
+            self.cfg["volume"] = vol
+        sfx.set_volume(vol, channel)
 
     def _on_scale(self, value: float) -> None:
         self.cfg["ui_scale"] = round(value / 100.0, 2)

@@ -79,6 +79,12 @@ TELEMETRY_STATUS_SENT = "telemetry_status_sent"
 TELEMETRY_STATUS_QUEUED = "telemetry_status_queued"
 TELEMETRY_STATUS_ERROR = "telemetry_status_error"
 
+# audio settings --------------------------------------------------------------
+MASTER_VOLUME = "master_volume"
+STEP_VOLUME = "step_volume"
+HIT_VOLUME = "hit_volume"
+UI_VOLUME = "ui_volume"
+
 # additional UI keys
 RESUME = "resume"
 RESTART = "restart"

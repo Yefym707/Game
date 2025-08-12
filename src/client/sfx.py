@@ -1,90 +1,167 @@
-from __future__ import annotations
+"""Procedural sound effects with simple ADSR envelope.
 
-"""Tiny sound effect helpers.
+This module generates short sound buffers on the fly using :mod:`numpy` and
+converts them into ``pygame`` ``Sound`` objects.  No external audio files are
+required which keeps the test environment lightweight.  A very small mixer is
+used with three effect channels (``step``, ``hit`` and ``ui``) plus a master
+volume.  Each channel can be controlled independently and an ADSR envelope is
+applied for smooth fades.
 
-The real game plays short procedural tones generated in memory.  The
-implementation here keeps things extremely small so it works even in the
-restricted test environment where audio output may not be available.  If the
-pygame mixer cannot be initialised the functions simply do nothing.
+The functions gracefully handle missing audio capabilities – if the mixer
+cannot be initialised the play helpers simply do nothing which allows the rest
+of the game to run in headless test environments.
 """
 
-from typing import Dict
+from __future__ import annotations
+
 import math
+from typing import Dict, Tuple
 
 import numpy as np
 import pygame
 
-# ---------------------------------------------------------------------------
+# mixer -----------------------------------------------------------------------
 
+_SAMPLE_RATE = 44100
 _INITIALISED = False
 
 
 def _ensure_init() -> None:
+    """Initialise the pygame mixer if possible."""
+
     global _INITIALISED
     if _INITIALISED:
         return
     try:  # pragma: no cover - audio may be unavailable
-        pygame.mixer.init()
+        pygame.mixer.init(frequency=_SAMPLE_RATE, size=-16, channels=1)
     except Exception:
         return
     _INITIALISED = True
 
 
-def tone(freq: int = 440, ms: int = 120) -> pygame.mixer.Sound | None:
-    """Return a pygame ``Sound`` object for a sine wave tone."""
+# volume handling --------------------------------------------------------------
+
+_VOLUME: Dict[str, float] = {
+    "master": 1.0,
+    "step": 1.0,
+    "hit": 1.0,
+    "ui": 1.0,
+}
+
+
+def set_volume(value: float, channel: str = "master") -> None:
+    """Set volume ``value`` for ``channel`` (0..1).
+
+    ``channel`` defaults to ``master`` for backward compatibility with earlier
+    versions that only exposed a single volume slider.
+    """
+
+    value = max(0.0, min(1.0, float(value)))
+    _VOLUME[channel] = value
+
+
+def init(cfg: Dict[str, float]) -> None:
+    """Initialise volumes from configuration ``cfg``."""
+
+    for ch in _VOLUME:
+        set_volume(cfg.get(f"volume_{ch}", cfg.get("volume", 1.0)), ch)
+
+
+# waveform generation ---------------------------------------------------------
+
+def _adsr_envelope(n: int, attack: int, decay: int, sustain: float, release: int) -> np.ndarray:
+    """Return an ADSR envelope for ``n`` samples."""
+
+    a = int(_SAMPLE_RATE * attack / 1000.0)
+    d = int(_SAMPLE_RATE * decay / 1000.0)
+    r = int(_SAMPLE_RATE * release / 1000.0)
+    s = max(0, n - a - d - r)
+    env = np.concatenate(
+        [
+            np.linspace(0.0, 1.0, a, False),
+            np.linspace(1.0, sustain, d, False),
+            np.full(s, sustain),
+            np.linspace(sustain, 0.0, r, False),
+        ]
+    )
+    if len(env) < n:
+        env = np.pad(env, (0, n - len(env)))
+    return env
+
+
+def generate_buffer(
+    waveform: str,
+    freq: float,
+    ms: int,
+    adsr: Tuple[int, int, float, int],
+) -> np.ndarray:
+    """Generate an int16 numpy buffer for a tone.
+
+    Parameters
+    ----------
+    waveform:
+        ``"sine"``, ``"square"`` or ``"triangle"``.
+    freq:
+        Frequency in Hz.
+    ms:
+        Duration in milliseconds.
+    adsr:
+        ``(attack_ms, decay_ms, sustain_level, release_ms)``
+    """
+
+    length = int(_SAMPLE_RATE * ms / 1000.0)
+    t = np.linspace(0, ms / 1000.0, length, False)
+    if waveform == "square":
+        wave = np.sign(np.sin(2 * math.pi * freq * t))
+    elif waveform == "triangle":
+        wave = 2.0 / math.pi * np.arcsin(np.sin(2 * math.pi * freq * t))
+    else:  # default to sine
+        wave = np.sin(2 * math.pi * freq * t)
+    env = _adsr_envelope(length, *adsr)
+    wave *= env
+    return (wave * 32767).astype(np.int16)
+
+
+def _play(channel: str, waveform: str, freq: float, ms: int, adsr: Tuple[int, int, float, int]) -> None:
+    """Generate and play a sound respecting channel volume."""
 
     _ensure_init()
     if not pygame.mixer.get_init():
-        return None
-    sample_rate = 44100
-    t = np.linspace(0, ms / 1000.0, int(sample_rate * ms / 1000.0), False)
-    wave = (np.sin(freq * 2 * math.pi * t) * 32767).astype(np.int16)
+        return
     try:
-        return pygame.sndarray.make_sound(wave)
-    except Exception:  # pragma: no cover - mixer may not support sndarray
-        return None
-
-
-class SFX:
-    """Container holding a couple of pre-generated effects."""
-
-    def __init__(self) -> None:
-        self.sounds: Dict[str, pygame.mixer.Sound | None] = {
-            "step": tone(660, 80),
-            "hit": tone(440, 120),
-            "pickup": tone(880, 120),
-        }
-
-    def play(self, name: str) -> None:
-        snd = self.sounds.get(name)
-        if snd:
-            try:  # pragma: no cover - audio playback
-                snd.play()
-            except Exception:
-                pass
-
-
-_VOLUME = 1.0
-
-
-def set_volume(v: float) -> None:
-    """Set global playback volume."""
-
-    global _VOLUME
-    _VOLUME = max(0.0, min(1.0, v))
-    try:  # pragma: no cover - mixer optional
-        pygame.mixer.music.set_volume(_VOLUME)
-    except Exception:
+        snd = pygame.sndarray.make_sound(generate_buffer(waveform, freq, ms, adsr))
+        snd.set_volume(_VOLUME.get(channel, 1.0) * _VOLUME["master"])
+        snd.play()
+    except Exception:  # pragma: no cover - mixer optional
         pass
 
 
-def ui_click() -> None:
-    """Play a short UI click tone respecting global volume."""
+# convenience play helpers ----------------------------------------------------
 
-    snd = tone(880, 50)
-    if snd:
-        try:  # pragma: no cover - audio playback optional
-            snd.set_volume(_VOLUME)
-            snd.play()
-        except Exception:
-            pass
+def play_step() -> None:
+    """Play a short footstep sound."""
+
+    _play("step", "square", 200, 80, (5, 20, 0.3, 60))
+
+
+def play_hit() -> None:
+    """Play a hit/attack sound."""
+
+    _play("hit", "square", 400, 120, (0, 50, 0.2, 120))
+
+
+def ui_click() -> None:
+    """Play a tiny UI click respecting volume levels."""
+
+    _play("ui", "sine", 880, 60, (5, 10, 0.5, 40))
+
+
+__all__ = [
+    "init",
+    "set_volume",
+    "generate_buffer",
+    "play_step",
+    "play_hit",
+    "ui_click",
+]
+

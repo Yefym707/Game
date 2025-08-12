@@ -9,7 +9,7 @@ from gamecore import config as gconfig
 from telemetry import init as telemetry_init, shutdown as telemetry_shutdown
 from . import input as cinput
 from .gfx.anim import FadeTransition
-from .sfx import set_volume
+from . import sfx
 from .scene_replay import ReplayScene  # imported for routing; used by menu
 
 
@@ -42,7 +42,7 @@ class App:
         w, h = self.cfg.get("window_size", [width, height])
         pygame.display.set_caption(_("window_title"))
         self.screen = pygame.display.set_mode((w, h), flags)
-        set_volume(self.cfg.get("volume", 1.0))
+        sfx.init(self.cfg)
         # unified input layer
         self.input = cinput.InputManager(self.cfg)
         self.clock = pygame.time.Clock()

@@ -70,4 +70,8 @@
   ,"tooltip_attack": "Атака"
   ,"log_expand": "развернуть журнал"
   ,"log_collapse": "свернуть журнал"
+  ,"master_volume": "Общая громкость"
+  ,"step_volume": "Громкость шагов"
+  ,"hit_volume": "Громкость ударов"
+  ,"ui_volume": "Громкость UI"
 }

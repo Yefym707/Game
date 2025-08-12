@@ -11,7 +11,11 @@ REPLAY_DIR = CONFIG_DIR / "replays"
 CONFIG_FILE = CONFIG_DIR / "config.json"
 
 DEFAULT_CONFIG: Dict[str, Any] = {
-    "volume": 1.0,
+    "volume": 1.0,  # legacy master volume
+    "volume_master": 1.0,
+    "volume_step": 1.0,
+    "volume_hit": 1.0,
+    "volume_ui": 1.0,
     "lang": "en",
     "window_size": [800, 600],
     "fullscreen": False,
@@ -46,8 +50,11 @@ def load_config() -> Dict[str, Any]:
         data = DEFAULT_CONFIG.copy()
         save_config(data)
     # merge in defaults for missing keys to keep backwards compatibility
+    if "volume_master" not in data and "volume" in data:
+        data["volume_master"] = data.get("volume", 1.0)
     for key, value in DEFAULT_CONFIG.items():
         data.setdefault(key, value)
+    data["volume"] = data.get("volume_master", 1.0)
     if not data.get("telemetry_anonymous_id"):
         data["telemetry_anonymous_id"] = str(uuid.uuid4())
         save_config(data)
