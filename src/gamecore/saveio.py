@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from . import board, rules, entities
+from .save_migrations import apply_migrations
 from integrations import steam
 
 SAVE_VERSION = 2
@@ -65,8 +66,11 @@ def load_game(path: str | Path) -> board.GameState:
     else:
         with path.open("r", encoding="utf-8") as fh:
             data = json.load(fh)
-    if data.get("save_version") != SAVE_VERSION:
+    version = data.get("save_version", 1)
+    if version > SAVE_VERSION:
         raise ValueError("Unsupported save version")
+    if version < SAVE_VERSION:
+        data = apply_migrations(data, SAVE_VERSION)
     mode = rules.GameMode[data.get("mode", "SOLO")]
     players = [entities.Player.from_dict(p) for p in data.get("players", [])]
     return board.GameState.from_dict(data["state"], mode=mode, players=players)

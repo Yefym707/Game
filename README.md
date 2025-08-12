@@ -37,6 +37,14 @@ Configuration options are kept in `config.json` and individual saves reside
 in the `saves/` subdirectory.  The save files include a `save_version` field
 so future releases can detect incompatible formats.
 
+### Save File Versions & Migrations
+
+Older save files are automatically upgraded when loaded.  The loader checks
+the embedded `save_version` and applies any required migration functions in
+sequence until the current version is reached.  Each migration is a pure and
+deterministic transformation, ensuring existing saves remain compatible with
+new releases.
+
 From the game you can quick save with **F5** and quick load with **F9**. The
 game also performs an automatic save after each turn.
 
