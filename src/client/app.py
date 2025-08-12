@@ -4,6 +4,8 @@ from __future__ import annotations
 import pygame
 import time
 from typing import Optional
+from pathlib import Path
+import logging
 
 from gamecore.i18n import gettext as _
 from gamecore import config as gconfig
@@ -58,49 +60,57 @@ class App:
         self.transition: FadeTransition | None = None
 
     def run(self) -> None:
+        log_dir = Path.home() / ".oko_zombie" / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_file = log_dir / "app.log"
+        if log_file.exists() and log_file.stat().st_size > 256 * 1024:
+            log_file.write_text("")
+        logging.basicConfig(filename=log_file, level=logging.INFO)
         running = True
-        while running:
-            dt = self.clock.tick(self.cfg.get("fps_cap", 60)) / 1000.0
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-                    break
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_F3:
-                    # Toggle the lightweight profiling overlay at runtime so
-                    # it can be enabled temporarily when investigating frame
-                    # time issues without cluttering normal gameplay.
-                    self.cfg["perf_overlay"] = not self.cfg.get("perf_overlay", False)
-                if not self.transition:
-                    self.scene.handle_event(event)
-            if self.transition:
-                self.transition.update(dt)
-            else:
-                self.scene.update(dt)
-                if self.scene.next_scene:
-                    self.transition = FadeTransition(self, self.scene.next_scene)
-                    self.scene.next_scene = None
-            self.scene.draw(self.screen)
-            if self.transition:
-                self.transition.draw(self.screen)
-                if self.transition.finished:
-                    self.transition = None
+        try:
+            while running:
+                dt = self.clock.tick(self.cfg.get("fps_cap", 60)) / 1000.0
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        running = False
+                        break
+                    if event.type == pygame.KEYDOWN and event.key == pygame.K_F3:
+                        self.cfg["perf_overlay"] = not self.cfg.get("perf_overlay", False)
+                    if not self.transition:
+                        self.scene.handle_event(event)
+                if self.transition:
+                    self.transition.update(dt)
+                else:
+                    self.scene.update(dt)
+                    if self.scene.next_scene:
+                        self.transition = FadeTransition(self, self.scene.next_scene)
+                        self.scene.next_scene = None
+                self.scene.draw(self.screen)
+                if self.transition:
+                    self.transition.draw(self.screen)
+                    if self.transition.finished:
+                        self.transition = None
 
-            fx_time = 0.0
-            if postfx.count_enabled(self.cfg):
-                start = time.perf_counter()
-                frame = self.screen.copy()
-                frame = postfx.apply_chain(frame, self.cfg)
-                fx_time = (time.perf_counter() - start) * 1000.0
-                self.screen.blit(frame, (0, 0))
+                fx_time = 0.0
+                if postfx.count_enabled(self.cfg):
+                    start = time.perf_counter()
+                    frame = self.screen.copy()
+                    frame = postfx.apply_chain(frame, self.cfg)
+                    fx_time = (time.perf_counter() - start) * 1000.0
+                    self.screen.blit(frame, (0, 0))
 
-            if self.cfg.get("perf_overlay"):
-                txt = f"dt:{dt*1000:.1f}ms fps:{1.0/dt if dt else 0:.1f} calls:{1+postfx.count_enabled(self.cfg)} fx:{fx_time:.1f}ms"
-                img = self.font.render(txt, True, (255, 255, 255))
-                self.screen.blit(img, (8, 8))
+                if self.cfg.get("perf_overlay"):
+                    txt = f"dt:{dt*1000:.1f}ms fps:{1.0/dt if dt else 0:.1f} calls:{1+postfx.count_enabled(self.cfg)} fx:{fx_time:.1f}ms"
+                    img = self.font.render(txt, True, (255, 255, 255))
+                    self.screen.blit(img, (8, 8))
 
-            pygame.display.flip()
-        pygame.quit()
-        telemetry_shutdown("quit")
+                pygame.display.flip()
+        except Exception:  # pragma: no cover - safety net
+            logging.exception("main loop crash")
+            raise
+        finally:
+            pygame.quit()
+            telemetry_shutdown("quit")
 
 
 def main(demo: bool = False) -> None:

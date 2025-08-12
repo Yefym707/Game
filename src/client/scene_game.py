@@ -244,6 +244,8 @@ class GameScene(Scene):
                 self.next_scene = PhotoScene(self.app, self)
                 return
             action = self.input.action_from_key(event.key)
+            if not action:
+                return
             if action == "pause":
                 self._open_pause_menu()
             elif action == "end_turn":
@@ -322,7 +324,8 @@ class GameScene(Scene):
                     )
                     start = self.camera.world_to_screen((old[0] * TILE_SIZE, old[1] * TILE_SIZE))
                     end = self.camera.world_to_screen((player.x * TILE_SIZE, player.y * TILE_SIZE))
-                    self.animations.append(anim.Slide(img, start, end, 0.2))
+                    if len(self.animations) < 100:
+                        self.animations.append(anim.Slide(img, start, end, 0.2))
                 sfx.play_step()
 
     def _handle_click(self, pos) -> None:
@@ -336,7 +339,8 @@ class GameScene(Scene):
             achievements.on_zombie_kill()
             sx, sy = self.camera.world_to_screen((x * TILE_SIZE, y * TILE_SIZE))
             size = int(TILE_SIZE * self.camera.zoom)
-            self.animations.append(anim.FloatText("+1", (sx + size // 2, sy)))
+            if len(self.animations) < 100:
+                self.animations.append(anim.FloatText("+1", (sx + size // 2, sy)))
             self.camera.shake(0.2, 5.0, 25.0)
 
     # update / draw ----------------------------------------------------

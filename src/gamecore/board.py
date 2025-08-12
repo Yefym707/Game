@@ -140,7 +140,7 @@ def create_game(
             x = rules.RNG.randrange(width)
             y = rules.RNG.randrange(height)
             if all((x, y) != (p.x, p.y) for p in player_list) and all(
-                z.x != x or z.y != y for z in zombie_list
+                (z.x, z.y) != (x, y) for z in zombie_list
             ):
                 zombie_list.append(entities.Zombie(x, y, "Z"))
                 break

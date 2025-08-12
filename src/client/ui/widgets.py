@@ -269,7 +269,7 @@ class Tooltip:
     """Simple text tooltip displayed near the cursor."""
 
     def __init__(self, text: str) -> None:
-        self.text = text
+        self.text = text[:60]
         self.font = pygame.font.SysFont(None, 18)
 
     def draw(self, surface: pygame.Surface, pos: tuple[int, int]) -> None:
@@ -401,7 +401,10 @@ class ToastManager:
         self.toasts: list[Toast] = []
 
     def show(self, text: str, duration: float = 2.0) -> None:
+        text = text[:60]
         self.toasts.append(Toast(text, duration))
+        if len(self.toasts) > 5:
+            self.toasts = self.toasts[-5:]
 
     def update(self, dt: float) -> None:
         self.toasts = [t for t in self.toasts if not t.update(dt)]

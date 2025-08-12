@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
-import random
+from gamecore import rules
 import pygame
 from typing import Tuple
 
@@ -49,13 +49,13 @@ class Rain(_BaseWeather):
 
     def _spawn(self, p: Particle) -> None:
         w, h = self.size
-        p.x = random.uniform(0, w)
-        p.y = random.uniform(-h, 0)
+        p.x = rules.RNG.uniform(0, w)
+        p.y = rules.RNG.uniform(-h, 0)
         p.vx = self.wind[0] - 50.0
         p.vy = 300.0 + self.wind[1]
         p.life = h / p.vy
         p.color = (150, 150, 255)
-        p.size = random.uniform(8, 15)
+        p.size = rules.RNG.uniform(8, 15)
 
     def update(self, dt: float) -> None:
         self.emitter.rate = 200 * self.intensity
@@ -81,14 +81,14 @@ class Snow(_BaseWeather):
 
     def _spawn(self, p: Particle) -> None:
         w, h = self.size
-        p.x = random.uniform(0, w)
-        p.y = random.uniform(-h, 0)
+        p.x = rules.RNG.uniform(0, w)
+        p.y = rules.RNG.uniform(-h, 0)
         p.vx = self.wind[0]
         p.vy = 40.0 + self.wind[1]
-        p.life = h / p.vy + random.uniform(1.0, 2.0)
+        p.life = h / p.vy + rules.RNG.uniform(1.0, 2.0)
         p.color = (255, 255, 255)
-        p.size = random.uniform(2, 4)
-        p.phase = random.uniform(0.0, math.tau)  # type: ignore[attr-defined]
+        p.size = rules.RNG.uniform(2, 4)
+        p.phase = rules.RNG.uniform(0.0, math.tau)  # type: ignore[attr-defined]
 
     def update(self, dt: float) -> None:
         self.emitter.rate = 150 * self.intensity
@@ -114,7 +114,7 @@ class Fog(_BaseWeather):
         base = pygame.Surface((64, 64))
         for x in range(64):
             for y in range(64):
-                v = random.randint(200, 255)
+                v = rules.RNG.randint(200, 255)
                 base.set_at((x, y), (v, v, v))
         self.noise = pygame.transform.smoothscale(base, size)
         self.time = 0.0

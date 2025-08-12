@@ -24,12 +24,24 @@ def validate_state(state: board_module.GameState) -> None:
     for (x, y) in b.noise.keys():
         if not _check_in_bounds(b, x, y):
             raise ValueError("noise out of bounds")
-    def _entities(ent: Iterable[board_module.entities.Entity]):
-        for e in ent:
-            if not _check_in_bounds(b, e.x, e.y):
-                raise ValueError("entity out of bounds")
-    _entities(state.players)
-    _entities(state.zombies)
+    player_pos = set()
+    for p in state.players:
+        if not _check_in_bounds(b, p.x, p.y):
+            raise ValueError("entity out of bounds")
+        pos = (p.x, p.y)
+        if pos in player_pos:
+            raise ValueError("player collision")
+        player_pos.add(pos)
+    zombie_pos = set()
+    for z in state.zombies:
+        if not _check_in_bounds(b, z.x, z.y):
+            raise ValueError("entity out of bounds")
+        pos = (z.x, z.y)
+        if pos in zombie_pos:
+            raise ValueError("zombie collision")
+        zombie_pos.add(pos)
     for p in state.players:
         if not all(isinstance(it, str) for it in p.inventory):
             raise ValueError("invalid inventory item")
+    if not 0 <= state.active < len(state.players):
+        raise ValueError("invalid active index")

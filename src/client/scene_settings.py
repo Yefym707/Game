@@ -79,9 +79,9 @@ class SettingsScene(Scene):
         self.widgets.append(
             Slider(
                 pygame.Rect(360, vol_y, 200, 20),
-                75,
+                100,
                 200,
-                self.cfg.get("ui_scale", 1.0) * 100,
+                max(1.0, self.cfg.get("ui_scale", 1.0)) * 100,
                 self._on_scale,
             )
         )
@@ -216,7 +216,7 @@ class SettingsScene(Scene):
         sfx.set_volume(vol, channel)
 
     def _on_scale(self, value: float) -> None:
-        self.cfg["ui_scale"] = round(value / 100.0, 2)
+        self.cfg["ui_scale"] = max(1.0, round(value / 100.0, 2))
 
     def _on_lang(self, value: str) -> None:
         self.cfg["lang"] = value
@@ -255,6 +255,8 @@ class SettingsScene(Scene):
         send(events.perf_tick(0, 0, 0, self.app.screen.get_size()))
 
     def _apply(self) -> None:
+        w, h = self.cfg.get("window_size", self.app.screen.get_size())
+        self.cfg["window_size"] = [max(320, int(w)), max(240, int(h))]
         self.input.save(self.cfg)
         gconfig.save_config(self.cfg)
         from telemetry import init as telemetry_init, send, events
