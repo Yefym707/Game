@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Any, Dict
+from typing import Any, Dict, Iterable
 
 try:  # pragma: no cover - optional dependency during tests
     import websockets
@@ -18,11 +18,16 @@ from net.serialization import parse_invite_url as _parse_invite_url
 class NetClient:
     """Thin wrapper around ``websockets`` with queues."""
 
-    def __init__(self) -> None:
+    def __init__(self, reconnect_backoff: Iterable[int] | None = None) -> None:
         self.ws: "websockets.WebSocketClientProtocol | None" = None
         self.incoming: "asyncio.Queue[Dict[str, Any]]" = asyncio.Queue()
         self.outgoing: "asyncio.Queue[Dict[str, Any]]" = asyncio.Queue(maxsize=32)
         self._action_rl = RateLimiter(5, 1.0)
+        self._ping_interval = 5.0
+        self.rtt: float | None = None
+        self._reconnect_backoff = list(reconnect_backoff or [1, 2, 5, 10])
+        self._reconnect_attempt = 0
+        self.last_invite: str = ""
 
     async def connect(self, uri: str) -> None:
         if websockets is None:
@@ -45,6 +50,10 @@ class NetClient:
                 msg = decode_message(raw)
             except Exception:
                 continue
+            if msg.get("t") == MessageType.PONG.value:
+                sent = float(msg.get("p", 0.0))
+                self.record_rtt(max(0.0, time.perf_counter() - sent))
+                continue
             await self.incoming.put(msg)
 
     async def _writer(self) -> None:
@@ -66,19 +75,52 @@ class NetClient:
     async def recv(self) -> Dict[str, Any]:
         return await self.incoming.get()
 
+    # ping helpers -----------------------------------------------------
+    async def ping_loop(self) -> None:
+        """Send periodic ping messages to measure latency."""
+
+        while True:
+            await asyncio.sleep(self._ping_interval)
+            if not self.ws:
+                continue
+            await self.send({"t": MessageType.PING.value, "p": time.perf_counter()})
+
+    def record_rtt(self, rtt: float) -> float:
+        """Record a round-trip time using simple smoothing."""
+
+        if self.rtt is None:
+            self.rtt = rtt
+        else:
+            self.rtt = (self.rtt + rtt) / 2.0
+        return self.rtt
+
+    # reconnect helpers -----------------------------------------------
+    def next_backoff(self) -> int:
+        """Return delay for the next reconnect attempt."""
+
+        delay = self._reconnect_backoff[min(self._reconnect_attempt, len(self._reconnect_backoff) - 1)]
+        self._reconnect_attempt += 1
+        return delay
+
+    def reset_backoff(self) -> None:
+        """Reset reconnect attempt counter."""
+
+        self._reconnect_attempt = 0
+
 
 def parse_invite_url(url: str) -> Dict[str, object]:
     """Parse invite URL into a payload dictionary."""
 
     return _parse_invite_url(url)
 
-    async def ping(self, uri: str, timeout: float = 5.0) -> float:
-        """Return round-trip latency to ``uri`` in seconds."""
 
-        if websockets is None:
-            raise RuntimeError("websockets library not installed")
-        start = time.perf_counter()
-        async with websockets.connect(uri) as ws:
-            await ws.send(encode_message({"t": MessageType.PING.value}))
-            await asyncio.wait_for(ws.recv(), timeout=timeout)
-        return time.perf_counter() - start
+async def ping(uri: str, timeout: float = 5.0) -> float:
+    """Return round-trip latency to ``uri`` in seconds."""
+
+    if websockets is None:
+        raise RuntimeError("websockets library not installed")
+    start = time.perf_counter()
+    async with websockets.connect(uri) as ws:
+        await ws.send(encode_message({"t": MessageType.PING.value}))
+        await asyncio.wait_for(ws.recv(), timeout=timeout)
+    return time.perf_counter() - start

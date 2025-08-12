@@ -13,7 +13,12 @@ except Exception:  # pragma: no cover
 
 from net.protocol import decode_message, encode_message, MessageType
 from net.serialization import parse_invite_url
-from .invite import create_invite, validate_invite
+from .invite import (
+    create_invite,
+    validate_invite,
+    revoke_invite,
+    refresh_invite,
+)
 from net.master_api import MasterMessage, encode_master_message, decode_master_message
 from .lobby import LobbyManager
 from .security import check_size, validate_master_payload, SessionGuard
@@ -54,7 +59,9 @@ class Server:
                     await websocket.send(encode_message({"t": MessageType.ERROR.value, "p": str(exc)}))
                     continue
                 if msg["t"] == MessageType.PING.value:
-                    await websocket.send(encode_message({"t": "PONG"}))
+                    await websocket.send(
+                        encode_message({"t": MessageType.PONG.value, "p": msg.get("p")})
+                    )
                 elif msg["t"] == MessageType.INVITE_CREATE.value:
                     secret = os.environ.get("INVITE_SECRET")
                     if not secret:
@@ -86,6 +93,24 @@ class Server:
                         await websocket.send(
                             encode_message({"t": MessageType.ERROR.value, "p": str(exc)})
                         )
+                elif msg["t"] == MessageType.INVITE_REVOKE.value:
+                    code = str(msg.get("code", ""))
+                    revoke_invite(code)
+                    await websocket.send(
+                        encode_message({"t": MessageType.INVITE_INFO.value, "p": "revoked"})
+                    )
+                elif msg["t"] == MessageType.INVITE_REFRESH.value:
+                    secret = os.environ.get("INVITE_SECRET")
+                    if not secret:
+                        await websocket.send(
+                            encode_message({"t": MessageType.ERROR.value, "p": "invites disabled"})
+                        )
+                        continue
+                    ttl = int(os.environ.get("INVITE_TTL", "1800"))
+                    data = refresh_invite(msg.get("p", {}), secret.encode(), ttl)
+                    await websocket.send(
+                        encode_message({"t": MessageType.INVITE_INFO.value, **data})
+                    )
                 else:
                     await websocket.send(encode_message({"t": MessageType.ERROR.value, "p": "unsupported"}))
         finally:
