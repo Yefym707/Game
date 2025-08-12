@@ -10,7 +10,7 @@ from .gfx.tileset import TILE_SIZE, Tileset
 from .gfx import anim
 from .ui.widgets import IconLog, StatusPanel, PauseMenu
 from .input import InputManager
-from .sfx import SFX, set_volume
+from . import sfx
 from .net_client import NetClient
 from gamecore import board as gboard
 from gamecore import rules, saveio, config as gconfig, achievements
@@ -28,7 +28,6 @@ class GameScene(Scene):
     def __init__(self, app, new_game: bool = True, net_client: NetClient | None = None) -> None:
         super().__init__(app)
         self.cfg = app.cfg
-        set_volume(self.cfg.get("volume", 1.0))
         self.input: InputManager = app.input
         self.tileset = Tileset()
         self.quick_path = gconfig.quicksave_path()
@@ -58,7 +57,6 @@ class GameScene(Scene):
         self.log = IconLog()
         self.status = StatusPanel()
         self._last_log = 0
-        self.sfx = SFX()
         self.animations: list[Any] = []
         self.hover_tile: tuple[int, int] | None = None
         self.paused = False
@@ -215,7 +213,7 @@ class GameScene(Scene):
                     start = (old[0] * size - self.camera_x, old[1] * size - self.camera_y)
                     end = (player.x * size - self.camera_x, player.y * size - self.camera_y)
                     self.animations.append(anim.Slide(img, start, end, 0.2))
-                self.sfx.play("step")
+                sfx.play_step()
 
     def _handle_click(self, pos) -> None:
         mx, my = pos
@@ -225,7 +223,7 @@ class GameScene(Scene):
         if self.state.board.in_bounds(x, y):
             msg = f"clicked {(x, y)}"
             self.state.add_log(msg)
-            self.sfx.play("pickup")
+            sfx.play_hit()
             achievements.on_zombie_kill()
             sx = x * tile_size - self.camera_x + tile_size // 2
             sy = y * tile_size - self.camera_y

@@ -70,4 +70,8 @@
   ,"tooltip_attack": "Attack"
   ,"log_expand": "expand log"
   ,"log_collapse": "collapse log"
+  ,"master_volume": "Master Volume"
+  ,"step_volume": "Step Volume"
+  ,"hit_volume": "Hit Volume"
+  ,"ui_volume": "UI Volume"
 }

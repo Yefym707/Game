@@ -104,6 +104,14 @@ system. Locale files live in `data/locales/<lang>.json` and the desired
 language is stored in `~/.oko_zombie/config.json` under the `"lang"` key.
 Missing keys default to the lookup key itself.
 
+## Audio System & SFX
+
+Short sound effects are generated procedurally using ``numpy`` and converted to
+``pygame`` sounds at runtime.  Three effect channels – footsteps, hits and UI –
+each have individual volume controls plus a global master level.  An ADSR
+envelope provides gentle fades so tones start and end smoothly without clicks.
+Volumes can be adjusted in the **Settings** menu and are applied immediately.
+
 ## UX polish & Difficulty Presets
 
 The client features small touches to make the board feel alive: movement and
