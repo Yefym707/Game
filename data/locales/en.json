@@ -38,4 +38,8 @@
   ,"save_map": "Save Map"
   ,"load_map": "Load Map"
   ,"test_map": "Test Map"
+  ,"PLAY_DEMO": "Play Demo"
+  ,"DEMO_COMPLETE": "Demo Complete"
+  ,"BUY_FULL": "Buy Full Version"
+  ,"steam_sdk_missing": "Steam SDK not found"
 }

@@ -74,9 +74,20 @@ class App:
         pygame.quit()
 
 
-def main() -> None:
-    """Entry point used by scripts.run_gui."""
+def main(demo: bool = False) -> None:
+    """Entry point used by ``scripts.run_gui``.
 
+    Parameters
+    ----------
+    demo:
+        When ``True`` the game runs in limited demo mode and corresponding
+        restrictions are enabled.
+    """
+
+    if demo:
+        from gamecore import rules
+
+        rules.DEMO_MODE = True
     App().run()
 
 
