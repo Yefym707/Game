@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Dict, Any
 
 from . import storage
 from . import index
 from gamecore import saveio
+from net.attestation import hmac_sign
 
 
 class Player:
@@ -21,9 +23,19 @@ class Player:
 
     @classmethod
     def load(cls, path: str | Path) -> "Player":
+        """Load ``path`` verifying optional HMAC signatures."""
+
         player = cls(path)
+        key = os.environ.get("REPLAY_HMAC_KEY")
         with storage.open_read(path) as fh:
             lines = fh.readlines()
+        if lines and "signature" in lines[-1]:
+            sig = json.loads(lines.pop())  # remove signature line
+            signature = sig.get("signature")
+            if key and signature:
+                data = "".join(lines).encode("utf-8")
+                if hmac_sign(data, key.encode()) != signature:
+                    raise ValueError("bad signature")
         if len(lines) >= 1:
             player.header = json.loads(lines[0])
         if len(lines) >= 2:
