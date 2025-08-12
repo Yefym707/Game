@@ -7,6 +7,7 @@ from typing import Dict
 
 CONFIG_PATH = Path.home() / ".oko_zombie" / "config.json"
 LOCALES_DIR = Path(__file__).resolve().parents[2] / "data" / "locales"
+# Language code used as a fallback for missing keys/translations
 DEFAULT_LANG = "en"
 
 
@@ -27,6 +28,10 @@ def _load_translations(lang: str) -> Dict[str, str]:
         return {}
 
 
+# Load default translations once so they are always available as a fallback
+_default_translations: Dict[str, str] = _load_translations(DEFAULT_LANG)
+
+# Load current language from the config and its translations
 _LANG = _load_lang()
 _translations: Dict[str, str] = _load_translations(_LANG)
 
@@ -46,7 +51,10 @@ def gettext(key: str) -> str:
     a translation is missing.
     """
 
-    return _translations.get(key, key)
+    # first try the active language, then fall back to default translations
+    if key in _translations:
+        return _translations[key]
+    return _default_translations.get(key, key)
 
 
 # common translation keys used by the client -------------------------------
