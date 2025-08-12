@@ -63,9 +63,23 @@ class SessionGuard:
             raise ValueError("traffic limit exceeded")
 
 
+class InviteLimiter:
+    """Track invite creation per IP."""
+
+    def __init__(self, limit: int = 5, interval: float = 60.0) -> None:
+        self.limit = limit
+        self.interval = interval
+        self._by_ip: Dict[str, RateLimiter] = {}
+
+    def hit(self, ip: str) -> bool:
+        rl = self._by_ip.setdefault(ip, RateLimiter(self.limit, self.interval))
+        return rl.hit()
+
+
 __all__ = [
     "check_size",
     "validate_master_payload",
     "RateLimiter",
     "SessionGuard",
+    "InviteLimiter",
 ]

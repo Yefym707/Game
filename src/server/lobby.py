@@ -47,6 +47,14 @@ class LobbyManager:
     def get(self, lobby_id: str) -> Lobby | None:
         return self._lobbies.get(lobby_id)
 
+    def find_joinable(self, lobby_id: str) -> Lobby | None:
+        """Return lobby if it exists and has free slots."""
+
+        lobby = self._lobbies.get(lobby_id)
+        if lobby and lobby.cur_players < lobby.max_players:
+            return lobby
+        return None
+
     def remove(self, lobby_id: str) -> None:
         self._lobbies.pop(lobby_id, None)
 

@@ -129,4 +129,11 @@
     ,"ACHIEVEMENTS": "Достижения"
     ,"CLOUD": "Облако"
     ,"OVERLAY": "Оверлей"
+    ,"INVITE": "Инвайт"
+    ,"COPY_LINK": "Копировать ссылку"
+    ,"COPY_CODE": "Копировать код"
+    ,"JOIN_BY_CODE": "Войти по коду"
+    ,"INVITE_INVALID": "Неверный инвайт"
+    ,"INVITE_EXPIRED": "Инвайт просрочен"
+    ,"COPIED": "Скопировано!"
   }

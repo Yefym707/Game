@@ -129,4 +129,11 @@
     ,"ACHIEVEMENTS": "Achievements"
     ,"CLOUD": "Cloud"
     ,"OVERLAY": "Overlay"
+    ,"INVITE": "Invite"
+    ,"COPY_LINK": "Copy Link"
+    ,"COPY_CODE": "Copy Code"
+    ,"JOIN_BY_CODE": "Join by Code"
+    ,"INVITE_INVALID": "Invalid invite"
+    ,"INVITE_EXPIRED": "Invite expired"
+    ,"COPIED": "Copied!"
   }

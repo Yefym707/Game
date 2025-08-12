@@ -10,6 +10,7 @@ import logging
 from gamecore.i18n import gettext as _
 from gamecore import config as gconfig
 from telemetry import init as telemetry_init, shutdown as telemetry_shutdown
+from integrations import steam
 from . import input as cinput
 from .gfx.anim import FadeTransition
 from . import sfx
@@ -58,6 +59,7 @@ class App:
 
         self.scene: Scene = MenuScene(self)
         self.transition: FadeTransition | None = None
+        steam.on_join_request(self._steam_join)
 
     def run(self) -> None:
         log_dir = Path.home() / ".oko_zombie" / "logs"
@@ -111,6 +113,14 @@ class App:
         finally:
             pygame.quit()
             telemetry_shutdown("quit")
+
+    # steam integration -------------------------------------------------
+    def _steam_join(self, data: str) -> None:
+        from .scene_online import OnlineScene
+
+        scene = OnlineScene(self)
+        scene.join_from_invite(data)
+        self.scene = scene
 
 
 def main(demo: bool = False) -> None:

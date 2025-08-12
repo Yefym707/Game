@@ -12,6 +12,7 @@ except Exception:  # pragma: no cover
 
 from net.protocol import decode_message, encode_message, MessageType
 from server.security import RateLimiter
+from net.serialization import parse_invite_url as _parse_invite_url
 
 
 class NetClient:
@@ -64,6 +65,12 @@ class NetClient:
 
     async def recv(self) -> Dict[str, Any]:
         return await self.incoming.get()
+
+
+def parse_invite_url(url: str) -> Dict[str, object]:
+    """Parse invite URL into a payload dictionary."""
+
+    return _parse_invite_url(url)
 
     async def ping(self, uri: str, timeout: float = 5.0) -> float:
         """Return round-trip latency to ``uri`` in seconds."""

@@ -376,3 +376,16 @@ steamcmd +login <user> +run_app_build path/to/app_build.vdf +quit
 ```
 
 Replace `<user>` and the VDF path with your account and build script.
+
+## Invites: Links, Codes & Steam Rich Presence
+
+The online mode supports short invite codes and clickable links. When the
+server is started with an ``INVITE_SECRET`` environment variable clients can
+request an invite which contains the server address, room id and an expiration
+timestamp.  The payload is signed with HMAC-SHA256 to prevent tampering.
+
+Invites are formatted as ``oko://join?host=HOST&port=PORT&room=ROOM&code=CODE``
+and can be shared directly or via the Steam overlay.  Clients may paste a link
+or the short ``XXXX-YYYY`` code to connect without entering an address
+manually.  When Steam is available the rich presence status exposes the invite
+so friends can join through "Join Game".
