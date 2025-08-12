@@ -11,6 +11,37 @@ from integrations import steam
 
 SAVE_VERSION = 2
 
+CLOUD_MAP_PATH = Path.home() / ".oko_zombie" / "cloud_map.json"
+_cloud_map: Dict[str, str] | None = None
+
+
+def _load_cloud_map() -> Dict[str, str]:
+    global _cloud_map
+    if _cloud_map is None:
+        try:
+            with CLOUD_MAP_PATH.open("r", encoding="utf-8") as fh:
+                _cloud_map = json.load(fh)
+        except Exception:
+            _cloud_map = {}
+    return _cloud_map
+
+
+def _save_cloud_map() -> None:
+    CLOUD_MAP_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with CLOUD_MAP_PATH.open("w", encoding="utf-8") as fh:
+        json.dump(_load_cloud_map(), fh)
+
+
+def _cloud_key(path: Path, create: bool) -> str | None:
+    cmap = _load_cloud_map()
+    key = cmap.get(str(path))
+    if key or not create:
+        return key
+    key = path.name
+    cmap[str(path)] = key
+    _save_cloud_map()
+    return key
+
 # Directory where user-created maps are stored
 MOD_MAPS_DIR = Path("mods") / "maps"
 
@@ -35,44 +66,47 @@ def save_game(state: board.GameState, path: str | Path) -> None:
         "rng": rules.RNG.get_state(),
     }
     text = json.dumps(data)
-    if steam.cloud_saves:
-        payload: bytes
+    if steam.is_available():
         if path.suffix == ".gz":
             payload = gzip.compress(text.encode("utf-8"))
         else:
             payload = text.encode("utf-8")
-        steam.save(path.name, payload)
-    else:
-        tmp = path.with_suffix(path.suffix + ".tmp")
-        try:
-            if path.suffix == ".gz":
-                with gzip.open(tmp, "wt", encoding="utf-8") as fh:
-                    fh.write(text)
-            else:
-                with tmp.open("w", encoding="utf-8") as fh:
-                    fh.write(text)
-            tmp.replace(path)
-        finally:
-            if tmp.exists():
-                tmp.unlink(missing_ok=True)
+        key = _cloud_key(path, True)
+        if key and steam.cloud_write(key, payload):
+            return
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    try:
+        if path.suffix == ".gz":
+            with gzip.open(tmp, "wt", encoding="utf-8") as fh:
+                fh.write(text)
+        else:
+            with tmp.open("w", encoding="utf-8") as fh:
+                fh.write(text)
+        tmp.replace(path)
+    finally:
+        if tmp.exists():
+            tmp.unlink(missing_ok=True)
 
 
 def load_game(path: str | Path) -> board.GameState:
     path = Path(path)
-    if steam.cloud_saves:
-        raw = steam.load(path.name)
-        if raw is None:
-            raise FileNotFoundError(path.name)
+    data = None
+    if steam.is_available():
+        key = _cloud_key(path, False)
+        if key:
+            raw = steam.cloud_read(key)
+            if raw is not None:
+                if path.suffix == ".gz":
+                    data = json.loads(gzip.decompress(raw).decode("utf-8"))
+                else:
+                    data = json.loads(raw.decode("utf-8"))
+    if data is None:
         if path.suffix == ".gz":
-            data = json.loads(gzip.decompress(raw).decode("utf-8"))
+            with gzip.open(path, "rt", encoding="utf-8") as fh:
+                data = json.load(fh)
         else:
-            data = json.loads(raw.decode("utf-8"))
-    elif path.suffix == ".gz":
-        with gzip.open(path, "rt", encoding="utf-8") as fh:
-            data = json.load(fh)
-    else:
-        with path.open("r", encoding="utf-8") as fh:
-            data = json.load(fh)
+            with path.open("r", encoding="utf-8") as fh:
+                data = json.load(fh)
     version = data.get("save_version", 1)
     if version > SAVE_VERSION:
         raise ValueError("Unsupported save version")

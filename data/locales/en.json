@@ -124,6 +124,9 @@
   ,"show_minimap": "Show Minimap"
   ,"minimap_size": "Minimap Size"
   ,"photo_hint": "F10 - Photo Mode"
-  ,"scenario": "Scenario"
-  ,"difficulty": "Difficulty"
-}
+    ,"scenario": "Scenario"
+    ,"difficulty": "Difficulty"
+    ,"ACHIEVEMENTS": "Achievements"
+    ,"CLOUD": "Cloud"
+    ,"OVERLAY": "Overlay"
+  }

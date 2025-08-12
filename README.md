@@ -324,12 +324,13 @@ movement bounds and save/load round-trips.
 pytest -q
 ```
 
-## Steam Achievements & Cloud Saves
+## Steamworks Integration (Fallback if SDK missing)
 
-When the environment variable ``STEAM_SDK_PATH`` points to a Steamworks SDK
-installation the game enables achievement tracking and uses
-``ISteamRemoteStorage`` for saves.  Outside of Steam a small stub keeps the
-game fully playable while simply ignoring these features.
+Setting the ``STEAM_SDK_PATH`` environment variable enables a thin
+``ctypes`` based wrapper around ``steam_api``.  When initialisation succeeds
+the game exposes achievements, cloud saves, rich presence and overlay status.
+If the SDK is missing or any call fails, a stub implementation keeps the game
+running with all features silently disabled.
 
 ## Build & Steam upload
 

@@ -104,6 +104,10 @@ TOOLTIP_ATTACK = "tooltip_attack"
 LOG_EXPAND = "log_expand"
 LOG_COLLAPSE = "log_collapse"
 
+ACHIEVEMENTS = "ACHIEVEMENTS"
+CLOUD = "CLOUD"
+OVERLAY = "OVERLAY"
+
 # events and scenarios -------------------------------------------------------
 EVENT_ACCEPT = "event_accept"
 EVENT_IGNORE = "event_ignore"
