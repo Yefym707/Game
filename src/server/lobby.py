@@ -9,7 +9,10 @@ from typing import Dict, List
 class Lobby:
     id: str
     name: str
+    mode: str = "default"
     max_players: int = 4
+    cur_players: int = 0
+    region: str = "global"
     seed: int = 0
     players: List[str] = field(default_factory=list)
     ready: List[str] = field(default_factory=list)
@@ -18,7 +21,10 @@ class Lobby:
         return {
             "id": self.id,
             "name": self.name,
+            "mode": self.mode,
             "max_players": self.max_players,
+            "cur_players": self.cur_players,
+            "region": self.region,
             "players": list(self.players),
         }
 
@@ -30,10 +36,11 @@ class LobbyManager:
         self._lobbies: Dict[str, Lobby] = {}
         self._next_id = 1
 
-    def create(self, name: str, max_players: int = 4, seed: int = 0) -> Lobby:
+    def create(self, name: str, mode: str = "default", max_players: int = 4, seed: int = 0,
+               region: str = "global") -> Lobby:
         lobby_id = str(self._next_id)
         self._next_id += 1
-        lobby = Lobby(lobby_id, name, max_players=max_players, seed=seed)
+        lobby = Lobby(lobby_id, name, mode=mode, max_players=max_players, seed=seed, region=region)
         self._lobbies[lobby_id] = lobby
         return lobby
 

@@ -30,6 +30,8 @@
   "READY": "Ready",
   "START": "Start",
   "PING": "Ping",
+  "BROWSE": "Browse",
+  "REFRESH": "Refresh",
   "DISCONNECTED": "Disconnected"
   ,"ACH_WIN_CAMPAIGN": "Campaign Conqueror"
   ,"ACH_KILL_100_ZOMBIES": "Zombie Slayer"

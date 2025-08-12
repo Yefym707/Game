@@ -137,6 +137,21 @@ uses JSON messages with a small set of types such as ``HELLO``, ``ACTION`` and
 ``STATE``.  The implementation is intentionally minimal but provides a solid
 foundation for further development.
 
+## Master Server & Server Browser
+
+A small discovery service allows public game servers to announce themselves so
+players can join without manually typing IP addresses.  Run the master server
+locally with:
+
+```bash
+python -m scripts.run_master --host 0.0.0.0 --port 8080
+```
+
+Game servers started with the ``--master`` option will automatically
+register, send periodic heartbeats and unregister on shutdown.  Clients can
+query the master via the **Browse** tab in the online menu which lists
+available servers and displays basic metadata.
+
 ## Tests
 
 ```bash
