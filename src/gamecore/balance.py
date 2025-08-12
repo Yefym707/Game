@@ -35,6 +35,19 @@ def _validate(data: Dict[str, Any]) -> None:
         raise ValueError("loot must be dict")
     for key, val in loot.items():
         _check_number(f"loot.{key}", val, 0.0, 1.0)
+    lighting = data.get("lighting", {})
+    if not isinstance(lighting, dict):
+        raise ValueError("lighting must be dict")
+    for key in (
+        "player_radius",
+        "player_intensity",
+        "campfire_radius",
+        "campfire_intensity",
+        "lamp_radius",
+        "lamp_intensity",
+        "flicker",
+    ):
+        _check_number(f"lighting.{key}", lighting.get(key, 0), 0, 1000)
 
 
 def load_balance(path: str | Path = DATA_PATH) -> Dict[str, Any]:

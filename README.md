@@ -141,6 +141,15 @@ events trigger subtle screen shake which stacks across impacts. Rendering is
 split into ordered layers – background, tiles, entities and overlays – before
 the UI is composited on top.
 
+## Lighting & Day/Night
+
+A lightweight lightmap simulates illumination. Each tile stores an intensity
+value which is blurred with a small Gaussian kernel for soft edges. Players,
+campfires and lamps act as light sources with a subtle noise driven flicker.
+The lightmap is blended multiplicatively over the scene and tinted depending on
+the current time of day. A simple cycle transitions through day, dusk, night
+and dawn adjusting both color temperature and ambient brightness.
+
 ## Telemetry & Crash Reports (Opt-in)
 
 The game can optionally send anonymous telemetry events and crash reports to a

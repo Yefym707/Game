@@ -106,4 +106,8 @@
   ,"camera": "Camera"
   ,"zoom": "Zoom"
   ,"follow_speed": "Follow Speed"
+  ,"time_day": "Day"
+  ,"time_dusk": "Dusk"
+  ,"time_night": "Night"
+  ,"time_dawn": "Dawn"
 }
