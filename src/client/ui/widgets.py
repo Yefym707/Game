@@ -198,6 +198,101 @@ class StatusPanel:
         surface.blit(img2, (5, 30))
 
 
+# ---------------------------------------------------------------------------
+# Additional widgets used for UX polish
+
+
+class Tooltip:
+    """Simple text tooltip displayed near the cursor."""
+
+    def __init__(self, text: str) -> None:
+        self.text = text
+        self.font = pygame.font.SysFont(None, 18)
+
+    def draw(self, surface: pygame.Surface, pos: tuple[int, int]) -> None:
+        img = self.font.render(self.text, True, (0, 0, 0))
+        rect = img.get_rect(topleft=pos)
+        pygame.draw.rect(surface, (255, 255, 224), rect.inflate(4, 4))
+        surface.blit(img, rect)
+
+
+class IconLabel:
+    """Render ``icon`` and ``text`` side by side using unicode icons."""
+
+    def __init__(self, icon: str, text: str) -> None:
+        self.icon = icon
+        self.text = text
+        self.font = pygame.font.SysFont(None, 18)
+
+    def draw(self, surface: pygame.Surface, pos: tuple[int, int]) -> None:
+        img = self.font.render(f"{self.icon} {self.text}", True, (200, 200, 200))
+        surface.blit(img, pos)
+
+
+class IconLog:
+    """Compact log with optional collapse/expand and small icons."""
+
+    def __init__(self, max_lines: int = 20) -> None:
+        self.entries: list[tuple[str, str]] = []
+        self.max_lines = max_lines
+        self.font = pygame.font.SysFont(None, 18)
+        self.collapsed = False
+        self.toggle_rect: pygame.Rect | None = None
+
+    def add(self, icon: str, text: str) -> None:
+        self.entries.append((icon, text))
+        if len(self.entries) > self.max_lines:
+            self.entries = self.entries[-self.max_lines :]
+
+    def handle_event(self, event: pygame.event.Event) -> None:
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if self.toggle_rect and self.toggle_rect.collidepoint(event.pos):
+                self.collapsed = not self.collapsed
+
+    def draw(self, surface: pygame.Surface, rect: pygame.Rect) -> None:
+        pygame.draw.rect(surface, (30, 30, 30), rect)
+        pygame.draw.rect(surface, (80, 80, 80), rect, 1)
+        # collapse/expand button
+        icon = "▶" if self.collapsed else "◀"
+        self.toggle_rect = pygame.Rect(rect.right - 20, rect.top, 20, 20)
+        img = self.font.render(icon, True, (200, 200, 200))
+        surface.blit(img, self.toggle_rect.topleft)
+        if self.collapsed:
+            return
+        y = rect.top + 5
+        for ic, msg in self.entries[-self.max_lines :]:
+            img = self.font.render(f"{ic} {msg}", True, (200, 200, 200))
+            surface.blit(img, (rect.left + 5, y))
+            y += self.font.get_linesize()
+
+
+class PauseMenu:
+    """Overlay pause menu with basic options."""
+
+    def __init__(self, rect: pygame.Rect, callbacks) -> None:
+        self.rect = pygame.Rect(rect)
+        bx = self.rect.left + 20
+        by = self.rect.top + 20
+        bw = self.rect.width - 40
+        bh = 40
+        self.buttons = [
+            Button(_("resume"), pygame.Rect(bx, by, bw, bh), callbacks.get("resume")),
+            Button(_("restart"), pygame.Rect(bx, by + 50, bw, bh), callbacks.get("restart")),
+            Button(_("SETTINGS"), pygame.Rect(bx, by + 100, bw, bh), callbacks.get("settings")),
+            Button(_("menu_quit"), pygame.Rect(bx, by + 150, bw, bh), callbacks.get("exit")),
+        ]
+
+    def handle_event(self, event: pygame.event.Event) -> None:
+        for b in self.buttons:
+            b.handle_event(event)
+
+    def draw(self, surface: pygame.Surface) -> None:
+        pygame.draw.rect(surface, (20, 20, 20), self.rect)
+        pygame.draw.rect(surface, (200, 200, 200), self.rect, 2)
+        for b in self.buttons:
+            b.draw(surface)
+
+
 class TimelineSlider(Slider):
     """Specialised slider used for replay timeline."""
 

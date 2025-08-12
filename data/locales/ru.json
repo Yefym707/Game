@@ -60,4 +60,14 @@
   ,"telemetry_status_sent": "отправлено"
   ,"telemetry_status_queued": "в очереди"
   ,"telemetry_status_error": "ошибка"
+
+  ,"resume": "Продолжить"
+  ,"restart": "Перезапуск"
+  ,"easy": "Легко"
+  ,"normal": "Нормально"
+  ,"hard": "Сложно"
+  ,"tooltip_move": "Ход"
+  ,"tooltip_attack": "Атака"
+  ,"log_expand": "развернуть журнал"
+  ,"log_collapse": "свернуть журнал"
 }
