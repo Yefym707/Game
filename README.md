@@ -18,6 +18,15 @@ python -m scripts.run_cli --seed 123
 python -m scripts.run_gui
 ```
 
+## Multiplayer
+
+The project supports both local and online multiplayer.  Local co-op allows
+2–4 players to take alternating turns on the same machine and works entirely
+offline.  Online games use a small asyncio based websocket server which
+broadcasts authoritative state updates to connected clients.  All random number
+generation happens on the server to keep sessions deterministic while the
+pygame client simply renders the received state.
+
 ## Balance
 
 Core combat and spawn values are configured in `data/balance.json`. The loader

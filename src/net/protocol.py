@@ -12,11 +12,7 @@ class MessageType(str, Enum):
     """Supported message types."""
 
     HELLO = "HELLO"
-    LOBBY_CREATE = "LOBBY_CREATE"
-    LOBBY_JOIN = "LOBBY_JOIN"
-    LOBBY_LIST = "LOBBY_LIST"
-    READY = "READY"
-    START = "START"
+    LOBBY = "LOBBY"
     ACTION = "ACTION"
     STATE = "STATE"
     PING = "PING"
