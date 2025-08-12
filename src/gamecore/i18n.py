@@ -109,3 +109,11 @@ DAY = "time_day"
 DUSK = "time_dusk"
 NIGHT = "time_night"
 DAWN = "time_dawn"
+
+# ui theme & minimap --------------------------------------------------------
+THEME_LIGHT = "theme_light"
+THEME_DARK = "theme_dark"
+THEME_APOCALYPSE = "theme_apocalypse"
+UI_THEME = "ui_theme"
+SHOW_MINIMAP = "show_minimap"
+MINIMAP_SIZE = "minimap_size"

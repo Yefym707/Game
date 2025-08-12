@@ -117,4 +117,10 @@
   ,"fx_desaturate": "Desaturate"
   ,"fx_bloom": "Bloom"
   ,"fx_color": "Color Curve"
+  ,"ui_theme": "UI Theme"
+  ,"theme_light": "Light"
+  ,"theme_dark": "Dark"
+  ,"theme_apocalypse": "Apocalypse"
+  ,"show_minimap": "Show Minimap"
+  ,"minimap_size": "Minimap Size"
 }

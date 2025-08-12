@@ -42,6 +42,17 @@ separate **Continue** button resumes the latest save, and **Settings** opens
 the configuration screen where volume, language and bindings can be adjusted.
 Scene changes employ short fade transitions for a smooth experience.
 
+## UI Themes & Minimap
+
+The client supports multiple visual themes – light, dark and an "apocalypse"
+variant. Themes can be switched at runtime from the settings screen and all
+panels, buttons and hints update instantly. Panels animate into view by sliding
+from the sides while fading in.
+
+A optional minimap gives a quick overview of the board. It encodes tile types
+by color, marks the current camera viewport and allows clicking to jump the
+camera. Both the visibility and size of the minimap are configurable.
+
 ## Saves & Config
 
 Game data is stored inside the user's home directory in `~/.oko_zombie`.

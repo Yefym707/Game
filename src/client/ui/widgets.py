@@ -5,18 +5,60 @@ import pygame
 
 from ..sfx import ui_click
 from gamecore.i18n import gettext as _
+from .theme import get_theme
+
+
+class HoverHints:
+    """Collect hover rectangles and draw tooltips."""
+
+    def __init__(self) -> None:
+        self.items: list[tuple[pygame.Rect, str]] = []
+        self.font = pygame.font.SysFont(None, 18)
+
+    def add(self, rect: pygame.Rect, text: str) -> None:
+        self.items.append((pygame.Rect(rect), text))
+
+    def draw(self, surface: pygame.Surface) -> None:
+        if not self.items:
+            return
+        th = get_theme()
+        pos = pygame.mouse.get_pos()
+        for rect, text in self.items:
+            if rect.collidepoint(pos):
+                img = self.font.render(text, True, th.colors["text"])
+                hint_rect = img.get_rect(topleft=(pos[0] + th.padding, pos[1] + th.padding))
+                bg_rect = hint_rect.inflate(th.padding * 2, th.padding * 2)
+                pygame.draw.rect(
+                    surface,
+                    th.colors["tooltip"],
+                    bg_rect,
+                    border_radius=th.radius,
+                )
+                surface.blit(img, hint_rect)
+                break
+        self.items.clear()
+
+
+hover_hints = HoverHints()
 
 
 class Button:
     """Clickable rectangular button."""
 
-    def __init__(self, text: str, rect: pygame.Rect, callback) -> None:
+    def __init__(
+        self,
+        text: str,
+        rect: pygame.Rect,
+        callback,
+        hint: str | None = None,
+    ) -> None:
         self.text = text
         self.rect = pygame.Rect(rect)
         self.callback = callback
         self.font = pygame.font.SysFont(None, 24)
         self.hover = False
         self.focus = False
+        self.hint = hint
 
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.MOUSEMOTION:
@@ -31,11 +73,14 @@ class Button:
                 self.callback()
 
     def draw(self, surface: pygame.Surface) -> None:
-        color = (100, 100, 100) if (self.hover or self.focus) else (60, 60, 60)
-        pygame.draw.rect(surface, color, self.rect)
-        pygame.draw.rect(surface, (255, 255, 255), self.rect, 2)
-        img = self.font.render(self.text, True, (255, 255, 255))
+        th = get_theme()
+        color = th.colors["panel_hover"] if (self.hover or self.focus) else th.colors["panel"]
+        pygame.draw.rect(surface, color, self.rect, border_radius=th.radius)
+        pygame.draw.rect(surface, th.colors["border"], self.rect, 2, border_radius=th.radius)
+        img = self.font.render(self.text, True, th.colors["text"])
         surface.blit(img, img.get_rect(center=self.rect.center))
+        if self.hint:
+            hover_hints.add(self.rect, self.hint)
 
 
 class Toggle(Button):
@@ -100,32 +145,50 @@ class Slider:
         self.callback(self.value)
 
     def draw(self, surface: pygame.Surface) -> None:
-        pygame.draw.rect(surface, (80, 80, 80), self.rect)
+        th = get_theme()
+        pygame.draw.rect(surface, th.colors["panel"], self.rect, border_radius=th.radius)
         rel = (self.value - self.min) / (self.max - self.min)
         knob_x = int(self.rect.left + rel * self.rect.width)
-        pygame.draw.rect(surface, (160, 160, 160), pygame.Rect(knob_x - 3, self.rect.top, 6, self.rect.height))
+        pygame.draw.rect(
+            surface,
+            th.colors["panel_hover"],
+            pygame.Rect(knob_x - 3, self.rect.top, 6, self.rect.height),
+        )
 
 
 class Dropdown:
-    """Cycle-through dropdown used for language selection."""
+    """Cycle-through dropdown used for language/theme selection."""
 
-    def __init__(self, rect: pygame.Rect, options: list[str], value: str, callback) -> None:
+    def __init__(
+        self,
+        rect: pygame.Rect,
+        options: list[tuple[str, str]] | list[str],
+        value: str,
+        callback,
+    ) -> None:
         self.rect = pygame.Rect(rect)
-        self.options = options
+        if options and isinstance(options[0], tuple):
+            self.values = [o[0] for o in options]
+            self.labels = [o[1] for o in options]
+        else:
+            self.values = list(options)  # type: ignore[arg-type]
+            self.labels = list(options)  # type: ignore[arg-type]
         self.value = value
         self.callback = callback
         self.font = pygame.font.SysFont(None, 24)
 
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.MOUSEBUTTONDOWN and self.rect.collidepoint(event.pos):
-            idx = (self.options.index(self.value) + 1) % len(self.options)
-            self.value = self.options[idx]
+            idx = (self.values.index(self.value) + 1) % len(self.values)
+            self.value = self.values[idx]
             self.callback(self.value)
 
     def draw(self, surface: pygame.Surface) -> None:
-        pygame.draw.rect(surface, (60, 60, 60), self.rect)
-        pygame.draw.rect(surface, (255, 255, 255), self.rect, 2)
-        img = self.font.render(self.value, True, (255, 255, 255))
+        th = get_theme()
+        pygame.draw.rect(surface, th.colors["panel"], self.rect, border_radius=th.radius)
+        pygame.draw.rect(surface, th.colors["border"], self.rect, 2, border_radius=th.radius)
+        label = self.labels[self.values.index(self.value)]
+        img = self.font.render(label, True, th.colors["text"])
         surface.blit(img, img.get_rect(center=self.rect.center))
 
 
@@ -210,9 +273,15 @@ class Tooltip:
         self.font = pygame.font.SysFont(None, 18)
 
     def draw(self, surface: pygame.Surface, pos: tuple[int, int]) -> None:
-        img = self.font.render(self.text, True, (0, 0, 0))
+        th = get_theme()
+        img = self.font.render(self.text, True, th.colors["text"])
         rect = img.get_rect(topleft=pos)
-        pygame.draw.rect(surface, (255, 255, 224), rect.inflate(4, 4))
+        pygame.draw.rect(
+            surface,
+            th.colors["tooltip"],
+            rect.inflate(get_theme().padding, get_theme().padding),
+            border_radius=th.radius,
+        )
         surface.blit(img, rect)
 
 
@@ -250,27 +319,105 @@ class IconLog:
                 self.collapsed = not self.collapsed
 
     def draw(self, surface: pygame.Surface, rect: pygame.Rect) -> None:
-        pygame.draw.rect(surface, (30, 30, 30), rect)
-        pygame.draw.rect(surface, (80, 80, 80), rect, 1)
+        th = get_theme()
+        pygame.draw.rect(surface, th.colors["panel"], rect)
+        pygame.draw.rect(surface, th.colors["border"], rect, 1)
         # collapse/expand button
         icon = "▶" if self.collapsed else "◀"
         self.toggle_rect = pygame.Rect(rect.right - 20, rect.top, 20, 20)
-        img = self.font.render(icon, True, (200, 200, 200))
+        img = self.font.render(icon, True, th.colors["text"])
         surface.blit(img, self.toggle_rect.topleft)
         if self.collapsed:
             return
         y = rect.top + 5
         for ic, msg in self.entries[-self.max_lines :]:
-            img = self.font.render(f"{ic} {msg}", True, (200, 200, 200))
+            img = self.font.render(f"{ic} {msg}", True, th.colors["text"])
             surface.blit(img, (rect.left + 5, y))
             y += self.font.get_linesize()
 
 
-class PopupDialog:
+class Panel:
+    """Base panel supporting slide and fade animations."""
+
+    def __init__(self, rect: pygame.Rect, from_side: str = "left") -> None:
+        self.rect = pygame.Rect(rect)
+        self.target = pygame.Rect(rect)
+        self.from_side = from_side
+        screen = pygame.display.get_surface()
+        sw = screen.get_width() if screen else 0
+        if from_side == "left":
+            self.rect.x = -self.rect.width
+        elif from_side == "right":
+            self.rect.x = sw
+        self.alpha = 0.0
+        self.speed = 600.0
+
+    def update(self, dt: float) -> None:
+        if self.from_side == "left":
+            self.rect.x = min(self.rect.x + self.speed * dt, self.target.x)
+        else:
+            self.rect.x = max(self.rect.x - self.speed * dt, self.target.x)
+        self.alpha = min(255.0, self.alpha + self.speed * dt)
+
+    def _draw_bg(self, surface: pygame.Surface) -> None:
+        th = get_theme()
+        panel = pygame.Surface(self.rect.size, pygame.SRCALPHA)
+        panel.set_alpha(int(self.alpha))
+        pygame.draw.rect(panel, th.colors["panel"], panel.get_rect(), border_radius=th.radius)
+        pygame.draw.rect(panel, th.colors["border"], panel.get_rect(), 2, border_radius=th.radius)
+        surface.blit(panel, self.rect.topleft)
+
+
+class Toast:
+    """Small message that fades out after a short duration."""
+
+    def __init__(self, text: str, duration: float = 2.0) -> None:
+        self.text = text
+        self.duration = duration
+        self.elapsed = 0.0
+        self.font = pygame.font.SysFont(None, 24)
+
+    def update(self, dt: float) -> bool:
+        self.elapsed += dt
+        return self.elapsed >= self.duration
+
+    def draw(self, surface: pygame.Surface, y: int) -> None:
+        th = get_theme()
+        alpha = 255
+        if self.elapsed > self.duration - 1.0:
+            alpha = int(255 * (self.duration - self.elapsed))
+        img = self.font.render(self.text, True, th.colors["text"])
+        rect = img.get_rect(center=(surface.get_width() // 2, y))
+        bg = pygame.Surface(rect.inflate(10, 10).size, pygame.SRCALPHA)
+        bg.fill((*th.colors["toast"], alpha))
+        surface.blit(bg, rect.inflate(10, 10).topleft)
+        surface.blit(img, rect)
+
+
+class ToastManager:
+    """Manage a queue of active toasts."""
+
+    def __init__(self) -> None:
+        self.toasts: list[Toast] = []
+
+    def show(self, text: str, duration: float = 2.0) -> None:
+        self.toasts.append(Toast(text, duration))
+
+    def update(self, dt: float) -> None:
+        self.toasts = [t for t in self.toasts if not t.update(dt)]
+
+    def draw(self, surface: pygame.Surface) -> None:
+        y = surface.get_height() - 40
+        for t in reversed(self.toasts):
+            t.draw(surface, y)
+            y -= 40
+
+
+class PopupDialog(Panel):
     """Modal popup displaying text and choice buttons."""
 
     def __init__(self, rect: pygame.Rect, icon: str, title: str, desc: str, choices) -> None:
-        self.rect = pygame.Rect(rect)
+        super().__init__(rect, from_side="right")
         self.icon = icon
         self.title = title
         self.desc = desc
@@ -289,24 +436,27 @@ class PopupDialog:
         for b in self.buttons:
             b.handle_event(event)
 
+    def update(self, dt: float) -> None:
+        super().update(dt)
+
     def draw(self, surface: pygame.Surface) -> None:
-        pygame.draw.rect(surface, (20, 20, 20), self.rect)
-        pygame.draw.rect(surface, (200, 200, 200), self.rect, 2)
+        self._draw_bg(surface)
         icon_img = self.font.render(self.icon, True, (255, 255, 0))
         surface.blit(icon_img, (self.rect.left + 5, self.rect.top + 5))
-        title_img = self.font.render(self.title, True, (255, 255, 255))
+        th = get_theme()
+        title_img = self.font.render(self.title, True, th.colors["text"])
         surface.blit(title_img, (self.rect.left + 40, self.rect.top + 5))
-        desc_img = self.font_small.render(self.desc, True, (200, 200, 200))
+        desc_img = self.font_small.render(self.desc, True, th.colors["text"])
         surface.blit(desc_img, desc_img.get_rect(center=(self.rect.centerx, self.rect.top + 60)))
         for b in self.buttons:
             b.draw(surface)
 
 
-class PauseMenu:
+class PauseMenu(Panel):
     """Overlay pause menu with basic options."""
 
     def __init__(self, rect: pygame.Rect, callbacks) -> None:
-        self.rect = pygame.Rect(rect)
+        super().__init__(rect, from_side="left")
         bx = self.rect.left + 20
         by = self.rect.top + 20
         bw = self.rect.width - 40
@@ -322,9 +472,11 @@ class PauseMenu:
         for b in self.buttons:
             b.handle_event(event)
 
+    def update(self, dt: float) -> None:
+        super().update(dt)
+
     def draw(self, surface: pygame.Surface) -> None:
-        pygame.draw.rect(surface, (20, 20, 20), self.rect)
-        pygame.draw.rect(surface, (200, 200, 200), self.rect, 2)
+        self._draw_bg(surface)
         for b in self.buttons:
             b.draw(surface)
 
