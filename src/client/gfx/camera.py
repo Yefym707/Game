@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from __future__ import annotations
-
 import math
 import pygame
 
@@ -9,6 +7,8 @@ from . import anim
 
 
 class SmoothCamera:
+    """Camera following a target with smoothing and a deadzone."""
+
     def __init__(
         self,
         screen_size: tuple[int, int],
@@ -16,24 +16,46 @@ class SmoothCamera:
         follow_speed: float = 5.0,
         zoom_speed: float = 0.25,
         shake_scale: float = 1.0,
+        deadzone: tuple[int, int] = (100, 80),
     ) -> None:
         self.screen_w, self.screen_h = screen_size
         self.world_w, self.world_h = world_size
         self.follow_speed = follow_speed
         self.zoom_speed = zoom_speed
         self.shake_scale = shake_scale
+        self.deadzone_w, self.deadzone_h = deadzone
         self.x = 0.0
         self.y = 0.0
-        self.target_x = 0.0
-        self.target_y = 0.0
+        # start with target at current position
+        self.target_x = self.x
+        self.target_y = self.y
         self.zoom = 1.0
         self._shake: anim.Shake | None = None
         self.shake_offset = (0.0, 0.0)
 
     # positioning -----------------------------------------------------
     def follow(self, pos: tuple[float, float]) -> None:
-        tx = pos[0] - (self.screen_w / 2) / self.zoom
-        ty = pos[1] - (self.screen_h / 2) / self.zoom
+        """Adjust target so ``pos`` remains inside the deadzone."""
+
+        view_w = self.screen_w / self.zoom
+        view_h = self.screen_h / self.zoom
+        cx = self.x + view_w / 2
+        cy = self.y + view_h / 2
+        dzx = self.deadzone_w / self.zoom
+        dzy = self.deadzone_h / self.zoom
+
+        tx = self.x
+        ty = self.y
+        dx = pos[0] - cx
+        if dx < -dzx / 2:
+            tx += dx + dzx / 2
+        elif dx > dzx / 2:
+            tx += dx - dzx / 2
+        dy = pos[1] - cy
+        if dy < -dzy / 2:
+            ty += dy + dzy / 2
+        elif dy > dzy / 2:
+            ty += dy - dzy / 2
         self.target_x, self.target_y = tx, ty
 
     def update(self, dt: float) -> None:
