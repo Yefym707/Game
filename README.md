@@ -161,6 +161,10 @@ register, send periodic heartbeats and unregister on shutdown.  Clients can
 query the master via the **Browse** tab in the online menu which lists
 available servers and displays basic metadata.
 
+## Anti-Cheat, Validation & Moderation
+
+The server validates actions and enforces per-IP rate limits. A JSON based ban list allows temporary or permanent bans. Replays are signed with HMAC and players may submit in-game reports stored on the server.
+
 ## Tests
 
 ```bash

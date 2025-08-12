@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Any, Dict
 
 try:  # pragma: no cover - optional during tests
@@ -12,21 +13,38 @@ except Exception:  # pragma: no cover
 from net.protocol import decode_message, encode_message, MessageType
 from net.master_api import MasterMessage, encode_master_message, decode_master_message
 from .lobby import LobbyManager
-from .security import check_size, validate_master_payload
+from .security import check_size, validate_master_payload, SessionGuard
+from .banlist import BanList
+
+log = logging.getLogger(__name__)
 
 
 class Server:
     """Accept connections and dispatch messages."""
 
-    def __init__(self) -> None:
+    def __init__(self, limits: Dict[str, int] | None = None) -> None:
         self.lobbies = LobbyManager()
         self.clients: Dict[websockets.WebSocketServerProtocol, str] = {}
+        self.guards: Dict[websockets.WebSocketServerProtocol, SessionGuard] = {}
+        self.limits = limits or {"actions_per_sec": 10, "bytes_per_min": 65536}
+        self.bans = BanList()
 
     async def handler(self, websocket: "websockets.WebSocketServerProtocol") -> None:
+        ip = getattr(websocket, "remote_address", ("", 0))[0]
+        if self.bans.is_banned(str(ip)):
+            await websocket.close()
+            return
         self.clients[websocket] = ""
+        self.guards[websocket] = SessionGuard(**self.limits)
         try:
             async for raw in websocket:
                 check_size(raw)
+                try:
+                    self.guards[websocket].check(len(raw))
+                except Exception as exc:
+                    log.warning("rate limit: %s", exc)
+                    await websocket.send(encode_message({"t": MessageType.ERROR.value, "p": str(exc)}))
+                    continue
                 try:
                     msg = decode_message(raw)
                 except Exception as exc:
@@ -38,6 +56,7 @@ class Server:
                     await websocket.send(encode_message({"t": MessageType.ERROR.value, "p": "unsupported"}))
         finally:
             self.clients.pop(websocket, None)
+            self.guards.pop(websocket, None)
 
     # metadata used for master registration
     def lobby_payload(self) -> Dict[str, Any]:
@@ -74,10 +93,10 @@ async def _master_loop(server: Server, url: str) -> None:
                 pass
 
 
-async def run(host: str = "0.0.0.0", port: int = 8765, master: str | None = None) -> None:
+async def run(host: str = "0.0.0.0", port: int = 8765, master: str | None = None, limits: Dict[str, int] | None = None) -> None:
     if websockets is None:
         raise RuntimeError("websockets library not installed")
-    server = Server()
+    server = Server(limits)
     server.host = host  # type: ignore[attr-defined]
     server.port = port  # type: ignore[attr-defined]
     tasks = []
@@ -90,4 +109,5 @@ async def run(host: str = "0.0.0.0", port: int = 8765, master: str | None = None
 
 
 if __name__ == "__main__":  # pragma: no cover
+    logging.basicConfig(level=logging.INFO)
     asyncio.run(run())

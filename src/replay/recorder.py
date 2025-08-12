@@ -1,12 +1,14 @@
 """Utility to record deterministic game sessions."""
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Dict, Any
 
 from . import format as fmt
 from . import storage
 from gamecore import saveio
+from net.attestation import hmac_file
 
 
 class Recorder:
@@ -46,4 +48,9 @@ class Recorder:
         if path and final_path != self.path:
             self.path.replace(final_path)
             self.path = final_path
+        key = os.environ.get("REPLAY_HMAC_KEY")
+        if key:
+            sig = hmac_file(self.path, key.encode())
+            with storage.open_append(self.path) as fh:
+                storage.write_jsonl(fh, {"signature": sig})
         return self.path

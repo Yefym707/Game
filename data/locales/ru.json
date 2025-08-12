@@ -50,4 +50,8 @@
   ,"DEMO_COMPLETE": "Демо завершено"
   ,"BUY_FULL": "Купить полную версию"
   ,"steam_sdk_missing": "Steam SDK не найден"
+  ,"error_invalid_action": "Неверное действие"
+  ,"error_rate_limited": "Слишком много запросов"
+  ,"banned": "Бан: {reason}"
+  ,"report_sent": "Жалоба отправлена"
 }
