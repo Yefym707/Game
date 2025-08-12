@@ -17,6 +17,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "ui_scale": 1.0,
     "first_run": True,
     "config_version": 1,
+    "master_url": "ws://localhost:8080",
 }
 
 
