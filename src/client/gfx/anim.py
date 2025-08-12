@@ -106,3 +106,96 @@ class SlideTransition:
         offset = int((1.0 - t) * w)
         surface.blit(self.new_surf, (0, 0))
         surface.blit(self.old_surf, (-offset, 0))
+
+
+# lightweight animation primitives used by the game scene -----------------
+
+
+@dataclass
+class Fade:
+    """Fade a surface in or out by modifying its alpha channel."""
+
+    surface: pygame.Surface
+    duration: float = 0.3
+    out: bool = True
+    time: float = 0.0
+
+    def update(self, dt: float) -> bool:
+        self.time += dt
+        t = min(self.time / self.duration, 1.0)
+        t = ease_in_out(t)
+        alpha = int(t * 255) if self.out else int((1.0 - t) * 255)
+        self.surface.set_alpha(alpha)
+        return self.time >= self.duration
+
+
+@dataclass
+class Flash:
+    """Briefly flash a rectangle to indicate a hit."""
+
+    rect: pygame.Rect
+    color: tuple[int, int, int] = (255, 255, 255)
+    duration: float = 0.2
+    time: float = 0.0
+
+    def update(self, dt: float) -> bool:
+        self.time += dt
+        return self.time >= self.duration
+
+    def draw(self, surface: pygame.Surface) -> None:
+        if int(self.time * 10) % 2 == 0:
+            pygame.draw.rect(surface, self.color, self.rect, 2)
+
+
+@dataclass
+class Slide:
+    """Slide an image from ``start`` to ``end`` over ``duration``."""
+
+    image: pygame.Surface
+    start: tuple[float, float]
+    end: tuple[float, float]
+    duration: float = 0.2
+    time: float = 0.0
+    pos: tuple[float, float] | None = None
+
+    def update(self, dt: float) -> bool:
+        self.time += dt
+        t = min(self.time / self.duration, 1.0)
+        t = ease_in_out(t)
+        x = self.start[0] + (self.end[0] - self.start[0]) * t
+        y = self.start[1] + (self.end[1] - self.start[1]) * t
+        self.pos = (x, y)
+        return self.time >= self.duration
+
+    def draw(self, surface: pygame.Surface) -> None:
+        if self.pos:
+            surface.blit(self.image, self.pos)
+
+
+@dataclass
+class FloatText:
+    """Small piece of text floating upwards and fading out."""
+
+    text: str
+    pos: tuple[float, float]
+    color: tuple[int, int, int] = (255, 255, 255)
+    duration: float = 1.0
+    rise: float = 30.0
+    time: float = 0.0
+    font: pygame.font.Font | None = None
+
+    def __post_init__(self) -> None:
+        if self.font is None:
+            self.font = pygame.font.SysFont(None, 18)
+
+    def update(self, dt: float) -> bool:
+        self.time += dt
+        return self.time >= self.duration
+
+    def draw(self, surface: pygame.Surface) -> None:
+        t = min(self.time / self.duration, 1.0)
+        alpha = int((1.0 - t) * 255)
+        y = self.pos[1] - self.rise * t
+        img = self.font.render(self.text, True, self.color)
+        img.set_alpha(alpha)
+        surface.blit(img, (self.pos[0], y))

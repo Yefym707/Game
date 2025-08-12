@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 from typing import Any, Dict
 
+from . import rules
+
 # Default path to balance.json inside project data folder
 DATA_PATH = Path(__file__).resolve().parents[2] / "data" / "balance.json"
 
@@ -41,4 +43,11 @@ def load_balance(path: str | Path = DATA_PATH) -> Dict[str, Any]:
     with path.open("r", encoding="utf-8") as fh:
         data = json.load(fh)
     _validate(data)
+    preset = rules.difficulty_preset()
+    # apply multipliers
+    data["zombie"]["agro_range"] *= preset.get("agro", 1.0)
+    data["player"]["damage"] *= preset.get("damage", 1.0)
+    data["zombie"]["limit"] *= preset.get("spawn", 1.0)
+    for key in data.get("loot", {}):
+        data["loot"][key] = max(0.0, min(1.0, data["loot"][key] * preset.get("loot", 1.0)))
     return data

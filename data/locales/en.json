@@ -60,4 +60,14 @@
   ,"telemetry_status_sent": "sent"
   ,"telemetry_status_queued": "queued"
   ,"telemetry_status_error": "error"
+
+  ,"resume": "Resume"
+  ,"restart": "Restart"
+  ,"easy": "Easy"
+  ,"normal": "Normal"
+  ,"hard": "Hard"
+  ,"tooltip_move": "Move"
+  ,"tooltip_attack": "Attack"
+  ,"log_expand": "expand log"
+  ,"log_collapse": "collapse log"
 }

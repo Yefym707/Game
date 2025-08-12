@@ -5,7 +5,7 @@ import gzip
 from pathlib import Path
 from typing import Any, Dict
 
-from . import board, rules, entities
+from . import board, rules, entities, config
 from .save_migrations import apply_migrations
 from integrations import steam
 
@@ -106,3 +106,23 @@ def import_map(name: str) -> board.Board:
     """Load a map previously exported with :func:`export_map`."""
     path = MOD_MAPS_DIR / f"{name}.json"
     return board.import_map(path)
+
+
+# restart helpers ---------------------------------------------------------
+
+
+def restart_allowed(cfg: Dict[str, Any] | None = None) -> bool:
+    """Check configuration flag controlling restart availability."""
+
+    if cfg is None:
+        cfg = config.load_config()
+    return bool(cfg.get("allow_restart", True))
+
+
+def restart_state(state: board.GameState, seed: int, cfg: Dict[str, Any] | None = None) -> board.GameState:
+    """Return a fresh game state using ``seed`` if restarts are allowed."""
+
+    if not restart_allowed(cfg):
+        return state
+    rules.set_seed(seed)
+    return board.create_game(players=len(state.players), mode=state.mode)

@@ -37,6 +37,21 @@ class TurnStatus(Enum):
     PLAYER = auto()
     ZOMBIE = auto()
 
+
+class Difficulty(Enum):
+    EASY = auto()
+    NORMAL = auto()
+    HARD = auto()
+
+
+DIFFICULTY_PRESETS = {
+    Difficulty.EASY: {"agro": 0.75, "loot": 1.25, "damage": 0.75, "spawn": 0.75},
+    Difficulty.NORMAL: {"agro": 1.0, "loot": 1.0, "damage": 1.0, "spawn": 1.0},
+    Difficulty.HARD: {"agro": 1.25, "loot": 0.75, "damage": 1.25, "spawn": 1.25},
+}
+
+CURRENT_DIFFICULTY = Difficulty.NORMAL
+
 RNG = random.Random()
 
 # simple monotonically increasing identifiers used by the replay system
@@ -52,6 +67,17 @@ DIRECTIONS: Dict[str, Tuple[int, int]] = {
 
 def set_seed(seed: int) -> None:
     RNG.seed(seed)
+
+
+def set_difficulty(diff: Difficulty) -> None:
+    """Select active difficulty preset."""
+
+    global CURRENT_DIFFICULTY
+    CURRENT_DIFFICULTY = diff
+
+
+def difficulty_preset() -> Dict[str, float]:
+    return DIFFICULTY_PRESETS[CURRENT_DIFFICULTY]
 
 
 def validate_action(state, action, player_index: int) -> bool:

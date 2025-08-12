@@ -3,10 +3,12 @@ from __future__ import annotations
 
 import asyncio
 import pygame
+from typing import Any
 
 from .app import Scene
 from .gfx.tileset import TILE_SIZE, Tileset
-from .ui.widgets import Log, StatusPanel
+from .gfx import anim
+from .ui.widgets import IconLog, StatusPanel, PauseMenu
 from .input import InputManager
 from .sfx import SFX, set_volume
 from .net_client import NetClient
@@ -53,10 +55,14 @@ class GameScene(Scene):
         self.camera_x = 0.0
         self.camera_y = 0.0
         self.scale = 1.0
-        self.log = Log()
+        self.log = IconLog()
         self.status = StatusPanel()
         self._last_log = 0
         self.sfx = SFX()
+        self.animations: list[Any] = []
+        self.hover_tile: tuple[int, int] | None = None
+        self.paused = False
+        self.pause_menu: PauseMenu | None = None
         self.input.set_profile(self.state.active)
         self.recorder: Recorder | None = None
         if self.cfg.get("record_replays"):
@@ -75,24 +81,67 @@ class GameScene(Scene):
             except Exception:  # pragma: no cover - fallback
                 pass
         # Fallback to console/log output
-        print("Error:", msg)
+            print("Error:", msg)
         if hasattr(self, "log"):
-            self.log.add(msg)
+            self.log.add("!", msg)
+
+    def _open_pause_menu(self) -> None:
+        """Create the pause menu overlay."""
+
+        if not self.paused:
+            w, h = self.app.screen.get_size()
+            rect = pygame.Rect(w // 2 - 150, h // 2 - 120, 300, 220)
+            callbacks = {
+                "resume": self._resume,
+                "restart": self._restart,
+                "settings": self._goto_settings,
+                "exit": self._exit_to_menu,
+            }
+            self.pause_menu = PauseMenu(rect, callbacks)
+            self.paused = True
+
+    def _resume(self) -> None:
+        self.paused = False
+
+    def _goto_settings(self) -> None:
+        from .scene_settings import SettingsScene
+
+        self.next_scene = SettingsScene(self.app)
+
+    def _exit_to_menu(self) -> None:
+        from .scene_menu import MenuScene
+
+        if self.recorder:
+            self.recorder.stop()
+        self.next_scene = MenuScene(self.app)
+
+    def _restart(self) -> None:
+        self.state = saveio.restart_state(self.state, 0, self.cfg)
+        self.log.entries.clear()
+        self._last_log = 0
+        self.input.set_profile(self.state.active)
+        self.paused = False
 
     # event handling ---------------------------------------------------
     def handle_event(self, event: pygame.event.Event) -> None:
+        if self.paused:
+            if self.pause_menu:
+                self.pause_menu.handle_event(event)
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                self.paused = False
+            return
+        if event.type == pygame.MOUSEMOTION:
+            tile_size = int(TILE_SIZE * self.scale)
+            x = int((event.pos[0] + self.camera_x) // tile_size)
+            y = int((event.pos[1] + self.camera_y) // tile_size)
+            self.hover_tile = (x, y)
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                from .scene_menu import MenuScene
-                if self.recorder:
-                    self.recorder.stop()
-                self.next_scene = MenuScene(self.app)
+                self._open_pause_menu()
                 return
             action = self.input.action_from_key(event.key)
             if action == "pause":
-                from .scene_menu import MenuScene
-
-                self.next_scene = MenuScene(self.app)
+                self._open_pause_menu()
             elif action == "end_turn":
                 if self.state.mode == rules.GameMode.ONLINE and self.net_client:
                     asyncio.create_task(self.net_client.send({"t": "ACTION", "p": {"end_turn": True}}))
@@ -116,7 +165,7 @@ class GameScene(Scene):
                 if self.state.mode != rules.GameMode.ONLINE:
                     try:
                         self.state = saveio.load_game(self.quick_path)
-                        self.log.lines.clear()
+                        self.log.entries.clear()
                         self._last_log = 0
                         self.input.set_profile(self.state.active)
                     except Exception as exc:
@@ -132,6 +181,7 @@ class GameScene(Scene):
             self.scale *= 1.25 if event.y > 0 else 0.8
             self.scale = max(0.75, min(2.0, self.scale))
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            self.log.handle_event(event)
             self._handle_click(event.pos)
 
     def _handle_move(self, action: str) -> None:
@@ -146,14 +196,25 @@ class GameScene(Scene):
                 self.net_client.send({"t": "ACTION", "p": {"move": mapping[action]}})
             )
         else:
+            player = self.state.players[self.state.active]
+            old = (player.x, player.y)
             if gboard.player_move(self.state, mapping[action]):
                 if self.recorder:
-                    self.recorder.record({
-                        "type": "MOVE",
-                        "turn": self.state.turn,
-                        "player": self.state.active,
-                        "dir": mapping[action],
-                    })
+                    self.recorder.record(
+                        {
+                            "type": "MOVE",
+                            "turn": self.state.turn,
+                            "player": self.state.active,
+                            "dir": mapping[action],
+                        }
+                    )
+                tile = self.tileset.get(player.symbol)
+                if tile:
+                    size = int(TILE_SIZE * self.scale)
+                    img = pygame.transform.scale(tile, (size, size)) if size != TILE_SIZE else tile
+                    start = (old[0] * size - self.camera_x, old[1] * size - self.camera_y)
+                    end = (player.x * size - self.camera_x, player.y * size - self.camera_y)
+                    self.animations.append(anim.Slide(img, start, end, 0.2))
                 self.sfx.play("step")
 
     def _handle_click(self, pos) -> None:
@@ -166,6 +227,9 @@ class GameScene(Scene):
             self.state.add_log(msg)
             self.sfx.play("pickup")
             achievements.on_zombie_kill()
+            sx = x * tile_size - self.camera_x + tile_size // 2
+            sy = y * tile_size - self.camera_y
+            self.animations.append(anim.FloatText("+1", (sx, sy)))
 
     # update / draw ----------------------------------------------------
     def update(self, dt: float) -> None:
@@ -186,8 +250,11 @@ class GameScene(Scene):
             self.camera_x += speed
         if len(self.state.log) > self._last_log:
             for msg in self.state.log[self._last_log :]:
-                self.log.add(msg)
+                self.log.add("·", msg)
             self._last_log = len(self.state.log)
+        for a in list(self.animations):
+            if a.update(dt):
+                self.animations.remove(a)
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill((0, 0, 0))
@@ -204,16 +271,24 @@ class GameScene(Scene):
                     sx = x * tile_size - self.camera_x
                     sy = y * tile_size - self.camera_y
                     surface.blit(img, (sx, sy))
+        # highlights
+        self._draw_highlights(surface, tile_size)
         # entities
         for p in self.state.players:
             self._draw_entity(surface, p, tile_size)
         for z in self.state.zombies:
             self._draw_entity(surface, z, tile_size)
+        # animations overlay
+        for a in self.animations:
+            if hasattr(a, "draw"):
+                a.draw(surface)
         # UI
         w, h = surface.get_size()
         log_rect = pygame.Rect(w - 200, 0, 200, h)
         self.log.draw(surface, log_rect)
         self.status.draw(surface, self.state)
+        if self.paused and self.pause_menu:
+            self.pause_menu.draw(surface)
 
     def _draw_entity(self, surface: pygame.Surface, ent, tile_size: int) -> None:
         tile = self.tileset.get(ent.symbol)
@@ -225,3 +300,49 @@ class GameScene(Scene):
             sx = ent.x * tile_size - self.camera_x
             sy = ent.y * tile_size - self.camera_y
             surface.blit(img, (sx, sy))
+
+    def _draw_highlights(self, surface: pygame.Surface, tile_size: int) -> None:
+        player = self.state.players[self.state.active]
+        px, py = player.x, player.y
+        for dx, dy in rules.DIRECTIONS.values():
+            tx, ty = px + dx, py + dy
+            rect = pygame.Rect(
+                tx * tile_size - self.camera_x,
+                ty * tile_size - self.camera_y,
+                tile_size,
+                tile_size,
+            )
+            pygame.draw.rect(surface, (0, 255, 0), rect, 1)
+        for z in self.state.zombies:
+            if abs(z.x - px) + abs(z.y - py) == 1:
+                rect = pygame.Rect(
+                    z.x * tile_size - self.camera_x,
+                    z.y * tile_size - self.camera_y,
+                    tile_size,
+                    tile_size,
+                )
+                pygame.draw.rect(surface, (255, 0, 0), rect, 2)
+        if self.hover_tile:
+            path = self._simple_path((px, py), self.hover_tile)
+            for step in path:
+                cx = step[0] * tile_size - self.camera_x + tile_size // 2
+                cy = step[1] * tile_size - self.camera_y + tile_size // 2
+                pygame.draw.circle(surface, (255, 255, 0), (cx, cy), 3)
+
+    def _simple_path(self, start: tuple[int, int], end: tuple[int, int]) -> list[tuple[int, int]]:
+        x, y = start
+        tx, ty = end
+        path = []
+        while (x, y) != (tx, ty):
+            if x < tx:
+                x += 1
+            elif x > tx:
+                x -= 1
+            elif y < ty:
+                y += 1
+            elif y > ty:
+                y -= 1
+            path.append((x, y))
+            if len(path) > 100:
+                break
+        return path

@@ -104,6 +104,18 @@ system. Locale files live in `data/locales/<lang>.json` and the desired
 language is stored in `~/.oko_zombie/config.json` under the `"lang"` key.
 Missing keys default to the lookup key itself.
 
+## UX polish & Difficulty Presets
+
+The client features small touches to make the board feel alive: movement and
+attack ranges are highlighted, paths previewed with dotted lines and actions
+queued as non-blocking animations. A compact side log displays recent events
+with tiny unicode icons and can be collapsed when screen space is tight.
+
+Before starting a match the player may select between **Easy**, **Normal** and
+**Hard** difficulty. Each preset adjusts enemy aggression, loot chances, damage
+and spawn rates. Restarts are gated behind a configuration flag and reuse the
+original random seed for deterministic sessions.
+
 ## Telemetry & Crash Reports (Opt-in)
 
 The game can optionally send anonymous telemetry events and crash reports to a
