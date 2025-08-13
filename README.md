@@ -61,6 +61,15 @@ automatically retries with an exponential backoff and shows a reconnecting
 overlay which can be cancelled.  Invite links can be refreshed with a new
 signature or revoked entirely if access should be removed.
 
+### Online: Rejoin & Spectator
+
+Players receive a *rejoin token* when joining a room. If their connection drops
+the client uses this token to reclaim the original slot and receives a full
+state snapshot. Lobbies may optionally allow late **drop‑in** joins and
+spectator connections. Spectators can watch with camera control and access to
+the log but cannot issue actions. Participants can vote to pause the game; a
+majority vote pauses or resumes the tick loop.
+
 ## Balance
 
 Core combat and spawn values are configured in `data/balance.json`. The loader

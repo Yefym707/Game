@@ -28,6 +28,8 @@ class NetClient:
         self._reconnect_backoff = list(reconnect_backoff or [1, 2, 5, 10])
         self._reconnect_attempt = 0
         self.last_invite: str = ""
+        self.rejoin_token: str | None = None
+        self.spectator = False
 
     async def connect(self, uri: str) -> None:
         if websockets is None:
@@ -40,6 +42,10 @@ class NetClient:
             except Exception:
                 await asyncio.sleep(delay)
                 delay = min(delay * 2, 30)
+        if self.rejoin_token:
+            await self.ws.send(
+                encode_message({"t": MessageType.REJOIN_REQ.value, "token": self.rejoin_token})
+            )
         asyncio.create_task(self._reader())
         asyncio.create_task(self._writer())
 
@@ -53,6 +59,9 @@ class NetClient:
             if msg.get("t") == MessageType.PONG.value:
                 sent = float(msg.get("p", 0.0))
                 self.record_rtt(max(0.0, time.perf_counter() - sent))
+                continue
+            if msg.get("t") == MessageType.REJOIN_ACK.value:
+                self.rejoin_token = msg.get("token", self.rejoin_token)
                 continue
             await self.incoming.put(msg)
 
@@ -106,6 +115,12 @@ class NetClient:
         """Reset reconnect attempt counter."""
 
         self._reconnect_attempt = 0
+
+    def set_rejoin_token(self, token: str) -> None:
+        self.rejoin_token = token
+
+    def set_spectator(self, value: bool) -> None:
+        self.spectator = value
 
 
 def parse_invite_url(url: str) -> Dict[str, object]:

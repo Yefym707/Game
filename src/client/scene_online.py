@@ -37,6 +37,9 @@ class OnlineScene(Scene):
         self.invite: str | None = None
         self.ready = False
         self.rtts: Dict[str, float] = {}
+        self.allow_drop_in = False
+        self.allow_spectators = False
+        self.spectate = False
 
     async def _refresh(self) -> None:
         if websockets is None:
@@ -62,6 +65,16 @@ class OnlineScene(Scene):
                 self.connected = True
             if event.key == pygame.K_SPACE:
                 self.ready = not self.ready
+            if event.key == pygame.K_d:
+                self.allow_drop_in = not self.allow_drop_in
+            if event.key == pygame.K_s:
+                self.allow_spectators = not self.allow_spectators
+            if event.key == pygame.K_p and not self.connected:
+                self.client.set_spectator(True)
+                asyncio.create_task(self.client.connect(self.address))
+                self.status = _("CONNECT")
+                self.connected = True
+                self.spectate = True
 
     async def _poll(self) -> None:
         if not self.connected:
