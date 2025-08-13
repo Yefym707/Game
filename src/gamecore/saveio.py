@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict
 
-from . import board, rules, entities, config
+from . import board, rules, entities, config, validate
 from .save_migrations import apply_migrations
 from integrations import steam
 
@@ -86,6 +86,12 @@ def save_game(state: board.GameState, path: str | Path) -> None:
     if state.mode is rules.GameMode.ONLINE:
         return
     path = Path(path)
+    if path == config.autosave_path():
+        cfg = config.load_config()
+        interval = int(cfg.get("autosave_interval_turns", 1))
+        if interval > 0 and getattr(state, "turn", 0) % interval != 0:
+            return
+    validate.validate_state(state)
     path.parent.mkdir(parents=True, exist_ok=True)
 
     meta = {
@@ -164,7 +170,9 @@ def load_game(path: str | Path) -> board.GameState:
     rng_state = data.get("rng")
     if rng_state:
         rules.RNG.set_state(rng_state)
-    return board.GameState.from_dict(data["state"], mode=mode, players=players)
+    state = board.GameState.from_dict(data["state"], mode=mode, players=players)
+    validate.validate_state(state)
+    return state
 
 
 def snapshot(state: board.GameState) -> Dict[str, Any]:

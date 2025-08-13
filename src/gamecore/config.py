@@ -54,6 +54,8 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "auto_rejoin": True,
     "default_spectator": False,
     "save_conflict_policy": DEFAULT_SAVE_CONFLICT_POLICY,
+    "autosave_interval_turns": 1,
+    "enable_profiling": False,
 }
 
 
