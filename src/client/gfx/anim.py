@@ -37,15 +37,20 @@ def float_text(text: str, pos: tuple[int, int]) -> FloatText:
 
 
 def screen_shake(camera, amplitude: float = 1.0, duration: float = 0.2) -> None:  # pragma: no cover - visual
-    """Tiny placeholder for a camera shake effect.
+    """Apply a tiny instantaneous shake to ``camera``.
 
-    The implementation is intentionally light weight – the tests only need the
-    function to exist so modules can call it after an attack.  No actual shaking
-    is required.
+    For the purposes of the tests we do not implement a full time based
+    animation.  Instead the camera is nudged by a small random offset which is
+    clamped back into the world bounds.  The ``duration`` argument is accepted
+    for API compatibility but ignored.
     """
 
-    _ = (camera, amplitude, duration)  # unused but keeps signature stable
-    return None
+    import random
+
+    camera.x += random.uniform(-amplitude, amplitude)
+    camera.y += random.uniform(-amplitude, amplitude)
+    if hasattr(camera, "clamp_to_bounds"):
+        camera.clamp_to_bounds()
 
 
 __all__ = ["FloatText", "float_text", "screen_shake"]
