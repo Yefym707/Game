@@ -4,7 +4,7 @@ from __future__ import annotations
 import pygame
 
 from gamecore.i18n import gettext as _
-from .app import Scene
+from .scene_base import Scene
 from .ui.widgets import Button
 
 try:  # pragma: no cover - optional dependency

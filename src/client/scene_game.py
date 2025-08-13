@@ -6,7 +6,7 @@ import math
 import pygame
 from typing import Any
 
-from .app import Scene
+from .scene_base import Scene
 from .gfx.tileset import TILE_SIZE, Tileset
 from .gfx import anim
 from .gfx.camera import SmoothCamera

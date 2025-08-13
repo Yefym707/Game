@@ -4,7 +4,7 @@ from __future__ import annotations
 import pygame
 from pathlib import Path
 
-from .app import Scene
+from .scene_base import Scene
 from gamecore.i18n import gettext as _
 from replay import player as replay_player
 
