@@ -125,6 +125,19 @@ class SettingsScene(Scene):
         )
         y += 40
         self.general_widgets.append(
+            Dropdown(
+                pygame.Rect(40, y, 260, 32),
+                [
+                    ("ask", _("ask")),
+                    ("prefer_local", _("prefer_local")),
+                    ("prefer_cloud", _("prefer_cloud")),
+                ],
+                self.cfg.get("save_conflict_policy", gconfig.DEFAULT_SAVE_CONFLICT_POLICY),
+                self._on_conflict_policy,
+            )
+        )
+        y += 40
+        self.general_widgets.append(
             Toggle(
                 _("telemetry_opt_in"),
                 pygame.Rect(40, y, 260, 32),
@@ -257,6 +270,9 @@ class SettingsScene(Scene):
 
     def _on_endpoint(self, value: str) -> None:
         self.cfg["telemetry_endpoint"] = value
+
+    def _on_conflict_policy(self, value: str) -> None:
+        self.cfg["save_conflict_policy"] = value
 
     def _on_fx_toggle(self, key: str, value: bool) -> None:
         self.cfg[f"fx_{key}" if key != "color" else "fx_color"] = value

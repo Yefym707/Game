@@ -108,6 +108,18 @@ ACHIEVEMENTS = "ACHIEVEMENTS"
 CLOUD = "CLOUD"
 OVERLAY = "OVERLAY"
 
+# save conflict handling -----------------------------------------------------
+SAVE_CONFLICT_POLICY = "save_conflict_policy"
+PREFER_LOCAL = "prefer_local"
+PREFER_CLOUD = "prefer_cloud"
+ASK = "ask"
+SAVE_CONFLICT_TITLE = "save_conflict_title"
+LOCAL_VERSION = "local_version"
+CLOUD_VERSION = "cloud_version"
+ALWAYS_PREFER_LOCAL = "always_prefer_local"
+ALWAYS_PREFER_CLOUD = "always_prefer_cloud"
+OPEN_BACKUPS_FOLDER = "open_backups_folder"
+
 # events and scenarios -------------------------------------------------------
 EVENT_ACCEPT = "event_accept"
 EVENT_IGNORE = "event_ignore"

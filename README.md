@@ -89,6 +89,15 @@ Every save file includes a `save_version` field. When an old save is loaded the
 module `gamecore.save_migrations` upgrades it step by step until it matches the
 current format, ensuring long term compatibility.
 
+## Cloud Save Conflicts & Backups
+
+Saves are written atomically and the previous version is always copied to
+`~/.oko_zombie/backups/<date>/` before being replaced. When a cloud save
+differs from the local copy the game compares metadata such as modification
+time, size and checksum. Depending on the configured policy the newer version
+is chosen automatically or a dialog lets the player pick the desired file and
+optionally set a default preference.
+
 ## Demo Mode
 
 A limited demo version is available. Launch it with the ``--demo`` flag:
