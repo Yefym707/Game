@@ -54,11 +54,18 @@ python -m scripts.run_gui
 
 ## Controls & Turn Flow
 
-The playable prototype supports a tiny subset of the final game's controls.  A
-unit is selected with the left mouse button, right clicking issues a move or
-attack depending on the target and **Space** ends the turn.  The rules module
-tracks action points and validates that moves stay within range and do not pass
-through walls.  Each successful action appends a short entry to the event log
+The playable prototype supports a tiny subset of the final game's controls:
+
+* **LMB** – select a unit or target
+* **RMB** – move to a cell or attack an enemy
+* **Space** – end the current turn
+* **Esc** – pause
+* **F1** – toggle a help overlay with the current bindings
+
+The rules module tracks action points and validates that moves stay within
+range and do not pass through walls.  Failed actions return a localised reason
+which the client displays as a small toast message so the player knows why an
+order was rejected.  Successful actions append a short entry to the event log
 (``Move``, ``Hit`` or ``End Turn``).
 
 ## Game Flow: New Game / Continue / Load

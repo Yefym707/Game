@@ -12,6 +12,8 @@ from typing import Callable, List
 
 import pygame
 
+from ..gfx.tileset import TILE_SIZE
+
 _font: pygame.font.Font | None = None
 hover_hints: List[str] = []  # filled by tests; mirrors real project
 
@@ -201,7 +203,7 @@ class Minimap:
             relx = (event.pos[0] - self.rect.x) / self.rect.width
             rely = (event.pos[1] - self.rect.y) / self.rect.height
             cell = (int(relx * self.board_w), int(rely * self.board_h))
-            self.camera.jump_to(cell)
+            self.camera.jump_to((cell[0] * TILE_SIZE, cell[1] * TILE_SIZE))
 
 
 __all__ = [
