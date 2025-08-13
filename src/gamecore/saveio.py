@@ -14,9 +14,13 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
-from . import config
+from client.util_paths import user_data_dir
 
-SAVE_DIR = config.CONFIG_DIR / "saves"
+# Saves live inside the persistent user data directory.  ``user_data_dir``
+# honours platform specific locations and mirrors the behaviour of the real
+# project where configuration, logs and saves live under ``~/.oko_zombie`` (or
+# ``%USERPROFILE%\\.oko_zombie`` on Windows).
+SAVE_DIR = user_data_dir() / "saves"
 
 
 def _slot_path(slot: int) -> Path:
@@ -46,10 +50,38 @@ def find_last_save() -> int | None:
 
 
 def _validate_meta(meta: Dict[str, Any]) -> bool:
-    """Return ``True`` if ``meta`` contains the required fields."""
+    """Return ``True`` when the metadata contains the expected keys and types.
 
-    required = {"turn", "difficulty", "seed"}
-    return required.issubset(meta.keys())
+    ``Continue`` in the main menu relies on metadata validation to avoid
+    launching a broken match.  The check is intentionally strict: all required
+    fields must be present and of the correct type.  Additional keys are ignored
+    so forward compatible saves remain loadable.
+    """
+
+    required = {"turn": int, "difficulty": str, "seed": int}
+    for key, typ in required.items():
+        if key not in meta or not isinstance(meta[key], typ):
+            return False
+    return True
+
+
+def validate(slot: int) -> bool:
+    """Return ``True`` if ``slot`` contains a structurally valid save file.
+
+    Only the metadata section is inspected which keeps the check fast and
+    allows callers to guard the ``Continue`` menu option without loading the
+    full save file.  Any exception during parsing simply marks the slot as
+    invalid.
+    """
+
+    try:
+        path = _slot_path(slot)
+        with path.open("r", encoding="utf-8") as fh:
+            data = json.load(fh)
+    except Exception:
+        return False
+    meta = data.get("meta", {})
+    return _validate_meta(meta)
 
 
 def load(slot: int) -> Dict[str, Any]:
@@ -80,6 +112,7 @@ last_slot = find_last_save
 __all__ = [
     "list_saves",
     "find_last_save",
+    "validate",
     "load",
     "save",
     "last_slot",

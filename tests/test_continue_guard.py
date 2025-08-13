@@ -42,8 +42,16 @@ def test_continue_guard(tmp_path, monkeypatch):
     menu._continue()
     assert menu.next_scene is None
     assert menu.error_modal is not None
-
     menu.error_modal.on_yes()
     assert isinstance(menu.next_scene, DummyNew)
     assert menu.error_modal is None
+
+    # now pretend the last save is invalid
+    menu.next_scene = None
+    monkeypatch.setattr("gamecore.saveio.find_last_save", lambda: 1)
+    monkeypatch.setattr("gamecore.saveio.validate", lambda slot: False)
+
+    menu._continue()
+    assert menu.next_scene is None
+    assert menu.error_modal is not None
 

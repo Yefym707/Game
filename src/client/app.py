@@ -11,6 +11,7 @@ uncaught exception is written to ``app.log`` with log rotation and displayed via
 from __future__ import annotations
 
 import logging
+import sys
 from logging.handlers import RotatingFileHandler
 import traceback
 from types import SimpleNamespace
@@ -122,7 +123,10 @@ def main(safe_mode: bool = False) -> None:
         pygame.init()
         pygame.font.init()
         screen = pygame.display.set_mode((640, 480))
-        dialog = ModalError(_("error"), traceback.format_exc())
+        etype, value, tb = sys.exc_info()
+        stack = "".join(traceback.format_exception(etype, value, tb))
+        title = f"{etype.__name__}: {value}" if etype else _("error")
+        dialog = ModalError(title, stack)
         dialog.run(screen)
     finally:  # pragma: no cover - defensive
         telemetry_shutdown("exit")

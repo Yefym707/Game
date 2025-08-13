@@ -70,21 +70,29 @@ order was rejected.  Successful actions append a short entry to the event log
 
 ## Game Flow
 
-The main menu offers three entry points into a match:
+The title screen renders a visible menu navigable with the arrow keys or the
+mouse. A hint at the bottom reminds players that *Enter* or a left click selects
+the highlighted item. The available actions are:
 
-* **New Game** – opens a setup wizard where the mode, number of players,
-  player names, difficulty, scenario and random seed can be configured.
-* **Continue** – resumes the last used save slot when a valid save exists.
-  Otherwise a dialog is shown and the New Game wizard opens.
-* **Load** – shows all save slots with date, turn and seed information and
-  allows deletion or loading of a specific slot.
+* **New Game** – opens a lightweight setup wizard where the mode, player count,
+  names, difficulty and random seed can be adjusted.
+* **Continue** – resumes the most recent save when a valid slot exists. If the
+  last save is missing or malformed a dialog explains the issue and the wizard
+  opens instead of starting an empty match.
+* **Load** – lists all save slots with turn, difficulty and seed information
+  and allows deleting or loading a specific slot.
+* **Settings** – opens the configuration scene.
+* **Exit** – quits the application.
 
-## Safe Mode & Logs
+## Crash Handling & Logs
 
-Unexpected exceptions are caught and written to
-`%USERPROFILE%\.oko_zombie\logs\app.log`.  A modal error dialog shows the
-exception type and message and offers a **Copy details** button which copies the
-full stack trace to the clipboard for easy bug reports.
+Unexpected exceptions are written to
+`%USERPROFILE%\.oko_zombie\logs\app.log` with log rotation (1 MB ×3).  A modal
+dialog displays the error type and the last twenty lines of the stack trace and
+offers a **Copy details** button that copies the full traceback to the
+clipboard for easy bug reports.
+
+## Safe Mode
 
 Safe mode starts the game with heavy post effects, audio and online features
 disabled and loads a lightweight high‑contrast theme.  Enable it via:
@@ -132,11 +140,11 @@ the current camera view; clicking it jumps the camera to the selected cell.
 
 ## Loading Screen
 
-The client boots into a lightweight loading scene. Resources such as
-configuration files, locales and graphical assets are processed in small
-time-sliced batches to avoid frame hitches. Once loading completes the
-application switches to the main menu. The main loop uses a fixed 60 FPS
-cap with manual pacing to keep frame times stable.
+The client boots into a dedicated loading scene. Locales, configuration files,
+tiles and fonts are prepared by an ``AsyncLoader`` which processes tasks in
+small time-sliced batches each frame so the window never freezes. Progress is
+shown as a percentage alongside random gameplay tips. Once all tasks complete
+the application transitions to the main menu.
 
 ## Multiplayer
 
