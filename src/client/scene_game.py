@@ -11,7 +11,7 @@ that exposes the few attributes tests interact with: a ``state`` object, a
 
 import pygame
 from collections import deque
-from typing import Deque, Tuple
+from typing import Deque, Tuple, Optional, List
 
 from .gfx.camera import SmoothCamera
 from .gfx.tileset import TILE_SIZE
@@ -25,25 +25,35 @@ hover_hints = []  # tests patch this with translated help strings
 
 
 class GameScene:
-    def __init__(self, app, new_game: bool = True) -> None:
+    def __init__(self, app, new_game: bool = True, level_data: Optional[List[str]] = None) -> None:
         self.app = app
-        self.state = gboard.create_game(players=2)
-        rules.start_turn(self.state)
-        b = self.state.board
-        self.camera = SmoothCamera(
-            (app.screen.get_width(), app.screen.get_height()),
-            (b.width * TILE_SIZE, b.height * TILE_SIZE),
-        )
-        # attach players for minimap rendering
-        b.players = self.state.players  # type: ignore[attr-defined]
+        self.level_data = level_data
         self.help = HelpOverlay(app.input_map)
-        self.selected = self.state.current
         self.toasts: list[Toast] = []
         self.floaties: list = []
         self.queue: Deque[Tuple[str, tuple[int, int]]] = deque()
         self.preview_path: list[tuple[int, int]] = []
         self.font = pygame.font.SysFont(None, 16)
-        # pre-render board with grid
+        self._init_world()
+
+    def _init_world(self) -> None:
+        if self.level_data:
+            height = len(self.level_data)
+            width = len(self.level_data[0]) if height else 0
+            self.state = gboard.create_game(width=width, height=height, players=2)
+            self.state.board.tiles = [list(row) for row in self.level_data]
+        else:
+            self.state = gboard.create_game(width=10, height=10, players=2)
+        self.state.active = 0
+        rules.start_turn(self.state)
+        b = self.state.board
+        self.camera = SmoothCamera(
+            (self.app.screen.get_width(), self.app.screen.get_height()),
+            (b.width * TILE_SIZE, b.height * TILE_SIZE),
+        )
+        self.camera.jump_to((b.width * TILE_SIZE // 2, b.height * TILE_SIZE // 2))
+        b.players = self.state.players  # type: ignore[attr-defined]
+        self.selected = self.state.current
         self.board_surf = pygame.Surface((b.width * TILE_SIZE, b.height * TILE_SIZE))
         light = (180, 180, 180)
         dark = (50, 50, 50)
@@ -53,9 +63,15 @@ class GameScene:
                 rect = pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
                 self.board_surf.fill(dark if ch == "#" else light, rect)
                 pygame.draw.rect(self.board_surf, grid, rect, 1)
-        # minimap
-        mm_rect = pygame.Rect(app.screen.get_width() - 90, 10, 80, 80)
+        mm_rect = pygame.Rect(self.app.screen.get_width() - 90, 10, 80, 80)
         self.minimap = MinimapWidget(mm_rect, b, self.camera)
+        self.queue.clear()
+        self.preview_path = []
+        self.toasts.clear()
+        self.floaties.clear()
+
+    def enter(self) -> None:
+        self._init_world()
 
     # helpers -----------------------------------------------------------
     def cell_from_screen(self, pos: tuple[int, int]) -> tuple[int, int] | None:
