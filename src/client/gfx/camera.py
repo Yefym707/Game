@@ -61,8 +61,8 @@ class SmoothCamera:
 
     def update(self, dt: float) -> None:
         t = min(self.follow_speed * dt, 1.0)
-        self.x += (self.target_x - self.x) * t
-        self.y += (self.target_y - self.y) * t
+        self.x = anim.lerp(self.x, self.target_x, t)
+        self.y = anim.lerp(self.y, self.target_y, t)
         self.clamp_to_bounds()
         if self._shake:
             if self._shake.update(dt):

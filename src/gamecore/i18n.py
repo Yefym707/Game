@@ -187,6 +187,21 @@ INVERT_ZOOM = "invert_zoom"
 LARGE_TEXT = "large_text"
 NIGHT_VIGNETTE = "night_vignette"
 
+# help overlay -------------------------------------------------------------
+MOVE_UP = "move_up"
+MOVE_DOWN = "move_down"
+MOVE_LEFT = "move_left"
+MOVE_RIGHT = "move_right"
+END_TURN = "end_turn"
+REST = "rest"
+SCAVENGE = "scavenge"
+PAUSE_ACTION = "pause"
+QUICK_SAVE = "quick_save"
+QUICK_LOAD = "quick_load"
+HELP = "help"
+HP = "hp"
+AP = "ap"
+
 # minimap legend -------------------------------------------------------------
 LEGEND_WALL = "legend_wall"
 LEGEND_FLOOR = "legend_floor"

@@ -446,7 +446,7 @@ class GameScene(Scene):
         if self.weather:
             self.weather.draw(surface, (self.camera.x, self.camera.y))
         if ui:
-            log_rect = pygame.Rect(w - 200, 0, 200, h)
+            log_rect = pygame.Rect(w - 220, 0, 220, h)
             self.log.draw(surface, log_rect)
             self.status.draw(surface, self.state)
             if self.event_popup:

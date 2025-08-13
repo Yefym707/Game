@@ -14,7 +14,9 @@ def _sys_font(size: int) -> pygame.font.Font:
     """Return a pygame system font ensuring the font module is initialized."""
     if not pygame.font.get_init():
         pygame.font.init()
-    return pygame.font.SysFont(None, size)
+    th = get_theme()
+    scaled = max(1, int(size * th.scale))
+    return pygame.font.SysFont(None, scaled)
 
 
 class ModalError:
@@ -49,7 +51,9 @@ class ModalError:
             for bid, label in self.buttons:
                 rect = pygame.Rect(20, y, 160, 30)
                 pygame.draw.rect(surface, th.colors["panel"], rect, border_radius=th.radius)
-                pygame.draw.rect(surface, th.colors["border"], rect, 2, border_radius=th.radius)
+                pygame.draw.rect(
+                    surface, th.colors["border"], rect, th.border_width, border_radius=th.radius
+                )
                 img = self.font.render(label, True, th.colors["text"])
                 surface.blit(img, img.get_rect(center=rect.center))
                 btn_rects.append((bid, rect))
@@ -245,7 +249,9 @@ class Button:
         th = get_theme()
         color = th.colors["panel_hover"] if (self.hover or self.focus) else th.colors["panel"]
         pygame.draw.rect(surface, color, self.rect, border_radius=th.radius)
-        pygame.draw.rect(surface, th.colors["border"], self.rect, 2, border_radius=th.radius)
+        pygame.draw.rect(
+            surface, th.colors["border"], self.rect, th.border_width, border_radius=th.radius
+        )
         img = self.font.render(self.text, True, th.colors["text"])
         surface.blit(img, img.get_rect(center=self.rect.center))
         if self.hint:
@@ -498,18 +504,30 @@ class Log:
 
 
 class StatusPanel:
-    """Renders basic game state info at the top-left."""
+    """Renders current turn and active unit information.
+
+    The panel is anchored to the top-left and scales with the active theme.
+    """
 
     def __init__(self) -> None:
-        self.font = _sys_font(24)
+        self.font = _sys_font(18)
 
     def draw(self, surface: pygame.Surface, state) -> None:
-        text = _("status_turn").format(turn=state.turn)
-        img = self.font.render(text, True, (255, 255, 0))
-        surface.blit(img, (5, 5))
-        active = _("active_player").format(name=state.current.name)
-        img2 = self.font.render(active, True, (255, 255, 255))
-        surface.blit(img2, (5, 30))
+        th = get_theme()
+        rect = pygame.Rect(10, 10, 180, 70)
+        pygame.draw.rect(surface, th.colors["panel"], rect, border_radius=th.radius)
+        pygame.draw.rect(surface, th.colors["border"], rect, th.border_width, border_radius=th.radius)
+        player = state.players[state.active]
+        lines = [
+            _("status_turn").format(turn=state.turn),
+            player.name,
+            f"{_('hp')}: {getattr(player, 'health', 0)}  {_('ap')}: {getattr(player, 'ap', 0)}",
+        ]
+        y = rect.y + th.padding
+        for line in lines:
+            img = self.font.render(line, True, th.colors["text"])
+            surface.blit(img, (rect.x + th.padding, y))
+            y += self.font.get_linesize()
 
 
 # ---------------------------------------------------------------------------
@@ -599,7 +617,7 @@ class IconLog:
             y += self.font.get_linesize()
 
 
-class Panel:
+class AnimatedPanel:
     """Base panel supporting slide and fade animations."""
 
     def __init__(self, rect: pygame.Rect, from_side: str = "left") -> None:
@@ -679,7 +697,7 @@ class ToastManager:
             y -= 40
 
 
-class ModalConfirm(Panel):
+class ModalConfirm(AnimatedPanel):
     """Simple modal confirmation dialog with yes/no buttons."""
 
     def __init__(self, rect: pygame.Rect, text: str, on_yes, on_no=None) -> None:
@@ -722,7 +740,7 @@ class ModalConfirm(Panel):
             self.btn_no.draw(surface)
 
 
-class PopupDialog(Panel):
+class PopupDialog(AnimatedPanel):
     """Modal popup displaying text and choice buttons."""
 
     def __init__(self, rect: pygame.Rect, icon: str, title: str, desc: str, choices) -> None:
@@ -761,7 +779,7 @@ class PopupDialog(Panel):
             b.draw(surface)
 
 
-class PauseMenu(Panel):
+class PauseMenu(AnimatedPanel):
     """Overlay pause menu with basic options."""
 
     def __init__(self, rect: pygame.Rect, callbacks) -> None:
