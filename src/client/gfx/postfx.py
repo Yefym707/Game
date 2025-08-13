@@ -10,8 +10,23 @@ import numpy as np
 # ---------------------------------------------------------------------------
 # individual effects
 
-def vignette(surface: pygame.Surface, intensity: float = 0.5) -> pygame.Surface:
-    """Darken edges using a radial gradient."""
+
+def vignette(
+    surface: pygame.Surface, strength: float = 0.5, feather: float = 0.5
+) -> pygame.Surface:
+    """Darken edges using a radial gradient.
+
+    Parameters
+    ----------
+    surface:
+        Input surface. A new surface with the effect applied is returned.
+    strength:
+        Overall darkness of the corners in the range [0, 1].
+    feather:
+        Controls how smoothly the effect blends towards the center. Higher
+        values produce a softer edge.
+    """
+
     w, h = surface.get_size()
     arr = pygame.surfarray.array3d(surface).astype(np.float32)
     y, x = np.ogrid[:h, :w]
@@ -19,8 +34,8 @@ def vignette(surface: pygame.Surface, intensity: float = 0.5) -> pygame.Surface:
     dist = np.sqrt((x - cx) ** 2 + (y - cy) ** 2)
     max_dist = np.sqrt(cx ** 2 + cy ** 2)
     mask = 1.0 - dist / max_dist
-    mask = np.clip(mask, 0, 1) ** 0.5
-    mask = 1.0 - intensity * (1.0 - mask)
+    mask = np.clip(mask, 0, 1) ** max(0.01, feather)
+    mask = 1.0 - strength * (1.0 - mask)
     arr *= mask[..., None]
     return pygame.surfarray.make_surface(arr.astype(np.uint8))
 

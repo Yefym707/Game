@@ -24,6 +24,7 @@ from .ui.widgets import (
     Slider,
     Toggle,
     LargeTextToggle,
+    Label,
     hover_hints,
 )
 from .ui.theme import set_theme
@@ -231,6 +232,19 @@ class SettingsScene(Scene):
         )
         ay += 40
         self.access_widgets.append(
+            Label(_("night_vignette"), pygame.Rect(40, ay, 260, 32))
+        )
+        self.access_widgets.append(
+            Slider(
+                pygame.Rect(360, ay, 200, 20),
+                0,
+                100,
+                self.cfg.get("night_vignette", 0.0) * 100,
+                self._on_night_vignette,
+            )
+        )
+        ay += 40
+        self.access_widgets.append(
             Toggle(
                 _("invert_zoom"),
                 pygame.Rect(40, ay, 260, 32),
@@ -288,6 +302,9 @@ class SettingsScene(Scene):
     def _on_high_contrast(self, value: bool) -> None:
         self.cfg["theme"] = "high_contrast" if value else "dark"
         set_theme(self.cfg["theme"])
+
+    def _on_night_vignette(self, value: float) -> None:
+        self.cfg["night_vignette"] = round(value / 100.0, 2)
 
     def _on_subtitles(self, value: bool) -> None:
         self.cfg["subtitles"] = value

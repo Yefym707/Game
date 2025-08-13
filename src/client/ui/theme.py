@@ -106,21 +106,23 @@ THEMES: Dict[str, Theme] = {
     ),
     "high_contrast": Theme(
         colors={
-            "bg": (0, 0, 0),
-            "panel": (20, 20, 20),
-            "panel_hover": (40, 40, 40),
+            "bg": (11, 11, 11),  # #0B0B0B
+            "panel": (18, 18, 18),  # #121212
+            "panel_hover": (32, 32, 32),
             "text": (255, 255, 255),
-            "border": (255, 255, 0),
-            "tooltip": (10, 10, 10),
-            "toast": (0, 0, 0),
+            "border": (255, 255, 255),
+            "tooltip": (18, 18, 18),
+            "toast": (11, 11, 11),
+            "shadow1": (0, 0, 0, 150),
+            "shadow2": (0, 0, 0, 80),
         },
         palette={
             "ui": UIPalette(
-                neutral=(255, 255, 255),
-                accent=(255, 255, 0),
-                danger=(255, 0, 0),
-                warn=(255, 165, 0),
-                info=(0, 200, 255),
+                neutral=(220, 220, 220),
+                accent=(255, 191, 0),  # amber
+                danger=(255, 80, 80),
+                warn=(240, 170, 0),
+                info=(0, 170, 255),
             )
         },
         padding=8,
