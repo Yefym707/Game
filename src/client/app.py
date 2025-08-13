@@ -176,7 +176,9 @@ def main(demo: bool = False, safe_mode: bool = False) -> None:
         log_file.write_text("", encoding="utf-8")
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
-    fh = logging.FileHandler(log_file)
+    fh = logging.FileHandler(log_file, encoding="utf-8")
+    fmt = "%(asctime)s %(levelname)s %(name)s: %(message)s"
+    fh.setFormatter(logging.Formatter(fmt))
     root_logger.addHandler(fh)
     logging.info(
         "python=%s pygame=%s os=%s cwd=%s meipass=%s safe_mode=%s",
