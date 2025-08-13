@@ -6,7 +6,9 @@
   "menu_quit": "Exit",
   "no_valid_save": "No valid save",
   "loading": "Loading",
-  "tips": ["Stay alert!"],
+  "tips": [
+    "Stay alert!"
+  ],
   "copy_details": "Copy details",
   "help_select": "LMB: select",
   "help_move": "RMB: move/attack",
@@ -22,6 +24,10 @@
   "log_hit": "Hit",
   "log_miss": "Miss",
   "log_blocked": "Blocked",
-  "log_end": "End Turn"
+  "log_end": "End Turn",
+  "hp": "HP",
+  "ap": "AP",
+  "minimap": "Minimap",
+  "selected": "Selected",
+  "path_blocked": "Path blocked"
 }
-

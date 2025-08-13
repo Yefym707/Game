@@ -15,6 +15,7 @@ import pygame
 from gamecore.i18n import gettext as _
 from ..clipboard import copy as copy_to_clipboard
 from ..gfx.tileset import TILE_SIZE
+from .theme import get_theme
 
 _font: pygame.font.Font | None = None
 hover_hints: List[str] = []  # filled by tests; mirrors real project
@@ -232,6 +233,81 @@ class Minimap:
             self.camera.jump_to((cell[0] * TILE_SIZE, cell[1] * TILE_SIZE))
 
 
+class MinimapWidget:
+    """Clickable minimap rendering a board onto an internal surface.
+
+    The widget pre-renders the ``board`` onto a private :class:`Surface` so the
+    draw call simply scales that surface into ``rect``.  Players and zombies are
+    drawn as coloured rectangles using the active theme's palette.  Clicking
+    inside the widget converts the position into board coordinates and centres
+    the camera on that cell.
+    """
+
+    def __init__(self, rect: pygame.Rect, board, camera) -> None:
+        self.rect = rect
+        self.board = board
+        self.camera = camera
+        self.surface = pygame.Surface((board.width, board.height))
+        pal = get_theme().palette["ui"]
+        self.legend = {
+            ".": (180, 180, 180),
+            "#": (60, 60, 60),
+            "player": pal.accent,
+            "zombie": pal.danger,
+        }
+        self._render_map()
+
+    # internal ---------------------------------------------------------
+    def _render_map(self) -> None:
+        for y, row in enumerate(self.board.tiles):
+            for x, ch in enumerate(row):
+                self.surface.set_at((x, y), self.legend.get(ch, self.legend["."]))
+
+    # drawing ----------------------------------------------------------
+    def draw(self, surf: pygame.Surface) -> None:  # pragma: no cover - visual
+        img = pygame.transform.scale(self.surface, self.rect.size)
+        surf.blit(img, self.rect.topleft)
+        scale_x = self.rect.width / self.board.width
+        scale_y = self.rect.height / self.board.height
+        # entities
+        for p in getattr(self.board, "players", []):
+            px = self.rect.x + p.x * scale_x
+            py = self.rect.y + p.y * scale_y
+            pygame.draw.rect(
+                surf,
+                self.legend["player"],
+                pygame.Rect(px, py, max(1, scale_x), max(1, scale_y)),
+            )
+        for z in getattr(self.board, "zombies", []):
+            px = self.rect.x + z.x * scale_x
+            py = self.rect.y + z.y * scale_y
+            pygame.draw.rect(
+                surf,
+                self.legend["zombie"],
+                pygame.Rect(px, py, max(1, scale_x), max(1, scale_y)),
+            )
+        # view rectangle
+        theme = get_theme()
+        vw = self.camera.screen_w / self.camera.world_w * self.rect.width
+        vh = self.camera.screen_h / self.camera.world_h * self.rect.height
+        vx = self.rect.x + (self.camera.x / self.camera.world_w) * self.rect.width
+        vy = self.rect.y + (self.camera.y / self.camera.world_h) * self.rect.height
+        pygame.draw.rect(
+            surf,
+            theme.palette["ui"].neutral,
+            pygame.Rect(vx, vy, vw, vh),
+            theme.border_xs,
+        )
+
+    # events -----------------------------------------------------------
+    def handle_event(self, event: pygame.event.Event) -> None:
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.rect.collidepoint(event.pos):
+            relx = (event.pos[0] - self.rect.x) / self.rect.width
+            rely = (event.pos[1] - self.rect.y) / self.rect.height
+            cell = (int(relx * self.board.width), int(rely * self.board.height))
+            self.camera.jump_to((cell[0] * TILE_SIZE, cell[1] * TILE_SIZE))
+
+
 __all__ = [
     "init_ui",
     "ModalError",
@@ -245,5 +321,6 @@ __all__ = [
     "HelpOverlay",
     "SubtitleBar",
     "Minimap",
+    "MinimapWidget",
     "hover_hints",
 ]

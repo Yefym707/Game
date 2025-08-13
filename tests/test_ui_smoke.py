@@ -11,15 +11,17 @@ pygame.font.init()
 
 from client.app import App
 from client.gfx.camera import SmoothCamera
+from client.gfx.tileset import TILE_SIZE
 from client.ui import widgets
 from client.scene_game import GameScene
+from gamecore import board as gboard
 
 
 def test_ui_smoke() -> None:
     widgets.init_ui()
     widgets.hover_hints[:] = ["h1", "h2"]
 
-    app = App()
+    app = App({})
     scene = GameScene(app, new_game=True)
     app.scene = scene
 
@@ -41,11 +43,13 @@ def test_ui_smoke() -> None:
     ho.toggle()
     ho.draw(surf)
 
-    cam = SmoothCamera((100, 100), (200, 200))
-    mm = widgets.Minimap(pygame.Rect(0, 0, 50, 50), (200, 200), cam)
+    cam = SmoothCamera((100, 100), (10 * TILE_SIZE, 10 * TILE_SIZE))
+    board = gboard.Board.generate(10, 10)
+    mm = widgets.MinimapWidget(pygame.Rect(0, 0, 50, 50), board, cam)
     mm.draw(surf)
     ev = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(25, 25), button=1)
     mm.handle_event(ev)
-    assert cam.x != 0 or cam.y != 0
+    cx, cy = int(cam.x // TILE_SIZE), int(cam.y // TILE_SIZE)
+    assert 0 <= cx < board.width and 0 <= cy < board.height
 
     scene.draw(app.screen)
