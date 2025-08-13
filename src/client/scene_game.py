@@ -18,9 +18,12 @@ from .ui.widgets import (
     PauseMenu,
     PopupDialog,
     ToastManager,
+    SubtitleBar,
+    HelpOverlay,
     hover_hints,
 )
-from .input import InputManager
+from .ui.theme import get_theme
+from .input import InputManager, DEFAULT_GAMEPAD
 from . import sfx
 from .net_client import NetClient
 from gamecore import board as gboard
@@ -97,6 +100,8 @@ class GameScene(Scene):
         self.pause_menu: PauseMenu | None = None
         self.event_popup: PopupDialog | None = None
         self.toasts = ToastManager()
+        self.subtitles = SubtitleBar()
+        self.help = HelpOverlay(self.input)
         self.input.set_profile(self.state.active)
         self.recorder: Recorder | None = None
         if self.cfg.get("record_replays"):
@@ -149,6 +154,10 @@ class GameScene(Scene):
         if hasattr(self, "log"):
             self.log.add("!", msg)
 
+    def _subtitle(self, msg: str) -> None:
+        if self.cfg.get("subtitles"):
+            self.subtitles.show(msg, self.cfg.get("dyslexia_font", False))
+
     def _maybe_event(self) -> None:
         """Trigger a random event if conditions allow."""
 
@@ -175,6 +184,7 @@ class GameScene(Scene):
         msg = i18n.gettext(ev.title_key)
         self.log.add(ev.icon, msg)
         self.toasts.show(msg)
+        self._subtitle(msg)
 
     def _open_pause_menu(self) -> None:
         """Create the pause menu overlay."""
@@ -249,6 +259,9 @@ class GameScene(Scene):
             if event.key == pygame.K_ESCAPE:
                 self._open_pause_menu()
                 return
+            if event.key == pygame.K_F1:
+                self.help.toggle()
+                return
             if event.key == pygame.K_F10:
                 from .scene_photo import PhotoScene
 
@@ -296,10 +309,12 @@ class GameScene(Scene):
             elif action == "scavenge":
                 self.state.add_log("scavenge")
         elif event.type == pygame.MOUSEWHEEL:
-            self.camera.zoom_at(event.y, event.pos)
+            self.camera.zoom_at(self.input.wheel(event.y), event.pos)
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             self.log.handle_event(event)
             self._handle_click(event.pos)
+        elif event.type == pygame.JOYBUTTONDOWN and event.button == DEFAULT_GAMEPAD.get("help"):
+            self.help.toggle()
 
     def _handle_move(self, action: str) -> None:
         mapping = {
@@ -369,6 +384,7 @@ class GameScene(Scene):
         if len(self.state.log) > self._last_log:
             for msg in self.state.log[self._last_log :]:
                 self.log.add("·", msg)
+                self._subtitle(msg)
             self._last_log = len(self.state.log)
         if self.reconnecting:
             self.reconnect_progress += dt
@@ -388,6 +404,7 @@ class GameScene(Scene):
         if self.event_popup:
             self.event_popup.update(dt)
         self.toasts.update(dt)
+        self.subtitles.update(dt)
 
     def draw(self, surface: pygame.Surface, ui: bool = True) -> None:
         w, h = surface.get_size()
@@ -417,6 +434,8 @@ class GameScene(Scene):
                 self.pause_menu.draw(surface)
             self._draw_minimap(surface)
             self.toasts.draw(surface)
+            self.subtitles.draw(surface)
+            self.help.draw(surface)
             hover_hints.draw(surface)
             hint = self.app.font.render(_("photo_hint"), True, (255, 255, 255))
             surface.blit(hint, (8, h - hint.get_height() - 8))
@@ -473,6 +492,7 @@ class GameScene(Scene):
             surface.blit(img, (sx, sy))
 
     def _draw_highlights(self, surface: pygame.Surface) -> None:
+        th = get_theme()
         tile_size = int(TILE_SIZE * self.camera.zoom)
         player = self.state.players[self.state.active]
         px, py = player.x, player.y
@@ -480,12 +500,12 @@ class GameScene(Scene):
             tx, ty = px + dx, py + dy
             sx, sy = self.camera.world_to_screen((tx * TILE_SIZE, ty * TILE_SIZE))
             rect = pygame.Rect(sx, sy, tile_size, tile_size)
-            pygame.draw.rect(surface, (0, 255, 0), rect, 1)
+            pygame.draw.rect(surface, (0, 255, 0), rect, th.border_width)
         for z in self.state.zombies:
             if abs(z.x - px) + abs(z.y - py) == 1:
                 sx, sy = self.camera.world_to_screen((z.x * TILE_SIZE, z.y * TILE_SIZE))
                 rect = pygame.Rect(sx, sy, tile_size, tile_size)
-                pygame.draw.rect(surface, (255, 0, 0), rect, 2)
+                pygame.draw.rect(surface, (255, 0, 0), rect, th.border_width)
         if self.hover_tile:
             path = self._simple_path((px, py), self.hover_tile)
             for step in path:

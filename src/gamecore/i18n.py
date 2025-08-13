@@ -129,6 +129,12 @@ THEME_APOCALYPSE = "theme_apocalypse"
 UI_THEME = "ui_theme"
 SHOW_MINIMAP = "show_minimap"
 MINIMAP_SIZE = "minimap_size"
+HIGH_CONTRAST = "high_contrast"
+SUBTITLES = "subtitles"
+DYSLEXIA_FONT = "dyslexia_font"
+ACCESSIBILITY = "accessibility"
+INVERT_ZOOM = "invert_zoom"
+LARGE_TEXT = "large_text"
 
 # invite related --------------------------------------------------------------
 INVITE = "INVITE"
