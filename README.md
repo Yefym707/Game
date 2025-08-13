@@ -164,6 +164,16 @@ intensity slider and can be disabled entirely if performance drops. Turning off
 post-processing or lowering weather intensity helps maintain a steady 60 FPS on
 mid‑range laptops.
 
+## Performance Presets & UX
+
+Tiles are packed into a cached atlas on load so no textures are generated
+during gameplay. Post effects can be switched between **OFF**, **BALANCED** and
+**HIGH** presets – the OFF preset performs a direct buffer copy for the fastest
+possible rendering. Press **Esc** to open a small pause menu with *Resume*,
+*Restart*, *Settings* and *Exit* actions. Transient toast messages, tooltips and
+modal confirmation dialogs provide unobtrusive feedback throughout the
+interface.
+
 ## Saves & Config
 
 Game data is stored inside the user's home directory in `~/.oko_zombie`.

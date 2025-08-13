@@ -101,6 +101,8 @@
   ,"event_car_desc": "A car might contain fuel."
   ,"event_horde_title": "Zombie Horde"
   ,"event_horde_desc": "A group of zombies approaches."
+  ,"yes": "Yes"
+  ,"no": "No"
   ,"scenario_short_name": "Short Run"
   ,"scenario_short_goal": "Survive 5 days"
   ,"scenario_medium_name": "Urban Trek"

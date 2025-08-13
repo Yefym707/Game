@@ -7,7 +7,7 @@ from gamecore.i18n import gettext as _
 from gamecore import achievements, rules
 from integrations import steam
 from .app import Scene
-from .ui.widgets import Button, Card, NameField, ColorPicker
+from .ui.widgets import Button, Card, NameField, ColorPicker, ModalConfirm
 from . import clipboard
 from .sfx import set_volume
 
@@ -86,22 +86,44 @@ class MenuScene(Scene):
         self.bg_time = 0.0
         self.ach_font = pygame.font.Font(None, 20)
         self.show_achievements = False
+        self._fade = 1.0
+        self._pending_scene = None
+        self.error_modal: ModalConfirm | None = None
 
     # callbacks ---------------------------------------------------------
+    def _start_transition(self, scene) -> None:
+        """Begin a fade-out to ``scene``."""
+
+        if self._pending_scene is None:
+            self._pending_scene = scene
+            self._fade = 0.0
+
+    def _launch(self, factory) -> None:
+        try:
+            scene = factory()
+        except Exception as exc:  # pragma: no cover - error paths
+            self._show_error(str(exc))
+            return
+        self._start_transition(scene)
+
+    def _show_error(self, msg: str) -> None:
+        w, h = self.app.screen.get_size()
+        rect = pygame.Rect(w // 2 - 150, h // 2 - 75, 300, 150)
+        self.error_modal = ModalConfirm(rect, msg, lambda: setattr(self, "error_modal", None))
     def _start_mode(self, mode: str) -> None:
         if mode == "local":
-            self.next_scene = LocalCoopScene(self.app)
+            self._start_transition(LocalCoopScene(self.app))
             return
         if mode == "online":
             from .scene_online import OnlineScene
 
-            self.next_scene = OnlineScene(self.app)
+            self._start_transition(OnlineScene(self.app))
             return
         from .scene_game import GameScene
 
         self.app.cfg["scenario"] = self.scenarios[self.scenario_idx]
         self.app.cfg["difficulty"] = self.difficulties[self.diff_idx]
-        self.next_scene = GameScene(self.app, new_game=True)
+        self._launch(lambda: GameScene(self.app, new_game=True))
 
     def _start_demo(self) -> None:
         """Launch a new demo game."""
@@ -110,17 +132,16 @@ class MenuScene(Scene):
 
         self.app.cfg["scenario"] = self.scenarios[self.scenario_idx]
         self.app.cfg["difficulty"] = self.difficulties[self.diff_idx]
-        self.next_scene = GameScene(self.app, new_game=True)
+        self._start_transition(GameScene(self.app, new_game=True))
 
     def _continue(self) -> None:
         from .scene_game import GameScene
 
-        self.next_scene = GameScene(self.app, new_game=False)
+        self._launch(lambda: GameScene(self.app, new_game=False))
 
     def _settings(self) -> None:
         from .scene_settings import SettingsScene
-
-        self.next_scene = SettingsScene(self.app)
+        self._start_transition(SettingsScene(self.app))
 
     def _toggle_ach(self) -> None:
         self.show_achievements = not self.show_achievements
@@ -157,6 +178,9 @@ class MenuScene(Scene):
         self.focusables[self.focus_idx].focus = True
 
     def handle_event(self, event: pygame.event.Event) -> None:
+        if self.error_modal:
+            self.error_modal.handle_event(event)
+            return
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_RIGHT, pygame.K_DOWN):
                 self._move_focus(1)
@@ -168,6 +192,14 @@ class MenuScene(Scene):
     # update / draw ----------------------------------------------------
     def update(self, dt: float) -> None:
         self.bg_time += dt
+        if self.error_modal:
+            self.error_modal.update(dt)
+        if self._pending_scene is None:
+            self._fade = max(0.0, self._fade - dt * 2.0)
+        else:
+            self._fade = min(1.0, self._fade + dt * 2.0)
+            if self._fade >= 1.0:
+                self.next_scene = self._pending_scene
 
     def _draw_bg(self, surface: pygame.Surface) -> None:
         surface.fill((10, 10, 30))
@@ -201,12 +233,18 @@ class MenuScene(Scene):
                 txt = f"{_(aid)}: {status}"
                 img = self.ach_font.render(txt, True, (255, 255, 255))
                 surface.blit(img, (panel.x + 10, panel.y + 10 + i * 20))
+        if self.error_modal:
+            self.error_modal.draw(surface)
         overlay_txt = f"{_('OVERLAY')}: {'✔' if steam.is_overlay_active() else '✖'}"
         cloud_txt = f"{_('CLOUD')}: {'✔' if steam.is_available() else '✖'}"
         ov_img = self.ach_font.render(overlay_txt, True, (255, 255, 255))
         cl_img = self.ach_font.render(cloud_txt, True, (255, 255, 255))
         surface.blit(ov_img, (10, 10))
         surface.blit(cl_img, (10, 30))
+        if self._fade > 0.0:
+            fade = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+            fade.fill((0, 0, 0, int(self._fade * 255)))
+            surface.blit(fade, (0, 0))
 
 
 class LocalCoopScene(Scene):
