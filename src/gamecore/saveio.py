@@ -197,6 +197,94 @@ def restore(data: Dict[str, Any]) -> board.GameState:
     return board.GameState.from_dict(data["state"], mode=mode, players=players)
 
 
+# ---------------------------------------------------------------------------
+# slot based save management
+
+_last_slot: int | None = None
+
+
+def _slot_path(slot: int) -> Path:
+    return config.SAVE_DIR / f"slot{slot}.json"
+
+
+def last_slot() -> int | None:
+    """Return the last used save slot from config."""
+
+    global _last_slot
+    if _last_slot is None:
+        cfg = config.load_config()
+        _last_slot = cfg.get("last_used_slot")
+    return _last_slot
+
+
+def _set_last_slot(slot: int) -> None:
+    global _last_slot
+    _last_slot = slot
+    cfg = config.load_config()
+    cfg["last_used_slot"] = slot
+    config.save_config(cfg)
+
+
+def list_saves() -> list[Dict[str, Any]]:
+    """Return metadata for all existing slots."""
+
+    saves: list[Dict[str, Any]] = []
+    for path in sorted(config.SAVE_DIR.glob("slot*.json")):
+        try:
+            with path.open("r", encoding="utf-8") as fh:
+                data = json.load(fh)
+            meta = data.get("meta", {})
+            load_game(path)  # validate
+            saves.append({
+                "slot": int(path.stem[4:]),
+                "meta": meta,
+                "valid": True,
+            })
+        except Exception:
+            saves.append({
+                "slot": int(path.stem[4:]),
+                "meta": {},
+                "valid": False,
+            })
+    return saves
+
+
+def load(slot: int) -> board.GameState:
+    """Load ``slot`` and copy it to the autosave path."""
+
+    path = _slot_path(slot)
+    with path.open("r", encoding="utf-8") as fh:
+        meta = json.load(fh).get("meta", {})
+    state = load_game(path)
+    try:
+        shutil.copy2(path, config.autosave_path())
+    except Exception:
+        pass
+    _set_last_slot(slot)
+    cfg = config.load_config()
+    cfg["last_seed"] = meta.get("seed", 0)
+    config.save_config(cfg)
+    return state
+
+
+def save(slot: int, state: board.GameState) -> None:
+    """Persist ``state`` to ``slot`` and update tracking."""
+
+    path = _slot_path(slot)
+    save_game(state, path)
+    _set_last_slot(slot)
+    cfg = config.load_config()
+    cfg["last_seed"] = rules.RNG.get_state().get("seed", 0)
+    config.save_config(cfg)
+
+
+def delete(slot: int) -> None:
+    """Remove save ``slot`` if it exists."""
+
+    path = _slot_path(slot)
+    path.unlink(missing_ok=True)
+
+
 def export_map(b: board.Board, name: str) -> Path:
     """Export ``b`` to ``mods/maps`` using ``name`` as filename."""
     MOD_MAPS_DIR.mkdir(parents=True, exist_ok=True)

@@ -52,6 +52,17 @@ python -m scripts.run_cli --seed 123
 python -m scripts.run_gui
 ```
 
+## Game Flow: New Game / Continue / Load
+
+The main menu offers three entry points into a match:
+
+* **New Game** – opens a setup wizard where the mode, number of players,
+  player names, difficulty, scenario and random seed can be configured.
+* **Continue** – resumes the last used save slot when a valid save exists.
+  Otherwise a dialog is shown and the New Game wizard opens.
+* **Load** – shows all save slots with date, turn and seed information and
+  allows deletion or loading of a specific slot.
+
 ## Crash Handling & Safe Mode
 
 Unexpected exceptions are caught and written to
