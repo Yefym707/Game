@@ -8,7 +8,7 @@ from pathlib import Path
 
 from gamecore import config as gconfig
 from gamecore.i18n import gettext as _
-from .app import Scene
+from .scene_base import Scene
 from .ui.widgets import Button
 
 

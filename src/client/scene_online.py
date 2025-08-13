@@ -11,7 +11,7 @@ from gamecore.config import load_config
 from gamecore.i18n import gettext as _
 from net.master_api import MasterMessage, encode_master_message, decode_master_message
 from net.protocol import MessageType
-from .app import Scene
+from .scene_base import Scene
 from .net_client import NetClient, parse_invite_url
 from . import clipboard
 

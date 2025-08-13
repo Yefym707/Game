@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import pygame
 import time
-from typing import Optional
 from pathlib import Path
 import logging
 
@@ -20,23 +19,7 @@ from .gfx import postfx
 from .ui import theme as ui_theme
 from .scene_loading import LoadingScene
 
-
-class Scene:
-    """Base class for scenes."""
-
-    def __init__(self, app: "App") -> None:
-        self.app = app
-        self.next_scene: Optional[Scene] = None
-
-    def handle_event(self, event: pygame.event.Event) -> None:
-        """Handle pygame events."""
-
-    def update(self, dt: float) -> None:
-        """Update scene state."""
-
-    def draw(self, surface: pygame.Surface) -> None:
-        """Draw scene to the surface."""
-
+from .scene_base import Scene
 
 class App:
     """Pygame application managing scenes."""

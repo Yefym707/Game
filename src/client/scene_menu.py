@@ -6,7 +6,7 @@ import pygame
 from gamecore.i18n import gettext as _
 from gamecore import achievements, rules
 from integrations import steam
-from .app import Scene
+from .scene_base import Scene
 from .ui.widgets import Button, Card, NameField, ColorPicker, ModalConfirm
 from . import clipboard
 from .sfx import set_volume

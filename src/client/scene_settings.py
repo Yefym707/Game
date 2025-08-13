@@ -14,7 +14,7 @@ import pygame
 from gamecore import config as gconfig
 from gamecore import i18n
 from gamecore.i18n import gettext as _
-from .app import Scene
+from .scene_base import Scene
 from .input import InputManager
 from . import sfx
 from .ui.widgets import (

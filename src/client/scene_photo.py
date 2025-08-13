@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pygame
 
-from .app import Scene
+from .scene_base import Scene
 from .gfx.camera import SmoothCamera
 from .gfx import postfx
 from gamecore import config as gconfig, rules

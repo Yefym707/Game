@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pygame
 
-from .app import Scene
+from .scene_base import Scene
 from .ui.widgets import Button, TilePalette, Toolbar
 from .gfx.tileset import TILE_SIZE
 from gamecore import board as gboard, saveio
