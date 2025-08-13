@@ -79,6 +79,17 @@ python -m scripts.run_gui --safe
 
 or set the environment variable `GAME_SAFE_MODE=1`.
 
+## Stability: Saves & Localization
+
+Save files are written atomically using a temporary file and the previous
+version is copied to `~/.oko_zombie/backups/<date>/` before being replaced.
+Loading verifies size and checksum metadata so corrupted files trigger a
+dialog and the **Continue** button falls back to **New Game** when no valid
+save is present.
+
+Localization lookups use `safe_get()` which falls back to the default language
+and logs missing keys only once without interrupting gameplay.
+
 ## Borders & Highlights
 
 UI elements use three border widths (`border_xs`, `border_sm`, `border_md`) and

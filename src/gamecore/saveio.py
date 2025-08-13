@@ -143,23 +143,31 @@ def save_game(state: board.GameState, path: str | Path) -> None:
 
 def load_game(path: str | Path) -> board.GameState:
     path = Path(path)
-    data = None
+    data: Dict[str, Any] | None = None
+    payload: bytes | None = None
     if steam.is_available():
         key = _cloud_key(path, False)
         if key:
             raw = steam.cloud_read(key)
             if raw is not None:
                 if path.suffix == ".gz":
-                    data = json.loads(gzip.decompress(raw).decode("utf-8"))
+                    payload = gzip.decompress(raw)
                 else:
-                    data = json.loads(raw.decode("utf-8"))
-    if data is None:
+                    payload = raw
+                data = json.loads(payload.decode("utf-8"))
+    if data is None or payload is None:
         if path.suffix == ".gz":
-            with gzip.open(path, "rt", encoding="utf-8") as fh:
-                data = json.load(fh)
+            with gzip.open(path, "rb") as fh:
+                payload = fh.read()
         else:
-            with path.open("r", encoding="utf-8") as fh:
-                data = json.load(fh)
+            payload = path.read_bytes()
+        data = json.loads(payload.decode("utf-8"))
+    size = len(payload)
+    sha = hashlib.sha256(payload).hexdigest()
+    meta = data.get("meta", {})
+    if "size" in meta and "sha256" in meta:
+        if meta["size"] != size or meta["sha256"] != sha:
+            raise ValueError("save file corrupted")
     version = data.get("save_version", 1)
     if version > SAVE_VERSION:
         raise ValueError("Unsupported save version")
