@@ -50,6 +50,14 @@ rounded corners (`radius_sm`, `radius_md`, `radius_lg`). Highlight colors are
 drawn from the active theme's `palette.ui` (`neutral`, `accent`, `danger`,
 `warn`, `info`) ensuring consistent visuals across themes and scales.
 
+## Night Vignette & High-Contrast Theme
+
+Night scenes can optionally apply a soft vignette to gently darken the edges
+of the screen.  The effect strength is adjustable via *Vignette at night* in
+the accessibility settings.  A dedicated *High Contrast* theme provides dark
+backgrounds, bright text and amber/blue accents alongside subtle shadow layers
+to improve readability and accessibility.
+
 ## Loading & Frame Pacing
 
 The client boots into a lightweight loading scene. Resources such as

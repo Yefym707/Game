@@ -77,6 +77,43 @@ class HoverOutline:
         )
 
 
+class Panel:
+    """Simple container with rounded corners and a subtle drop shadow."""
+
+    def __init__(self, rect: pygame.Rect) -> None:
+        self.rect = pygame.Rect(rect)
+
+    def handle_event(self, event: pygame.event.Event) -> None:  # pragma: no cover - non interactive
+        pass
+
+    def draw(self, surface: pygame.Surface) -> None:
+        th = get_theme()
+        shadow1 = th.colors.get("shadow1", (0, 0, 0, 120))
+        shadow2 = th.colors.get("shadow2", (0, 0, 0, 60))
+        for off, col in ((4, shadow2), (2, shadow1)):
+            sh = pygame.Surface(self.rect.size, pygame.SRCALPHA)
+            pygame.draw.rect(sh, col, sh.get_rect(), border_radius=th.radius)
+            surface.blit(sh, (self.rect.x + off, self.rect.y + off))
+        pygame.draw.rect(surface, th.colors["panel"], self.rect, border_radius=th.radius)
+
+
+class Label:
+    """Non-interactive text label."""
+
+    def __init__(self, text: str, rect: pygame.Rect) -> None:
+        self.text = text
+        self.rect = pygame.Rect(rect)
+        self.font = pygame.font.SysFont(None, 24)
+
+    def handle_event(self, event: pygame.event.Event) -> None:  # pragma: no cover - static
+        pass
+
+    def draw(self, surface: pygame.Surface) -> None:
+        th = get_theme()
+        img = self.font.render(self.text, True, th.colors["text"])
+        surface.blit(img, self.rect.topleft)
+
+
 class Button:
     """Clickable rectangular button."""
 
@@ -159,12 +196,19 @@ class Card(Button):
         self.font_small = pygame.font.SysFont(None, 18)
 
     def draw(self, surface: pygame.Surface) -> None:
-        color = (80, 80, 120) if (self.hover or self.focus) else (40, 40, 60)
-        pygame.draw.rect(surface, color, self.rect, border_radius=8)
-        pygame.draw.rect(surface, (255, 255, 255), self.rect, 2, border_radius=8)
-        title_img = self.font.render(self.text, True, (255, 255, 255))
+        th = get_theme()
+        shadow1 = th.colors.get("shadow1", (0, 0, 0, 120))
+        shadow2 = th.colors.get("shadow2", (0, 0, 0, 60))
+        for off, col in ((6, shadow2), (3, shadow1)):
+            sh = pygame.Surface(self.rect.size, pygame.SRCALPHA)
+            pygame.draw.rect(sh, col, sh.get_rect(), border_radius=th.radius_lg)
+            surface.blit(sh, (self.rect.x + off, self.rect.y + off))
+        color = th.colors["panel_hover"] if (self.hover or self.focus) else th.colors["panel"]
+        pygame.draw.rect(surface, color, self.rect, border_radius=th.radius_lg)
+        pygame.draw.rect(surface, th.colors["border"], self.rect, th.border_width, border_radius=th.radius_lg)
+        title_img = self.font.render(self.text, True, th.colors["text"])
         surface.blit(title_img, title_img.get_rect(center=(self.rect.centerx, self.rect.top + 30)))
-        desc_img = self.font_small.render(self.desc, True, (200, 200, 200))
+        desc_img = self.font_small.render(self.desc, True, th.palette["ui"].neutral)
         surface.blit(desc_img, desc_img.get_rect(center=(self.rect.centerx, self.rect.top + 60)))
 
 
@@ -384,15 +428,26 @@ class Tooltip:
 
     def draw(self, surface: pygame.Surface, pos: tuple[int, int]) -> None:
         th = get_theme()
+        padding = th.padding
         img = self.font.render(self.text, True, th.colors["text"])
-        rect = img.get_rect(topleft=pos)
-        pygame.draw.rect(
-            surface,
-            th.colors["tooltip"],
-            rect.inflate(get_theme().padding, get_theme().padding),
-            border_radius=th.radius,
-        )
-        surface.blit(img, rect)
+        text_rect = img.get_rect()
+        bg_rect = text_rect.inflate(padding * 2, padding * 2)
+        bg_rect.topleft = pos
+        shadow1 = th.colors.get("shadow1", (0, 0, 0, 120))
+        shadow2 = th.colors.get("shadow2", (0, 0, 0, 60))
+        sh = pygame.Surface((bg_rect.width, bg_rect.height + 6), pygame.SRCALPHA)
+        pygame.draw.rect(sh, shadow1, pygame.Rect(2, 2, bg_rect.width, bg_rect.height), border_radius=th.radius)
+        pygame.draw.rect(sh, shadow2, pygame.Rect(4, 4, bg_rect.width, bg_rect.height), border_radius=th.radius)
+        surface.blit(sh, bg_rect.topleft)
+        pygame.draw.rect(surface, th.colors["tooltip"], bg_rect, border_radius=th.radius)
+        arrow = [
+            (bg_rect.centerx - 6, bg_rect.bottom),
+            (bg_rect.centerx + 6, bg_rect.bottom),
+            (bg_rect.centerx, bg_rect.bottom + 6),
+        ]
+        pygame.draw.polygon(surface, shadow1, [(x + 2, y + 2) for x, y in arrow])
+        pygame.draw.polygon(surface, th.colors["tooltip"], arrow)
+        surface.blit(img, (bg_rect.x + padding, bg_rect.y + padding))
 
 
 class IconLabel:

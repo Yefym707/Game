@@ -165,6 +165,7 @@ DYSLEXIA_FONT = "dyslexia_font"
 ACCESSIBILITY = "accessibility"
 INVERT_ZOOM = "invert_zoom"
 LARGE_TEXT = "large_text"
+NIGHT_VIGNETTE = "night_vignette"
 
 # invite related --------------------------------------------------------------
 INVITE = "INVITE"

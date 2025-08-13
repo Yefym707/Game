@@ -13,6 +13,7 @@ from .gfx.camera import SmoothCamera
 from .gfx.layers import Layer
 from .gfx.lighting import LightMap
 from .gfx import weather as gweather
+from .gfx import postfx
 from .ui.widgets import (
     IconLog,
     StatusPanel,
@@ -446,6 +447,16 @@ class GameScene(Scene):
             hover_hints.draw(surface)
             hint = self.app.font.render(_("photo_hint"), True, (255, 255, 255))
             surface.blit(hint, (8, h - hint.get_height() - 8))
+        self._apply_postfx(surface)
+
+    def _apply_postfx(self, surface: pygame.Surface) -> None:
+        strength = self.cfg.get("night_vignette", 0.0)
+        if strength <= 0:
+            return
+        if rules.current_time_of_day() != rules.TimeOfDay.NIGHT and not self.cfg.get("vignette_debug", False):
+            return
+        result = postfx.vignette(surface, strength)
+        surface.blit(result, (0, 0))
 
     def _build_minimap(self) -> None:
         board = self.state.board
