@@ -106,6 +106,16 @@ time, size and checksum. Depending on the configured policy the newer version
 is chosen automatically or a dialog lets the player pick the desired file and
 optionally set a default preference.
 
+## Safe Saves & Profiling
+
+Save operations are atomic and the previous file is backed up to
+``~/.oko_zombie/backups/<date>/`` before being replaced.  Automatic saves run
+every N turns as configured by ``autosave_interval_turns`` in
+``config.json``.  When ``enable_profiling`` is set, running
+``tools/profiler_trace.py`` on the generated trace produces
+``profiler_report.json`` summarising average FPS, the 95th percentile frame
+time and how much time was spent in each subsystem.
+
 ## Demo Mode
 
 A limited demo version is available. Launch it with the ``--demo`` flag:
