@@ -17,7 +17,7 @@ from gamecore.i18n import gettext as _
 
 from .input_map import InputMap
 from .scene_menu import MenuScene
-from .ui.widgets import HelpOverlay, ModalError
+from .ui.widgets import HelpOverlay, ModalError, init_ui
 
 
 class App:
@@ -26,11 +26,13 @@ class App:
     def __init__(self, safe_mode: bool = False) -> None:
         pygame.init()
         pygame.font.init()
+        init_ui()
         pygame.mouse.set_visible(True)
         self.safe_mode = safe_mode
         self.screen = pygame.display.set_mode((640, 480))
         self.input_map = InputMap()
         self.scene = MenuScene(self)
+        self.scene.enter()
         self.help = HelpOverlay(self.input_map)
         self.running = True
 
@@ -44,6 +46,11 @@ class App:
                     break
                 self.handle_event(event)
             self.scene.update(0.0)
+            if self.scene.next_scene:
+                self.scene.exit()
+                self.scene = self.scene.next_scene
+                self.scene.enter()
+                continue
             self.screen.fill((0, 0, 0))
             self.scene.draw(self.screen)
             if self.help.visible:
