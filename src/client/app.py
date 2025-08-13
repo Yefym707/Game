@@ -21,11 +21,13 @@ from .scene_replay import ReplayScene  # imported for routing; used by menu
 from .scene_photo import PhotoScene  # imported for hotkey access
 from .gfx import postfx
 from .ui import theme as ui_theme
-from .ui.widgets import ModalError
 from .scene_loading import LoadingScene
 from .util_paths import logs_dir
 
 from .scene_base import Scene
+
+# Placeholder for ModalError; assigned in main() after pygame is initialized.
+ModalError = None
 
 class App:
     """Pygame application managing scenes."""
@@ -185,6 +187,12 @@ def main(demo: bool = False, safe_mode: bool = False) -> None:
         getattr(sys, "_MEIPASS", None),
         safe_mode,
     )
+
+    pygame.init()
+    pygame.font.init()
+    global ModalError
+    from .ui.widgets import ModalError, init_ui
+    init_ui()
 
     if demo:
         from gamecore import rules
