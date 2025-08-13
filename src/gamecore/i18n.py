@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict
+from typing import Dict, TypeVar
 
 CONFIG_PATH = Path.home() / ".oko_zombie" / "config.json"
 LOCALES_DIR = Path(__file__).resolve().parents[2] / "data" / "locales"
@@ -55,6 +55,24 @@ def gettext(key: str) -> str:
     if key in _translations:
         return _translations[key]
     return _default_translations.get(key, key)
+
+
+T = TypeVar("T")
+
+
+def safe_get(key: str, default: T) -> T:
+    """Return translation for ``key`` or ``default`` if missing.
+
+    This helper never raises ``KeyError`` and allows code to supply a
+    fallback value when a translation is absent. It looks up the active
+    language first and then falls back to the bundled default translations.
+    """
+
+    if key in _translations:
+        return _translations[key]  # type: ignore[return-value]
+    if key in _default_translations:
+        return _default_translations[key]  # type: ignore[return-value]
+    return default
 
 
 # common translation keys used by the client -------------------------------

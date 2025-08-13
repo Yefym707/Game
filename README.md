@@ -43,6 +43,14 @@ python -m scripts.run_cli --seed 123
 python -m scripts.run_gui
 ```
 
+## Loading & Frame Pacing
+
+The client boots into a lightweight loading scene. Resources such as
+configuration files, locales and graphical assets are processed in small
+time-sliced batches to avoid frame hitches. Once loading completes the
+application switches to the main menu. The main loop uses a fixed 60 FPS
+cap with manual pacing to keep frame times stable.
+
 ## Multiplayer
 
 The project supports both local and online multiplayer.  Local co-op allows
