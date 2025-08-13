@@ -101,6 +101,8 @@
   ,"event_car_desc": "В машине может быть топливо."
   ,"event_horde_title": "Орда зомби"
   ,"event_horde_desc": "Приближается группа зомби."
+  ,"yes": "Да"
+  ,"no": "Нет"
   ,"scenario_short_name": "Короткий путь"
   ,"scenario_short_goal": "Выжить 5 дней"
   ,"scenario_medium_name": "Городской поход"

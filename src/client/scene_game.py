@@ -387,6 +387,7 @@ class GameScene(Scene):
             for msg in self.state.log[self._last_log :]:
                 self.log.add("·", msg)
                 self._subtitle(msg)
+                self.toasts.show(msg)
             self._last_log = len(self.state.log)
         if self.reconnecting:
             self.reconnect_progress += dt

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Dict, Mapping
+import math
 
 import pygame
 from .layers import Layer
@@ -19,6 +20,9 @@ class Tileset:
         self.folder = folder or root / "assets" / "tiles"
         self.folder.mkdir(parents=True, exist_ok=True)
         self.tiles: Dict[str, pygame.Surface] = {}
+        self._scaled: Dict[int, Dict[str, pygame.Surface]] = {}
+        self._atlas: pygame.Surface | None = None
+        self._rects: Dict[str, pygame.Rect] = {}
         self._load(root)
 
     # internal ---------------------------------------------------------
@@ -29,8 +33,11 @@ class Tileset:
             self._generate_from_json(root)
             _GENERATED = True
             pngs = list(self.folder.glob("*.png"))
+        images: Dict[str, pygame.Surface] = {}
         for path in pngs:
-            self.tiles[path.stem] = pygame.image.load(path.as_posix()).convert_alpha()
+            images[path.stem] = pygame.image.load(path.as_posix()).convert_alpha()
+        if images:
+            self._build_atlas(images)
 
     def _generate_from_json(self, root: Path) -> None:
         """Generate PNG tiles via :mod:`tools.build_tiles`.
@@ -87,17 +94,46 @@ class Tileset:
         layers: Mapping[Layer, pygame.Surface],
     ) -> None:
         tile_size = int(TILE_SIZE * camera.zoom)
+        cache = self._scaled.setdefault(tile_size, {})
         for y, row in enumerate(board.tiles):
             for x, ch in enumerate(row):
-                tile = self.get(ch)
-                if not tile:
+                rect = self._rects.get(ch)
+                if rect is None or self._atlas is None:
                     continue
                 if tile_size != TILE_SIZE:
-                    img = pygame.transform.scale(tile, (tile_size, tile_size))
+                    img = cache.get(ch)
+                    if img is None:
+                        img = pygame.transform.scale(
+                            self._atlas.subsurface(rect), (tile_size, tile_size)
+                        )
+                        cache[ch] = img
                 else:
-                    img = tile
+                    img = self._atlas.subsurface(rect)
                 sx, sy = camera.world_to_screen((x * TILE_SIZE, y * TILE_SIZE))
                 layers[Layer.TILE].blit(img, (sx, sy))
+
+    def _build_atlas(self, images: Dict[str, pygame.Surface]) -> None:
+        """Pack ``images`` into a single atlas surface.
+
+        The resulting atlas is stored on ``self`` and individual tile surfaces
+        reference sub‑regions of that atlas.  This avoids holding many small
+        ``Surface`` objects and keeps repeated blits cache‑friendly.  Scaled
+        versions are cached separately in ``self._scaled``.
+        """
+
+        cols = int(math.ceil(math.sqrt(len(images))))
+        rows = int(math.ceil(len(images) / cols))
+        atlas = pygame.Surface((cols * TILE_SIZE, rows * TILE_SIZE), pygame.SRCALPHA)
+        rects: Dict[str, pygame.Rect] = {}
+        for idx, (name, img) in enumerate(images.items()):
+            x = (idx % cols) * TILE_SIZE
+            y = (idx // cols) * TILE_SIZE
+            atlas.blit(img, (x, y))
+            rects[name] = pygame.Rect(x, y, TILE_SIZE, TILE_SIZE)
+        self._atlas = atlas
+        self._rects = rects
+        # Replace ``tiles`` with atlas subsurfaces for ``get``/``draw`` helpers
+        self.tiles = {name: atlas.subsurface(rect) for name, rect in rects.items()}
 
 
 _icon_cache: Dict[tuple[str, int, tuple[int, int, int]], pygame.Surface] = {}

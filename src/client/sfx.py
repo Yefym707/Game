@@ -28,7 +28,13 @@ _AVAILABLE = False
 
 
 def _ensure_init() -> None:
-    """Initialise the pygame mixer if possible."""
+    """Initialise the :mod:`pygame` mixer lazily.
+
+    The mixer is created on the first attempt to play a sound.  In headless test
+    environments or machines without an audio device the initialisation may
+    fail; in that case ``_AVAILABLE`` stays ``False`` and subsequent play calls
+    become no-ops.
+    """
 
     global _INITIALISED, _AVAILABLE
     if _INITIALISED:
@@ -36,7 +42,7 @@ def _ensure_init() -> None:
     _INITIALISED = True
     try:  # pragma: no cover - audio may be unavailable
         pygame.mixer.init(frequency=_SAMPLE_RATE, size=-16, channels=1)
-        _AVAILABLE = True
+        _AVAILABLE = bool(pygame.mixer.get_init())
     except Exception:
         _AVAILABLE = False
 

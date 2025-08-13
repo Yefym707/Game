@@ -85,6 +85,26 @@ _EFFECTS = [
     ("bloom", bloom),
 ]
 
+# Preset configurations.  OFF short-circuits to a direct buffer copy while the
+# other presets enable a small selection of effects with tuned intensities.
+_PRESETS = {
+    "OFF": {},
+    "BALANCED": {
+        "fx_vignette": True,
+        "fx_vignette_intensity": 0.5,
+        "fx_desaturate": True,
+        "fx_desaturate_intensity": 0.2,
+    },
+    "HIGH": {
+        "fx_vignette": True,
+        "fx_vignette_intensity": 0.8,
+        "fx_desaturate": True,
+        "fx_desaturate_intensity": 0.3,
+        "fx_bloom": True,
+        "fx_bloom_intensity": 1.0,
+    },
+}
+
 
 def apply_chain(surface: pygame.Surface, cfg) -> pygame.Surface:
     """Apply enabled effects in a fixed order.
@@ -109,6 +129,25 @@ def apply_chain(surface: pygame.Surface, cfg) -> pygame.Surface:
             intensity = cfg.get(f"fx_{name}_intensity", 1.0)
             result = func(result, intensity)
     return result
+
+
+def apply_preset(surface: pygame.Surface, preset: str) -> pygame.Surface:
+    """Apply a predefined ``preset`` of post-processing effects.
+
+    ``preset`` can be ``"OFF"``, ``"BALANCED"`` or ``"HIGH"``.  The OFF preset
+    performs a direct buffer copy without touching numpy which keeps the
+    operation extremely fast for performance-sensitive situations.
+    """
+
+    p = _PRESETS.get(preset.upper())
+    if p is None:
+        return surface.copy()
+    if preset.upper() == "OFF":
+        # ``apply_chain`` would already return a copy when no effects are
+        # enabled, but explicitly handling it here avoids the configuration
+        # lookup and keeps the hot path minimal.
+        return surface.copy()
+    return apply_chain(surface, p)
 
 
 def count_enabled(cfg) -> int:

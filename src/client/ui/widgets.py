@@ -492,6 +492,49 @@ class ToastManager:
             y -= 40
 
 
+class ModalConfirm(Panel):
+    """Simple modal confirmation dialog with yes/no buttons."""
+
+    def __init__(self, rect: pygame.Rect, text: str, on_yes, on_no=None) -> None:
+        super().__init__(rect, from_side="right")
+        self.text = text
+        self.on_yes = on_yes
+        self.on_no = on_no
+        self.font = pygame.font.SysFont(None, 24)
+        bw = (self.rect.width - 60) // 2
+        by = self.rect.bottom - 60
+        self.btn_yes = Button(_("yes"), pygame.Rect(self.rect.left + 20, by, bw, 40), self._yes)
+        self.btn_no: Button | None = None
+        if on_no is not None:
+            self.btn_no = Button(
+                _("no"), pygame.Rect(self.rect.left + 40 + bw, by, bw, 40), self._no
+            )
+
+    def _yes(self) -> None:
+        self.on_yes()
+
+    def _no(self) -> None:
+        if self.on_no:
+            self.on_no()
+
+    def handle_event(self, event: pygame.event.Event) -> None:
+        self.btn_yes.handle_event(event)
+        if self.btn_no:
+            self.btn_no.handle_event(event)
+
+    def update(self, dt: float) -> None:
+        super().update(dt)
+
+    def draw(self, surface: pygame.Surface) -> None:
+        self._draw_bg(surface)
+        th = get_theme()
+        img = self.font.render(self.text, True, th.colors["text"])
+        surface.blit(img, img.get_rect(center=(self.rect.centerx, self.rect.top + 40)))
+        self.btn_yes.draw(surface)
+        if self.btn_no:
+            self.btn_no.draw(surface)
+
+
 class PopupDialog(Panel):
     """Modal popup displaying text and choice buttons."""
 
