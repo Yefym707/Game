@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List
+import secrets
 
 from .lobby import Lobby
 
@@ -19,6 +20,9 @@ class GameRoom:
         self.actions: List[Dict[str, Any]] = []
         self._next_seq = 1
         self.started = False
+        self.rejoin_tokens: Dict[str, str] = {}
+        self.slots: Dict[str, int] = {}
+        self.spectators: List[str] = []
 
     def apply_action(self, action: Dict[str, Any], player_index: int = 0) -> Dict[str, Any]:
         """Validate and apply an action returning state delta.
@@ -35,6 +39,39 @@ class GameRoom:
         self.state["tick"] += 1
         self._next_seq += 1
         return {"tick": self.state["tick"]}
+
+    # player slot management -------------------------------------------
+    def add_player(self, player_id: str, token: str | None = None) -> str:
+        """Add a player slot and return rejoin token."""
+
+        tok = token or secrets.token_hex(8)
+        self.rejoin_tokens[player_id] = tok
+        if player_id not in self.slots:
+            self.slots[player_id] = len(self.slots)
+        if player_id not in self.state["players"]:
+            self.state["players"].append(player_id)
+        return tok
+
+    def drop_player(self, player_id: str) -> None:
+        """Remove player from active list but keep slot/token."""
+
+        if player_id in self.state["players"]:
+            self.state["players"].remove(player_id)
+
+    def rejoin_player(self, player_id: str, token: str) -> str:
+        """Validate rejoin token and return state snapshot."""
+
+        if self.rejoin_tokens.get(player_id) != token:
+            raise ValueError("bad token")
+        if player_id not in self.state["players"]:
+            self.state["players"].append(player_id)
+        return self.snapshot()
+
+    def add_spectator(self, name: str) -> None:
+        """Track spectator connections."""
+
+        if name not in self.spectators:
+            self.spectators.append(name)
 
     def can_start(self, lobby: "Lobby") -> bool:
         """Return ``True`` if the game can start based on lobby state."""

@@ -111,6 +111,22 @@ class Server:
                     await websocket.send(
                         encode_message({"t": MessageType.INVITE_INFO.value, **data})
                     )
+                elif msg["t"] == MessageType.REJOIN_REQ.value:
+                    await websocket.send(
+                        encode_message({"t": MessageType.REJOIN_ACK.value})
+                    )
+                elif msg["t"] == MessageType.SPECTATE_JOIN.value:
+                    await websocket.send(
+                        encode_message({"t": MessageType.STATE_SNAPSHOT.value, "p": {}})
+                    )
+                elif msg["t"] == MessageType.VOTE_PAUSE.value:
+                    await websocket.send(
+                        encode_message({"t": MessageType.STATE.value, "p": "paused"})
+                    )
+                elif msg["t"] == MessageType.VOTE_RESUME.value:
+                    await websocket.send(
+                        encode_message({"t": MessageType.STATE.value, "p": "resumed"})
+                    )
                 else:
                     await websocket.send(encode_message({"t": MessageType.ERROR.value, "p": "unsupported"}))
         finally:

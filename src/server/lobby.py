@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Dict, List, Any
+import secrets
 
 
 @dataclass
@@ -18,6 +19,10 @@ class Lobby:
     ready: Dict[str, bool] = field(default_factory=dict)
     privacy: str = "public"
     rtt: Dict[str, float] = field(default_factory=dict)
+    allow_drop_in: bool = False
+    allow_spectators: bool = False
+    rejoin_tokens: Dict[str, str] = field(default_factory=dict)
+    spectators: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, object]:
         return {
@@ -32,13 +37,15 @@ class Lobby:
         }
 
     # ready state management -----------------------------------------
-    def add_player(self, name: str) -> bool:
+    def add_player(self, name: str) -> str | None:
         if self.cur_players >= self.max_players:
-            return False
+            return None
+        token = secrets.token_hex(8)
         self.players.append(name)
         self.cur_players += 1
         self.ready[name] = False
-        return True
+        self.rejoin_tokens[name] = token
+        return token
 
     def remove_player(self, name: str) -> None:
         if name in self.players:
@@ -46,6 +53,7 @@ class Lobby:
             self.cur_players -= 1
         self.ready.pop(name, None)
         self.rtt.pop(name, None)
+        # keep rejoin token for reconnect
 
     def set_ready(self, name: str, is_ready: bool) -> None:
         if name in self.players:
@@ -55,6 +63,25 @@ class Lobby:
         if not self.players:
             return False
         return all(self.ready.get(p, False) for p in self.players)
+
+    # rejoin and spectator helpers ------------------------------------
+    def rejoin(self, name: str, token: str) -> bool:
+        if self.rejoin_tokens.get(name) != token:
+            return False
+        if name not in self.players:
+            if self.cur_players >= self.max_players and not self.allow_drop_in:
+                return False
+            self.players.append(name)
+            self.cur_players += 1
+            self.ready.setdefault(name, False)
+        return True
+
+    def add_spectator(self, name: str) -> bool:
+        if not self.allow_spectators:
+            return False
+        if name not in self.spectators:
+            self.spectators.append(name)
+        return True
 
     def status(self) -> Dict[str, Any]:
         return {

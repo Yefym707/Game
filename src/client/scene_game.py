@@ -139,6 +139,8 @@ class GameScene(Scene):
             self._build_minimap()
         self.reconnecting = False
         self.reconnect_progress = 0.0
+        self.vote_paused = False
+        self.spectator = getattr(net_client, "spectator", False) if net_client else False
 
     def _show_error(self, msg: str) -> None:
         """Display an error message without crashing."""
@@ -432,6 +434,9 @@ class GameScene(Scene):
                 self.event_popup.draw(surface)
             if self.paused and self.pause_menu:
                 self.pause_menu.draw(surface)
+            if self.vote_paused:
+                overlay = self.app.font.render(_("PAUSED_BY_VOTE"), True, (255, 255, 255))
+                surface.blit(overlay, (w // 2 - overlay.get_width() // 2, 20))
             self._draw_minimap(surface)
             self.toasts.draw(surface)
             self.subtitles.draw(surface)

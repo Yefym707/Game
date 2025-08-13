@@ -48,6 +48,8 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "last_invite": "",
     "default_lobby_privacy": "public",
     "reconnect_backoff": [1, 2, 5, 10],
+    "auto_rejoin": True,
+    "default_spectator": False,
 }
 
 
