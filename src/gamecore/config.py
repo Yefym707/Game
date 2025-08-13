@@ -61,6 +61,10 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "disable_online": False,
     "ui_theme": "dark",
     "language": "en",
+    # new game flow ------------------------------------------------------
+    "last_used_slot": None,
+    "default_player_names": ["Alice", "Bob", "Carol", "Dave"],
+    "last_seed": 0,
 }
 
 

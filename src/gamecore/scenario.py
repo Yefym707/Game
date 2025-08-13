@@ -58,7 +58,10 @@ def _scenarios() -> Dict[str, Scenario]:
 
 
 def get_scenario(sid: str) -> Scenario:
-    return _scenarios()[sid]
+    """Return scenario ``sid`` falling back to the first entry."""
+
+    scenarios = _scenarios()
+    return scenarios.get(sid) or next(iter(scenarios.values()))
 
 
 def apply_scenario(state, scen: Scenario) -> None:
