@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Dict, TypeVar
 
+from client.util_paths import resource_path
+
 CONFIG_PATH = Path.home() / ".oko_zombie" / "config.json"
-LOCALES_DIR = Path(__file__).resolve().parents[2] / "data" / "locales"
 # Language code used as a fallback for missing keys/translations
 DEFAULT_LANG = "en"
 
@@ -21,10 +23,13 @@ def _load_lang() -> str:
 
 
 def _load_translations(lang: str) -> Dict[str, str]:
+    path = Path(resource_path(f"data/locales/{lang}.json"))
     try:
-        with (LOCALES_DIR / f"{lang}.json").open("r", encoding="utf-8") as fh:
+        with path.open("r", encoding="utf-8") as fh:
             return json.load(fh)
-    except FileNotFoundError:  # pragma: no cover - missing locale
+    except FileNotFoundError:
+        if lang != DEFAULT_LANG:
+            return _load_translations(DEFAULT_LANG)
         return {}
 
 
@@ -34,6 +39,7 @@ _default_translations: Dict[str, str] = _load_translations(DEFAULT_LANG)
 # Load current language from the config and its translations
 _LANG = _load_lang()
 _translations: Dict[str, str] = _load_translations(_LANG)
+_missing_logged: set[str] = set()
 
 
 def set_language(lang: str) -> None:
@@ -60,19 +66,23 @@ def gettext(key: str) -> str:
 T = TypeVar("T")
 
 
-def safe_get(key: str, default: T) -> T:
-    """Return translation for ``key`` or ``default`` if missing.
+def safe_get(key: str, default: T | None = None) -> T:
+    """Return translation for ``key`` or a fallback.
 
-    This helper never raises ``KeyError`` and allows code to supply a
-    fallback value when a translation is absent. It looks up the active
-    language first and then falls back to the bundled default translations.
+    Missing keys are logged once per process.  When ``default`` is ``None`` the
+    key itself is returned mirroring :func:`gettext` behaviour.
     """
 
     if key in _translations:
         return _translations[key]  # type: ignore[return-value]
     if key in _default_translations:
         return _default_translations[key]  # type: ignore[return-value]
-    return default
+    if key not in _missing_logged:
+        logging.getLogger(__name__).warning("missing translation: %s", key)
+        _missing_logged.add(key)
+    if default is not None:
+        return default
+    return key  # type: ignore[return-value]
 
 
 # common translation keys used by the client -------------------------------

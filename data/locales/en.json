@@ -13,6 +13,7 @@
   "loading": "Loading...",
   "preparing": "Preparing...",
   "error": "Error...",
+  "copy_details": "Copy details",
   "tips": ["Use arrow keys to move", "Stay safe out there"],
   "apply": "Apply",
   "press_key": "Press key...",

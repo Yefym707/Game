@@ -4,9 +4,68 @@ from __future__ import annotations
 import pygame
 
 from ..sfx import ui_click
+from .. import clipboard
 from gamecore.i18n import gettext as _
 from .theme import get_theme
 from ..input import DEFAULT_GAMEPAD
+
+
+class ModalError:
+    """Very small modal dialog used for crash reporting.
+
+    The dialog shows ``message`` and optional ``details`` and offers a list of
+    ``buttons`` where each item is ``(id, label)``.  ``run`` returns the id of
+    the pressed button.  If a button with id ``"copy"`` is supplied the
+    ``details`` text is copied to the clipboard when pressed.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        details: str | None,
+        buttons: list[tuple[str, str]],
+    ) -> None:
+        self.message = message
+        self.details = details
+        self.buttons = buttons
+        self.font = pygame.font.SysFont(None, 24)
+
+    def run(self, surface: pygame.Surface) -> str:
+        th = get_theme()
+        btn_rects: list[tuple[str, pygame.Rect]] = []
+        while True:
+            surface.fill((0, 0, 0))
+            msg = self.font.render(self.message, True, th.colors["text"])
+            surface.blit(msg, (20, 20))
+            y = 60
+            btn_rects.clear()
+            for bid, label in self.buttons:
+                rect = pygame.Rect(20, y, 160, 30)
+                pygame.draw.rect(surface, th.colors["panel"], rect, border_radius=th.radius)
+                pygame.draw.rect(surface, th.colors["border"], rect, 2, border_radius=th.radius)
+                img = self.font.render(label, True, th.colors["text"])
+                surface.blit(img, img.get_rect(center=rect.center))
+                btn_rects.append((bid, rect))
+                y += 40
+            pygame.display.flip()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return "quit"
+                if event.type == pygame.KEYDOWN:
+                    if event.key in (pygame.K_ESCAPE, pygame.K_q):
+                        return "quit"
+                    if event.key in (pygame.K_RETURN, pygame.K_r):
+                        return "restart"
+                    if event.key == pygame.K_c and self.details:
+                        clipboard.copy(self.details)
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    for bid, rect in btn_rects:
+                        if rect.collidepoint(event.pos):
+                            if bid == "copy" and self.details:
+                                clipboard.copy(self.details)
+                                break
+                            return bid
+
 
 
 class HoverHints:
