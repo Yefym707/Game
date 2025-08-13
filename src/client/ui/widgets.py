@@ -172,6 +172,88 @@ class Tooltip:
         surf.blit(img, rect)
 
 
+class Dropdown:
+    """Very small dropdown widget used in settings menus.
+
+    The widget mirrors the style of other test widgets and purposefully keeps
+    behaviour to a minimum – it merely lets the user pick a value from a list
+    of options.  Each option is a ``(value, text)`` tuple and the currently
+    selected value is available via :attr:`value`.
+    """
+
+    def __init__(
+        self,
+        rect: pygame.Rect,
+        options: list[tuple[str, str]],
+        value: str,
+        callback: Callable[[str], None] | None = None,
+    ) -> None:
+        self.rect = pygame.Rect(rect)
+        self.options = options
+        self.value = value
+        self.callback = callback
+        self.open = False
+        self.row_h = max(24, self.rect.height)
+
+    # drawing ----------------------------------------------------------
+    def render(self, surface: pygame.Surface) -> None:  # pragma: no cover - visual
+        theme = get_theme()
+        colors = theme.colors
+        # button -------------------------------------------------
+        pygame.draw.rect(surface, colors["panel"], self.rect)
+        pygame.draw.rect(surface, colors["border"], self.rect, theme.border_xs)
+        label = next((t for v, t in self.options if v == self.value), str(self.value))
+        img = _f().render(label, True, colors["text"])
+        surface.blit(
+            img,
+            (self.rect.x + theme.padding, self.rect.y + (self.rect.height - img.get_height()) // 2),
+        )
+
+        if not self.open:
+            return
+
+        # options -------------------------------------------------
+        for i, (val, text) in enumerate(self.options):
+            opt_rect = pygame.Rect(
+                self.rect.x,
+                self.rect.bottom + i * self.row_h,
+                self.rect.width,
+                self.row_h,
+            )
+            bg = colors["panel_hover"] if val == self.value else colors["panel"]
+            pygame.draw.rect(surface, bg, opt_rect)
+            pygame.draw.rect(surface, colors["border"], opt_rect, theme.border_xs)
+            img = _f().render(text, True, colors["text"])
+            surface.blit(
+                img,
+                (opt_rect.x + theme.padding, opt_rect.y + (opt_rect.height - img.get_height()) // 2),
+            )
+
+    # events -----------------------------------------------------------
+    def handle_event(self, event: pygame.event.Event) -> None:
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if self.open:
+                for i, (val, _text) in enumerate(self.options):
+                    opt_rect = pygame.Rect(
+                        self.rect.x,
+                        self.rect.bottom + i * self.row_h,
+                        self.rect.width,
+                        self.row_h,
+                    )
+                    if opt_rect.collidepoint(event.pos):
+                        if val != self.value:
+                            self.value = val
+                            if self.callback:
+                                self.callback(val)
+                        self.open = False
+                        return
+                # click outside
+                if not self.rect.collidepoint(event.pos):
+                    self.open = False
+            elif self.rect.collidepoint(event.pos):
+                self.open = True
+
+
 # ---------------------------------------------------------------------------
 # help overlay and minimap
 # ---------------------------------------------------------------------------
@@ -331,6 +413,7 @@ __all__ = [
     "Button",
     "Toast",
     "Tooltip",
+    "Dropdown",
     "HelpOverlay",
     "SubtitleBar",
     "Minimap",
