@@ -1,327 +1,77 @@
+"""Tiny JSON based save helpers."""
+
 from __future__ import annotations
 
 import json
-import gzip
-import hashlib
-import logging
-import shutil
-import time
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
-from . import board, rules, entities, config, validate
-from .save_migrations import apply_migrations
-from integrations import steam
+from . import config
 
-log = logging.getLogger(__name__)
-
-SAVE_VERSION = 2
-
-CLOUD_MAP_PATH = Path.home() / ".oko_zombie" / "cloud_map.json"
-_cloud_map: Dict[str, str] | None = None
-
-
-def _load_cloud_map() -> Dict[str, str]:
-    global _cloud_map
-    if _cloud_map is None:
-        try:
-            with CLOUD_MAP_PATH.open("r", encoding="utf-8") as fh:
-                _cloud_map = json.load(fh)
-        except Exception:
-            _cloud_map = {}
-    return _cloud_map
-
-
-def _save_cloud_map() -> None:
-    CLOUD_MAP_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with CLOUD_MAP_PATH.open("w", encoding="utf-8") as fh:
-        json.dump(_load_cloud_map(), fh)
-
-
-def _cloud_key(path: Path, create: bool) -> str | None:
-    cmap = _load_cloud_map()
-    key = cmap.get(str(path))
-    if key or not create:
-        return key
-    key = path.name
-    cmap[str(path)] = key
-    _save_cloud_map()
-    return key
-
-# Directory where user-created maps are stored
-MOD_MAPS_DIR = Path("mods") / "maps"
-
-# directory for shadow backups of overwritten saves
-BACKUP_DIR = Path.home() / ".oko_zombie" / "backups"
-
-
-def _shadow_backup(path: Path) -> Path | None:
-    """Create a dated backup of ``path`` if it exists.
-
-    The backup directory structure is ``~/.oko_zombie/backups/YYYYmmdd/`` and the
-    file name is suffixed with the current time to avoid collisions.
-    """
-
-    if not path.exists():
-        return None
-    date_dir = BACKUP_DIR / time.strftime("%Y%m%d")
-    date_dir.mkdir(parents=True, exist_ok=True)
-    backup = date_dir / f"{path.name}.{time.strftime('%H%M%S')}"
-    try:
-        shutil.copy2(path, backup)
-        log.info("backup created at %s", backup)
-        return backup
-    except Exception:  # pragma: no cover - best effort only
-        return None
-
-
-def save_game(state: board.GameState, path: str | Path) -> None:
-    """Persist ``state`` to ``path``.
-
-    Network matches are intentionally not saved to disk to avoid accidental
-    spoilers or cheating.  The caller can still create manual snapshots by
-    serialising the state with :mod:`net.serialization` if required.
-    """
-
-    if state.mode is rules.GameMode.ONLINE:
-        return
-    path = Path(path)
-    if path == config.autosave_path():
-        cfg = config.load_config()
-        interval = int(cfg.get("autosave_interval_turns", 1))
-        if interval > 0 and getattr(state, "turn", 0) % interval != 0:
-            return
-    validate.validate_state(state)
-    path.parent.mkdir(parents=True, exist_ok=True)
-
-    meta = {
-        "created": path.stat().st_ctime if path.exists() else time.time(),
-        "modified": time.time(),
-        "duration": getattr(state, "duration", 0),
-        "turn": getattr(state, "turn", 0),
-        "seed": rules.RNG.get_state().get("seed", 0),
-    }
-    data = {
-        "save_version": SAVE_VERSION,
-        "mode": state.mode.name,
-        "players": [p.to_dict() for p in state.players],
-        "state": state.to_dict(),
-        "rng": rules.RNG.get_state(),
-        "meta": meta,
-    }
-    # compute size & checksum iteratively until stable
-    while True:
-        text = json.dumps(data)
-        payload = text.encode("utf-8")
-        size = len(payload)
-        sha = hashlib.sha256(payload).hexdigest()
-        if meta.get("size") == size and meta.get("sha256") == sha:
-            break
-        meta["size"] = size
-        meta["sha256"] = sha
-    if steam.is_available():
-        cloud_payload = payload
-        if path.suffix == ".gz":
-            cloud_payload = gzip.compress(payload)
-        key = _cloud_key(path, True)
-        if key and steam.cloud_write(key, cloud_payload):
-            return
-    backup = _shadow_backup(path)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    try:
-        if path.suffix == ".gz":
-            with gzip.open(tmp, "wb") as fh:
-                fh.write(payload)
-        else:
-            with tmp.open("wb") as fh:
-                fh.write(payload)
-        tmp.replace(path)
-    finally:
-        if tmp.exists():
-            tmp.unlink(missing_ok=True)
-
-
-def load_game(path: str | Path) -> board.GameState:
-    path = Path(path)
-    data: Dict[str, Any] | None = None
-    payload: bytes | None = None
-    if steam.is_available():
-        key = _cloud_key(path, False)
-        if key:
-            raw = steam.cloud_read(key)
-            if raw is not None:
-                if path.suffix == ".gz":
-                    payload = gzip.decompress(raw)
-                else:
-                    payload = raw
-                data = json.loads(payload.decode("utf-8"))
-    if data is None or payload is None:
-        if path.suffix == ".gz":
-            with gzip.open(path, "rb") as fh:
-                payload = fh.read()
-        else:
-            payload = path.read_bytes()
-        data = json.loads(payload.decode("utf-8"))
-    size = len(payload)
-    sha = hashlib.sha256(payload).hexdigest()
-    meta = data.get("meta", {})
-    if "size" in meta and "sha256" in meta:
-        if meta["size"] != size or meta["sha256"] != sha:
-            raise ValueError("save file corrupted")
-    version = data.get("save_version", 1)
-    if version > SAVE_VERSION:
-        raise ValueError("Unsupported save version")
-    if version < SAVE_VERSION:
-        data = apply_migrations(data, SAVE_VERSION)
-    mode = rules.GameMode[data.get("mode", "SOLO")]
-    players = [entities.Player.from_dict(p) for p in data.get("players", [])]
-    rng_state = data.get("rng")
-    if rng_state:
-        rules.RNG.set_state(rng_state)
-    state = board.GameState.from_dict(data["state"], mode=mode, players=players)
-    validate.validate_state(state)
-    return state
-
-
-def snapshot(state: board.GameState) -> Dict[str, Any]:
-    """Return a serialisable snapshot of ``state`` used for replays."""
-
-    return {
-        "mode": state.mode.name,
-        "players": [p.to_dict() for p in state.players],
-        "state": state.to_dict(),
-        "rng": rules.RNG.get_state(),
-    }
-
-
-def restore(data: Dict[str, Any]) -> board.GameState:
-    """Reconstruct a :class:`board.GameState` from ``data``."""
-
-    mode = rules.GameMode[data.get("mode", "SOLO")]
-    players = [entities.Player.from_dict(p) for p in data.get("players", [])]
-    rng_state = data.get("rng")
-    if rng_state:
-        rules.RNG.set_state(rng_state)
-    return board.GameState.from_dict(data["state"], mode=mode, players=players)
-
-
-# ---------------------------------------------------------------------------
-# slot based save management
-
-_last_slot: int | None = None
+SAVE_DIR = config.CONFIG_DIR / "saves"
 
 
 def _slot_path(slot: int) -> Path:
-    return config.SAVE_DIR / f"slot{slot}.json"
+    return SAVE_DIR / f"{slot}.json"
 
 
-def last_slot() -> int | None:
-    """Return the last used save slot from config."""
+def list_saves() -> List[Dict[str, Any]]:
+    """Return metadata for all save slots."""
 
-    global _last_slot
-    if _last_slot is None:
-        cfg = config.load_config()
-        _last_slot = cfg.get("last_used_slot")
-    return _last_slot
-
-
-def _set_last_slot(slot: int) -> None:
-    global _last_slot
-    _last_slot = slot
-    cfg = config.load_config()
-    cfg["last_used_slot"] = slot
-    config.save_config(cfg)
-
-
-def list_saves() -> list[Dict[str, Any]]:
-    """Return metadata for all existing slots."""
-
-    saves: list[Dict[str, Any]] = []
-    for path in sorted(config.SAVE_DIR.glob("slot*.json")):
+    SAVE_DIR.mkdir(parents=True, exist_ok=True)
+    saves: List[Dict[str, Any]] = []
+    for path in SAVE_DIR.glob("*.json"):
         try:
             with path.open("r", encoding="utf-8") as fh:
                 data = json.load(fh)
-            meta = data.get("meta", {})
-            load_game(path)  # validate
-            saves.append({
-                "slot": int(path.stem[4:]),
-                "meta": meta,
-                "valid": True,
-            })
+            saves.append({"slot": int(path.stem), "meta": data.get("meta", {})})
         except Exception:
-            saves.append({
-                "slot": int(path.stem[4:]),
-                "meta": {},
-                "valid": False,
-            })
-    return saves
+            continue
+    return sorted(saves, key=lambda s: s["slot"])
 
 
-def load(slot: int) -> board.GameState:
-    """Load ``slot`` and copy it to the autosave path."""
+def find_last_save() -> int | None:
+    saves = list_saves()
+    if not saves:
+        return None
+    return max(s["slot"] for s in saves)
 
+
+def _validate_meta(meta: Dict[str, Any]) -> bool:
+    required = {"turn", "difficulty", "seed"}
+    return required.issubset(meta.keys())
+
+
+def load(slot: int) -> Dict[str, Any]:
     path = _slot_path(slot)
     with path.open("r", encoding="utf-8") as fh:
-        meta = json.load(fh).get("meta", {})
-    state = load_game(path)
-    try:
-        shutil.copy2(path, config.autosave_path())
-    except Exception:
-        pass
-    _set_last_slot(slot)
-    cfg = config.load_config()
-    cfg["last_seed"] = meta.get("seed", 0)
-    config.save_config(cfg)
-    return state
+        data = json.load(fh)
+    meta = data.get("meta", {})
+    if not _validate_meta(meta):
+        raise ValueError("invalid metadata")
+    return data
 
 
-def save(slot: int, state: board.GameState) -> None:
-    """Persist ``state`` to ``slot`` and update tracking."""
+def save(slot: int, data: Dict[str, Any]) -> None:
+    """Atomically store ``data`` in ``slot``."""
 
+    SAVE_DIR.mkdir(parents=True, exist_ok=True)
     path = _slot_path(slot)
-    save_game(state, path)
-    _set_last_slot(slot)
-    cfg = config.load_config()
-    cfg["last_seed"] = rules.RNG.get_state().get("seed", 0)
-    config.save_config(cfg)
+    tmp = path.with_suffix(".tmp")
+    with tmp.open("w", encoding="utf-8") as fh:
+        json.dump(data, fh)
+    tmp.replace(path)
 
 
-def delete(slot: int) -> None:
-    """Remove save ``slot`` if it exists."""
-
-    path = _slot_path(slot)
-    path.unlink(missing_ok=True)
+# backward compatible helper used in tests -----------------------------------
+last_slot = find_last_save
 
 
-def export_map(b: board.Board, name: str) -> Path:
-    """Export ``b`` to ``mods/maps`` using ``name`` as filename."""
-    MOD_MAPS_DIR.mkdir(parents=True, exist_ok=True)
-    path = MOD_MAPS_DIR / f"{name}.json"
-    board.export_map(b, path)
-    return path
+__all__ = [
+    "list_saves",
+    "find_last_save",
+    "load",
+    "save",
+    "last_slot",
+]
 
-
-def import_map(name: str) -> board.Board:
-    """Load a map previously exported with :func:`export_map`."""
-    path = MOD_MAPS_DIR / f"{name}.json"
-    return board.import_map(path)
-
-
-# restart helpers ---------------------------------------------------------
-
-
-def restart_allowed(cfg: Dict[str, Any] | None = None) -> bool:
-    """Check configuration flag controlling restart availability."""
-
-    if cfg is None:
-        cfg = config.load_config()
-    return bool(cfg.get("allow_restart", True))
-
-
-def restart_state(state: board.GameState, seed: int, cfg: Dict[str, Any] | None = None) -> board.GameState:
-    """Return a fresh game state using ``seed`` if restarts are allowed."""
-
-    if not restart_allowed(cfg):
-        return state
-    rules.set_seed(seed)
-    return board.create_game(players=len(state.players), mode=state.mode)

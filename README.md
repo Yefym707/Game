@@ -285,25 +285,18 @@ The **Settings** menu exposes basic options like volume, language, window
 size and fullscreen state.  Changing these values writes them to
 `config.json` for the next session.
 
-### Controls & Rebinding
+### Controls
 
-Movement uses the arrow keys (or a gamepad's left stick) while actions such as
-*End Turn*, *Rest* and *Scavenge* have their own keys.  In the settings screen
-each action can be rebound; the chosen bindings are stored inside
-`~/.oko_zombie/config.json` under the ``bindings`` section.
+The default input scheme is intentionally small and geared towards mouse play:
 
-### Gamepad
+* **LMB** – select
+* **RMB** – move / attack
+* **Space** – end turn
+* **Esc** – pause
+* **F1** – show help
 
-The client will automatically enable the first detected gamepad via the
-``pygame.joystick`` API.  Default mapping follows the common XInput layout – A
-confirms/end turn, B cancels, X scavenges, Y rests and the left stick pans the
-camera.
-
-### Tutorial
-
-On the very first launch a short interactive tutorial is shown explaining the
-basics of movement and ending a turn.  Completing it clears the ``first_run``
-flag in the configuration so it only appears once.
+Bindings are defined centrally in ``src/client/input_map.py`` and later patches
+may add a settings screen for rebinding.
 
 ## Tiles pipeline
 
