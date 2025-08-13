@@ -10,6 +10,13 @@ from .theme import get_theme
 from ..input import DEFAULT_GAMEPAD
 
 
+def _sys_font(size: int) -> pygame.font.Font:
+    """Return a pygame system font ensuring the font module is initialized."""
+    if not pygame.font.get_init():
+        pygame.font.init()
+    return pygame.font.SysFont(None, size)
+
+
 class ModalError:
     """Very small modal dialog used for crash reporting.
 
@@ -28,7 +35,7 @@ class ModalError:
         self.message = message
         self.details = details
         self.buttons = buttons
-        self.font = pygame.font.SysFont(None, 24)
+        self.font = _sys_font(24)
 
     def run(self, surface: pygame.Surface) -> str:
         th = get_theme()
@@ -73,7 +80,7 @@ class HoverHints:
 
     def __init__(self) -> None:
         self.items: list[tuple[pygame.Rect, str]] = []
-        self.font = pygame.font.SysFont(None, 18)
+        self.font = _sys_font(18)
 
     def add(self, rect: pygame.Rect, text: str) -> None:
         self.items.append((pygame.Rect(rect), text))
@@ -99,7 +106,17 @@ class HoverHints:
         self.items.clear()
 
 
-hover_hints = HoverHints()
+hover_hints: HoverHints | None = None
+
+
+def init_ui() -> None:
+    """Create global UI helpers after pygame initialization."""
+    if not pygame.get_init():
+        pygame.init()
+    if not pygame.font.get_init():
+        pygame.font.init()
+    global hover_hints
+    hover_hints = HoverHints()
 
 
 class FocusRing:
@@ -142,7 +159,7 @@ class LegendWidget:
     def __init__(self, items: list[tuple[tuple[int, int, int], str]], rect: pygame.Rect) -> None:
         self.items = items
         self.rect = pygame.Rect(rect)
-        self.font = pygame.font.SysFont(None, 16)
+        self.font = _sys_font(16)
 
     def draw(self, surface: pygame.Surface) -> None:
         th = get_theme()
@@ -183,7 +200,7 @@ class Label:
     def __init__(self, text: str, rect: pygame.Rect) -> None:
         self.text = text
         self.rect = pygame.Rect(rect)
-        self.font = pygame.font.SysFont(None, 24)
+        self.font = _sys_font(24)
 
     def handle_event(self, event: pygame.event.Event) -> None:  # pragma: no cover - static
         pass
@@ -207,7 +224,7 @@ class Button:
         self.text = text
         self.rect = pygame.Rect(rect)
         self.callback = callback
-        self.font = pygame.font.SysFont(None, 24)
+        self.font = _sys_font(24)
         self.hover = False
         self.focus = False
         self.hint = hint
@@ -258,8 +275,8 @@ class LargeTextToggle(Toggle):
 
     def __init__(self, rect: pygame.Rect, value: bool, callback) -> None:
         super().__init__(_("large_text"), rect, value, callback)
-        self.base_font = pygame.font.SysFont(None, 24)
-        self.large_font = pygame.font.SysFont(None, 32)
+        self.base_font = _sys_font(24)
+        self.large_font = _sys_font(32)
         self.font = self.large_font if value else self.base_font
 
     def _update(self) -> None:  # type: ignore[override]
@@ -273,7 +290,7 @@ class Card(Button):
     def __init__(self, title: str, desc: str, rect: pygame.Rect, callback) -> None:
         super().__init__(title, rect, callback)
         self.desc = desc
-        self.font_small = pygame.font.SysFont(None, 18)
+        self.font_small = _sys_font(18)
 
     def draw(self, surface: pygame.Surface) -> None:
         th = get_theme()
@@ -348,7 +365,7 @@ class Dropdown:
             self.labels = list(options)  # type: ignore[arg-type]
         self.value = value
         self.callback = callback
-        self.font = pygame.font.SysFont(None, 24)
+        self.font = _sys_font(24)
 
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.MOUSEBUTTONDOWN and self.rect.collidepoint(event.pos):
@@ -377,7 +394,7 @@ class Tag:
     def __init__(self, text: str, rect: pygame.Rect) -> None:
         self.text = text
         self.rect = pygame.Rect(rect)
-        self.font = pygame.font.SysFont(None, 18)
+        self.font = _sys_font(18)
 
     def set_text(self, text: str) -> None:
         self.text = text
@@ -397,7 +414,7 @@ class ConfirmDialog:
         self.text = text
         self.on_yes = on_yes
         self.on_no = on_no
-        self.font = pygame.font.SysFont(None, 24)
+        self.font = _sys_font(24)
         self.visible = False
 
     def show(self) -> None:
@@ -463,7 +480,7 @@ class Log:
     def __init__(self, max_lines: int = 20) -> None:
         self.lines = []
         self.max_lines = max_lines
-        self.font = pygame.font.SysFont(None, 18)
+        self.font = _sys_font(18)
 
     def add(self, msg: str) -> None:
         self.lines.append(msg)
@@ -484,7 +501,7 @@ class StatusPanel:
     """Renders basic game state info at the top-left."""
 
     def __init__(self) -> None:
-        self.font = pygame.font.SysFont(None, 24)
+        self.font = _sys_font(24)
 
     def draw(self, surface: pygame.Surface, state) -> None:
         text = _("status_turn").format(turn=state.turn)
@@ -504,7 +521,7 @@ class Tooltip:
 
     def __init__(self, text: str) -> None:
         self.text = text[:60]
-        self.font = pygame.font.SysFont(None, 18)
+        self.font = _sys_font(18)
 
     def draw(self, surface: pygame.Surface, pos: tuple[int, int]) -> None:
         th = get_theme()
@@ -536,7 +553,7 @@ class IconLabel:
     def __init__(self, icon: str, text: str) -> None:
         self.icon = icon
         self.text = text
-        self.font = pygame.font.SysFont(None, 18)
+        self.font = _sys_font(18)
 
     def draw(self, surface: pygame.Surface, pos: tuple[int, int]) -> None:
         th = get_theme()
@@ -550,7 +567,7 @@ class IconLog:
     def __init__(self, max_lines: int = 20) -> None:
         self.entries: list[tuple[str, str]] = []
         self.max_lines = max_lines
-        self.font = pygame.font.SysFont(None, 18)
+        self.font = _sys_font(18)
         self.collapsed = False
         self.toggle_rect: pygame.Rect | None = None
 
@@ -621,7 +638,7 @@ class Toast:
         self.text = text
         self.duration = duration
         self.elapsed = 0.0
-        self.font = pygame.font.SysFont(None, 24)
+        self.font = _sys_font(24)
 
     def update(self, dt: float) -> bool:
         self.elapsed += dt
@@ -670,7 +687,7 @@ class ModalConfirm(Panel):
         self.text = text
         self.on_yes = on_yes
         self.on_no = on_no
-        self.font = pygame.font.SysFont(None, 24)
+        self.font = _sys_font(24)
         bw = (self.rect.width - 60) // 2
         by = self.rect.bottom - 60
         self.btn_yes = Button(_("yes"), pygame.Rect(self.rect.left + 20, by, bw, 40), self._yes)
@@ -713,8 +730,8 @@ class PopupDialog(Panel):
         self.icon = icon
         self.title = title
         self.desc = desc
-        self.font = pygame.font.SysFont(None, 24)
-        self.font_small = pygame.font.SysFont(None, 18)
+        self.font = _sys_font(24)
+        self.font_small = _sys_font(18)
         bx = self.rect.left + 20
         by = self.rect.bottom - 50 * len(choices) - 20
         bw = self.rect.width - 40
@@ -794,7 +811,7 @@ class TilePalette:
         self.rect = pygame.Rect(rect)
         self.cell = cell
         self.selected = tiles[0] if tiles else "."
-        self.font = pygame.font.SysFont(None, 18)
+        self.font = _sys_font(18)
 
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -835,7 +852,7 @@ class NameField:
         self.rect = pygame.Rect(rect)
         self.text = text
         self.callback = callback
-        self.font = pygame.font.SysFont(None, 24)
+        self.font = _sys_font(24)
         self.active = False
 
     def handle_event(self, event: pygame.event.Event) -> None:
@@ -866,7 +883,7 @@ class ColorPicker:
         self.rect = pygame.Rect(rect)
         self.index = self.COLORS.index(color) if color in self.COLORS else 0
         self.callback = callback
-        self.font = pygame.font.SysFont(None, 24)
+        self.font = _sys_font(24)
 
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.MOUSEBUTTONDOWN and self.rect.collidepoint(event.pos):
@@ -887,7 +904,7 @@ class SubtitleBar:
     def __init__(self) -> None:
         self.text = ""
         self.timer = 0.0
-        self.font = pygame.font.SysFont(None, 24)
+        self.font = _sys_font(24)
         self.dyslexia = False
 
     def show(self, text: str, dyslexia: bool = False) -> None:
@@ -920,7 +937,7 @@ class HelpOverlay:
     def __init__(self, input_mgr) -> None:
         self.input = input_mgr
         self.visible = False
-        self.font = pygame.font.SysFont(None, 24)
+        self.font = _sys_font(24)
 
     def toggle(self) -> None:
         self.visible = not self.visible
