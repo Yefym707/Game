@@ -1,12 +1,16 @@
 """Main pygame application and scene manager."""
 from __future__ import annotations
 
-import pygame
-import time
-from pathlib import Path
 import logging
+import os
+import platform
+import sys
+import time
+import traceback
 
-from gamecore.i18n import gettext as _
+import pygame
+
+from gamecore.i18n import gettext as _, set_language
 from gamecore import config as gconfig
 from telemetry import init as telemetry_init, shutdown as telemetry_shutdown
 from integrations import steam
@@ -17,24 +21,40 @@ from .scene_replay import ReplayScene  # imported for routing; used by menu
 from .scene_photo import PhotoScene  # imported for hotkey access
 from .gfx import postfx
 from .ui import theme as ui_theme
+from .ui.widgets import ModalError
 from .scene_loading import LoadingScene
+from .util_paths import logs_dir
 
 from .scene_base import Scene
 
 class App:
     """Pygame application managing scenes."""
 
-    def __init__(self, width: int = 800, height: int = 600) -> None:
+    def __init__(self, width: int = 800, height: int = 600, safe_mode: bool = False) -> None:
         pygame.init()
+        self.safe_mode = safe_mode
         # configuration -------------------------------------------------
         self.cfg = gconfig.load_config()
-        ui_theme.set_theme(self.cfg.get("theme", "dark"))
+        if safe_mode:
+            self.cfg["fx_preset"] = "OFF"
+            self.cfg["audio_enabled"] = False
+            self.cfg["disable_online"] = True
+            self.cfg["ui_theme"] = "high_contrast"
+            self.cfg["language"] = "en"
+        set_language(self.cfg.get("language", "en"))
+        ui_theme.set_theme(self.cfg.get("ui_theme", self.cfg.get("theme", "dark")))
         telemetry_init(self.cfg)
         flags = pygame.FULLSCREEN if self.cfg.get("fullscreen") else 0
         w, h = self.cfg.get("window_size", [width, height])
         pygame.display.set_caption(_("window_title"))
         self.screen = pygame.display.set_mode((w, h), flags)
-        sfx.init(self.cfg)
+        if self.cfg.get("audio_enabled", True):
+            sfx.init(self.cfg)
+        else:  # pragma: no cover - mixer optional
+            try:
+                pygame.mixer.quit()
+            except Exception:
+                pass
         pygame.mouse.set_visible(False)
         # unified input layer
         self.input = cinput.InputManager(self.cfg)
@@ -46,20 +66,23 @@ class App:
         self._global_toasts: list[str] = []
 
     def run(self) -> None:
-        log_dir = Path.home() / ".oko_zombie" / "logs"
-        log_dir.mkdir(parents=True, exist_ok=True)
-        log_file = log_dir / "app.log"
-        if log_file.exists() and log_file.stat().st_size > 256 * 1024:
-            log_file.write_text("")
-        logging.basicConfig(filename=log_file, level=logging.INFO)
-
         while True:
             try:
                 self._loop()
                 break
-            except Exception:  # pragma: no cover - safety net
+            except Exception:
+                tb = traceback.format_exc()
                 logging.exception("main loop crash")
-                if not self._error_dialog():
+                dialog = ModalError(
+                    _("error"),
+                    tb,
+                    [
+                        ("restart", _("restart")),
+                        ("quit", _("menu_quit")),
+                        ("copy", _("copy_details")),
+                    ],
+                )
+                if dialog.run(self.screen) != "restart":
                     break
 
         pygame.quit()
@@ -127,29 +150,6 @@ class App:
             if delay > 0:
                 time.sleep(delay)
 
-    def _error_dialog(self) -> bool:
-        msg = _("error")
-        font = self.font
-        surface = self.screen
-        surface.fill((0, 0, 0))
-        txt = font.render(msg, True, (255, 0, 0))
-        retry = font.render(_("restart"), True, (255, 255, 255))
-        quit_txt = font.render(_("menu_quit"), True, (255, 255, 255))
-        surface.blit(txt, (20, 20))
-        surface.blit(retry, (20, 60))
-        surface.blit(quit_txt, (20, 90))
-        pygame.display.flip()
-        while True:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    return False
-                if event.type == pygame.KEYDOWN:
-                    if event.key in (pygame.K_q, pygame.K_ESCAPE):
-                        return False
-                    if event.key in (pygame.K_r, pygame.K_RETURN):
-                        return True
-            time.sleep(0.05)
-
     # steam integration -------------------------------------------------
     def _steam_join(self, data: str) -> None:
         from .scene_online import OnlineScene
@@ -165,21 +165,53 @@ class App:
         self._global_toasts.append(text)
 
 
-def main(demo: bool = False) -> None:
-    """Entry point used by ``scripts.run_gui``.
+def main(demo: bool = False, safe_mode: bool = False) -> None:
+    """Entry point used by ``scripts.run_gui``."""
 
-    Parameters
-    ----------
-    demo:
-        When ``True`` the game runs in limited demo mode and corresponding
-        restrictions are enabled.
-    """
+    log_dir = logs_dir()
+    log_file = log_dir / "app.log"
+    if log_file.exists() and log_file.stat().st_size > 1_000_000:
+        log_file.write_text("", encoding="utf-8")
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    fh = logging.FileHandler(log_file)
+    root_logger.addHandler(fh)
+    logging.info(
+        "python=%s pygame=%s os=%s cwd=%s meipass=%s safe_mode=%s",
+        sys.version.split()[0],
+        pygame.version.ver,
+        platform.platform(),
+        os.getcwd(),
+        getattr(sys, "_MEIPASS", None),
+        safe_mode,
+    )
 
     if demo:
         from gamecore import rules
 
         rules.DEMO_MODE = True
-    App().run()
+
+    while True:
+        try:
+            App(safe_mode=safe_mode).run()
+            break
+        except Exception:
+            tb = traceback.format_exc()
+            logging.exception("startup crash")
+            pygame.init()
+            screen = pygame.display.set_mode((640, 480))
+            dialog = ModalError(
+                _("error"),
+                tb,
+                [
+                    ("restart", _("restart")),
+                    ("quit", _("menu_quit")),
+                    ("copy", _("copy_details")),
+                ],
+            )
+            if dialog.run(screen) != "restart":
+                break
+            pygame.quit()
 
 
 if __name__ == "__main__":  # pragma: no cover

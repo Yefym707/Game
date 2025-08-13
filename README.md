@@ -43,6 +43,22 @@ python -m scripts.run_cli --seed 123
 python -m scripts.run_gui
 ```
 
+## Crash Handling & Safe Mode
+
+Unexpected exceptions are caught and written to
+`%USERPROFILE%\.oko_zombie\logs\app.log`.  A modal error dialog shows the
+exception type and message and offers a **Copy details** button which copies the
+full stack trace to the clipboard for easy bug reports.
+
+Safe mode starts the game with heavy post effects, audio and online features
+disabled and loads a lightweight high‑contrast theme.  Enable it via:
+
+```bash
+python -m scripts.run_gui --safe
+```
+
+or set the environment variable `GAME_SAFE_MODE=1`.
+
 ## Borders & Highlights
 
 UI elements use three border widths (`border_xs`, `border_sm`, `border_md`) and

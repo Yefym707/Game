@@ -56,6 +56,11 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "save_conflict_policy": DEFAULT_SAVE_CONFLICT_POLICY,
     "autosave_interval_turns": 1,
     "enable_profiling": False,
+    "fx_preset": "HIGH",
+    "audio_enabled": True,
+    "disable_online": False,
+    "ui_theme": "dark",
+    "language": "en",
 }
 
 
