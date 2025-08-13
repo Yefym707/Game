@@ -116,6 +116,38 @@ class SlideTransition:
         surface.blit(self.old_surf, (-offset, 0))
 
 
+class SceneTransitions:
+    """Small factory for common scene transitions."""
+
+    @staticmethod
+    def fade_out(app, new_scene, duration: float = 0.3) -> FadeTransition:
+        return FadeTransition(app, new_scene, duration)
+
+    @staticmethod
+    def fade_in(app, duration: float = 0.3) -> FadeTransition:
+        trans = FadeTransition(app, app.scene, duration)
+        trans.phase = "in"
+        trans.time = 0.0
+        return trans
+
+    @staticmethod
+    def slide_out(app, new_scene, duration: float = 0.3) -> SlideTransition:
+        return SlideTransition(app, new_scene, duration)
+
+    @staticmethod
+    def slide_in(app, new_scene, duration: float = 0.3) -> SlideTransition:
+        class _SlideIn(SlideTransition):
+            def draw(self, surface: pygame.Surface) -> None:  # type: ignore[override]
+                w, _ = surface.get_size()
+                t = min(self.time / self.duration, 1.0)
+                t = ease_in_out(t)
+                offset = int((1.0 - t) * w)
+                surface.blit(self.old_surf, (0, 0))
+                surface.blit(self.new_surf, (offset, 0))
+
+        return _SlideIn(app, new_scene, duration)
+
+
 # lightweight animation primitives used by the game scene -----------------
 
 

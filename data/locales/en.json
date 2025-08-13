@@ -175,4 +175,10 @@
   ,"focus_ring": "Focus ring"
   ,"hover_outline": "Hover outline"
   ,"icon_label": "Icon label"
+  ,"legend_wall": "Wall"
+  ,"legend_floor": "Floor"
+  ,"legend_loot": "Loot"
+  ,"legend_player": "Player"
+  ,"legend_zombie": "Zombie"
+  ,"legend_goal": "Goal"
   }
