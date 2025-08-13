@@ -1,4 +1,12 @@
-"""Tiny JSON based save helpers."""
+"""Save file helpers.
+
+The real project exposes a fairly feature rich save subsystem with cloud
+integration and migrations.  For the tests in this kata we only require a
+light‑weight wrapper that lists, reads and writes JSON files.  The helpers below
+mirror the behaviour expected by the unit tests: saves are written atomically
+and metadata is validated strictly so the ``Continue`` option never starts a
+broken game.
+"""
 
 from __future__ import annotations
 
@@ -38,6 +46,8 @@ def find_last_save() -> int | None:
 
 
 def _validate_meta(meta: Dict[str, Any]) -> bool:
+    """Return ``True`` if ``meta`` contains the required fields."""
+
     required = {"turn", "difficulty", "seed"}
     return required.issubset(meta.keys())
 

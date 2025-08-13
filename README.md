@@ -68,7 +68,7 @@ which the client displays as a small toast message so the player knows why an
 order was rejected.  Successful actions append a short entry to the event log
 (``Move``, ``Hit`` or ``End Turn``).
 
-## Game Flow: New Game / Continue / Load
+## Game Flow
 
 The main menu offers three entry points into a match:
 
@@ -79,7 +79,7 @@ The main menu offers three entry points into a match:
 * **Load** – shows all save slots with date, turn and seed information and
   allows deletion or loading of a specific slot.
 
-## Crash Handling & Safe Mode
+## Safe Mode & Logs
 
 Unexpected exceptions are caught and written to
 `%USERPROFILE%\.oko_zombie\logs\app.log`.  A modal error dialog shows the
@@ -130,7 +130,7 @@ UI scale (1.0–2.0) for legible text on both 1080p and 1366×768 displays. The
 minimap highlights terrain types, players and zombies and draws a rectangle for
 the current camera view; clicking it jumps the camera to the selected cell.
 
-## Loading & Frame Pacing
+## Loading Screen
 
 The client boots into a lightweight loading scene. Resources such as
 configuration files, locales and graphical assets are processed in small

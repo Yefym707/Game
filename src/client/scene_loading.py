@@ -24,9 +24,10 @@ class LoadingScene:
 
         if loader is None:
             tasks: list[Callable[[], Iterable[None] | None]] = [
-                self._load_config,
                 self._load_locales,
-                self._prepare_assets,
+                self._load_config,
+                self._prepare_tiles,
+                self._prepare_fonts,
             ]
             loader = AsyncLoader(tasks, app.cfg.get("loader_batch_ms", 8))
         self.loader = loader
@@ -34,16 +35,21 @@ class LoadingScene:
         self.tip = random.choice(tips) if tips else ""
 
     # default loader tasks -------------------------------------------------
+    def _load_locales(self) -> None:
+        i18n.set_language(self.app.cfg.get("lang", "en"))
+
     def _load_config(self) -> None:
         from gamecore import config as gconfig
 
         gconfig.load_config()
 
-    def _load_locales(self) -> None:
-        i18n.set_language(self.app.cfg.get("lang", "en"))
+    def _prepare_tiles(self) -> None:  # pragma: no cover - placeholder
+        # Heavy work like tile generation would happen here in batches.
+        return None
 
-    def _prepare_assets(self) -> None:
-        # Placeholder for other startup tasks like tile generation
+    def _prepare_fonts(self) -> None:  # pragma: no cover - placeholder
+        # Ensure fonts are ready; the real game pre-renders caches here.
+        pygame.font.init()
         return None
 
     # scene interface ------------------------------------------------------
