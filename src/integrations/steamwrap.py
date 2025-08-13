@@ -179,6 +179,51 @@ class Steam:
                     pass
         return None
 
+    def cloud_list(self) -> list[str]:
+        """Return a list of available cloud save keys."""
+
+        if self.available and self._sdk:
+            get_count = getattr(
+                self._sdk, "SteamAPI_ISteamRemoteStorage_GetFileCount", None
+            )
+            get_name = getattr(
+                self._sdk, "SteamAPI_ISteamRemoteStorage_GetFileNameAndSize", None
+            )
+            if get_count and get_name:
+                try:
+                    count = get_count(None)
+                    res: list[str] = []
+                    for i in range(count):
+                        size = ctypes.c_int()
+                        name = get_name(None, i, ctypes.byref(size))
+                        if name:
+                            res.append(
+                                ctypes.cast(name, ctypes.c_char_p).value.decode("utf-8")
+                            )
+                    return res
+                except Exception:
+                    pass
+        return []
+
+    def cloud_meta(self, key: str) -> Optional[Dict[str, int]]:
+        """Return metadata for ``key`` such as size and timestamp."""
+
+        if self.available and self._sdk:
+            fsize = getattr(
+                self._sdk, "SteamAPI_ISteamRemoteStorage_GetFileSize", None
+            )
+            ftime = getattr(
+                self._sdk, "SteamAPI_ISteamRemoteStorage_GetFileTimestamp", None
+            )
+            if fsize and ftime:
+                try:
+                    size = fsize(None, key.encode("utf-8"))
+                    ts = ftime(None, key.encode("utf-8"))
+                    return {"size": size, "modified": ts}
+                except Exception:
+                    pass
+        return None
+
 
 steam = Steam()
 

@@ -12,6 +12,8 @@ REPLAY_DIR = CONFIG_DIR / "replays"
 SCREENSHOT_DIR = CONFIG_DIR / "screenshots"
 CONFIG_FILE = CONFIG_DIR / "config.json"
 
+DEFAULT_SAVE_CONFLICT_POLICY = "ask"
+
 DEFAULT_CONFIG: Dict[str, Any] = {
     "volume": 1.0,  # legacy master volume
     "volume_master": 1.0,
@@ -50,6 +52,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "reconnect_backoff": [1, 2, 5, 10],
     "auto_rejoin": True,
     "default_spectator": False,
+    "save_conflict_policy": DEFAULT_SAVE_CONFLICT_POLICY,
 }
 
 

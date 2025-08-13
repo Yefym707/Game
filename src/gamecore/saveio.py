@@ -2,12 +2,18 @@ from __future__ import annotations
 
 import json
 import gzip
+import hashlib
+import logging
+import shutil
+import time
 from pathlib import Path
 from typing import Any, Dict
 
 from . import board, rules, entities, config
 from .save_migrations import apply_migrations
 from integrations import steam
+
+log = logging.getLogger(__name__)
 
 SAVE_VERSION = 2
 
@@ -45,6 +51,29 @@ def _cloud_key(path: Path, create: bool) -> str | None:
 # Directory where user-created maps are stored
 MOD_MAPS_DIR = Path("mods") / "maps"
 
+# directory for shadow backups of overwritten saves
+BACKUP_DIR = Path.home() / ".oko_zombie" / "backups"
+
+
+def _shadow_backup(path: Path) -> Path | None:
+    """Create a dated backup of ``path`` if it exists.
+
+    The backup directory structure is ``~/.oko_zombie/backups/YYYYmmdd/`` and the
+    file name is suffixed with the current time to avoid collisions.
+    """
+
+    if not path.exists():
+        return None
+    date_dir = BACKUP_DIR / time.strftime("%Y%m%d")
+    date_dir.mkdir(parents=True, exist_ok=True)
+    backup = date_dir / f"{path.name}.{time.strftime('%H%M%S')}"
+    try:
+        shutil.copy2(path, backup)
+        log.info("backup created at %s", backup)
+        return backup
+    except Exception:  # pragma: no cover - best effort only
+        return None
+
 
 def save_game(state: board.GameState, path: str | Path) -> None:
     """Persist ``state`` to ``path``.
@@ -58,30 +87,48 @@ def save_game(state: board.GameState, path: str | Path) -> None:
         return
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
+
+    meta = {
+        "created": path.stat().st_ctime if path.exists() else time.time(),
+        "modified": time.time(),
+        "duration": getattr(state, "duration", 0),
+        "turn": getattr(state, "turn", 0),
+        "seed": rules.RNG.get_state().get("seed", 0),
+    }
     data = {
         "save_version": SAVE_VERSION,
         "mode": state.mode.name,
         "players": [p.to_dict() for p in state.players],
         "state": state.to_dict(),
         "rng": rules.RNG.get_state(),
+        "meta": meta,
     }
-    text = json.dumps(data)
+    # compute size & checksum iteratively until stable
+    while True:
+        text = json.dumps(data)
+        payload = text.encode("utf-8")
+        size = len(payload)
+        sha = hashlib.sha256(payload).hexdigest()
+        if meta.get("size") == size and meta.get("sha256") == sha:
+            break
+        meta["size"] = size
+        meta["sha256"] = sha
     if steam.is_available():
+        cloud_payload = payload
         if path.suffix == ".gz":
-            payload = gzip.compress(text.encode("utf-8"))
-        else:
-            payload = text.encode("utf-8")
+            cloud_payload = gzip.compress(payload)
         key = _cloud_key(path, True)
-        if key and steam.cloud_write(key, payload):
+        if key and steam.cloud_write(key, cloud_payload):
             return
+    backup = _shadow_backup(path)
     tmp = path.with_suffix(path.suffix + ".tmp")
     try:
         if path.suffix == ".gz":
-            with gzip.open(tmp, "wt", encoding="utf-8") as fh:
-                fh.write(text)
+            with gzip.open(tmp, "wb") as fh:
+                fh.write(payload)
         else:
-            with tmp.open("w", encoding="utf-8") as fh:
-                fh.write(text)
+            with tmp.open("wb") as fh:
+                fh.write(payload)
         tmp.replace(path)
     finally:
         if tmp.exists():
