@@ -14,6 +14,11 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "default_player_names": ["Alice", "Bob", "Carol", "Dave"],
     "last_seed": 0,
     "ui_scale": 1.0,
+    "fx_preset": "HIGH",
+    "audio_enabled": True,
+    "disable_online": False,
+    "ui_theme": "dark",
+    "language": "en",
 }
 
 

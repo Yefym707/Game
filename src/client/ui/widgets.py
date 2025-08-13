@@ -12,6 +12,8 @@ from typing import Callable, List
 
 import pygame
 
+from gamecore.i18n import gettext as _
+from ..clipboard import copy as copy_to_clipboard
 from ..gfx.tileset import TILE_SIZE
 
 _font: pygame.font.Font | None = None
@@ -43,14 +45,38 @@ def _f() -> pygame.font.Font:
 
 
 class ModalError:  # pragma: no cover - used in manual runs
-    def __init__(self, title: str, message: str) -> None:
-        self.title = title
-        self.message = message
+    """Very small blocking error dialog.
 
-    def run(self, surface: pygame.Surface) -> None:
-        surface.fill((0, 0, 0))
-        img = _f().render(self.title, True, (255, 0, 0))
-        surface.blit(img, (10, 10))
+    The dialog shows ``message`` and allows copying ``details`` to the clipboard
+    by pressing ``C``.  It returns ``"quit"`` once the user dismisses the dialog
+    so calling code can exit cleanly.
+    """
+
+    def __init__(self, message: str, details: str) -> None:
+        self.message = message
+        self.details = details
+
+    def run(self, surface: pygame.Surface) -> str:
+        running = True
+        clock = pygame.time.Clock()
+        result = "quit"
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_c:
+                        copy_to_clipboard(self.details)
+                    elif event.key in (pygame.K_ESCAPE, pygame.K_RETURN):
+                        running = False
+            surface.fill((0, 0, 0))
+            img = _f().render(self.message, True, (255, 0, 0))
+            surface.blit(img, (10, 10))
+            hint = _f().render(_("copy_details"), True, (255, 255, 255))
+            surface.blit(hint, (10, 40))
+            pygame.display.flip()
+            clock.tick(30)
+        return result
 
 
 class ModalConfirm:
