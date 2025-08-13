@@ -7,7 +7,9 @@ import logging
 from pathlib import Path
 from typing import Dict, TypeVar
 
-DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "locales"
+from client.util_paths import resource_path
+
+DATA_DIR = Path(resource_path("data/locales"))
 DEFAULT_LANG = "en"
 
 log = logging.getLogger(__name__)
@@ -18,17 +20,21 @@ _missing: set[str] = set()
 
 
 def _load(lang: str) -> Dict[str, str]:
+    """Load translations for ``lang`` returning an empty mapping on failure."""
+
     path = DATA_DIR / f"{lang}.json"
-    with path.open("r", encoding="utf-8") as fh:
-        return json.load(fh)
+    try:
+        with path.open("r", encoding="utf-8") as fh:
+            return json.load(fh)
+    except (FileNotFoundError, json.JSONDecodeError):
+        log.warning("failed to load locale '%s'", lang)
+        return {}
 
 
 def set_language(lang: str) -> None:
     global _translations
-    try:
-        _translations = _load(lang)
-    except FileNotFoundError:
-        _translations = _default
+    data = _load(lang)
+    _translations = data or _default
 
 
 try:  # load defaults at import time

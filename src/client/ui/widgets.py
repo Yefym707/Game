@@ -46,21 +46,23 @@ def _f() -> pygame.font.Font:
 
 
 class ModalError:  # pragma: no cover - used in manual runs
-    """Very small blocking error dialog.
+    """Blocking error dialog with a *Copy details* button.
 
-    The dialog shows ``message`` and allows copying ``details`` to the clipboard
-    by pressing ``C``.  It returns ``"quit"`` once the user dismisses the dialog
-    so calling code can exit cleanly.
+    ``details`` may contain an arbitrarily long traceback.  Only the last
+    twenty lines are shown but the *Copy details* button (or pressing ``C``)
+    copies the full text to the clipboard so bug reports can include the full
+    stack trace.
     """
 
     def __init__(self, message: str, details: str) -> None:
         self.message = message
         self.details = details
+        self.preview = "\n".join(details.splitlines()[-20:])
+        self._btn_rect: pygame.Rect | None = None
 
     def run(self, surface: pygame.Surface) -> str:
         running = True
         clock = pygame.time.Clock()
-        result = "quit"
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -70,14 +72,25 @@ class ModalError:  # pragma: no cover - used in manual runs
                         copy_to_clipboard(self.details)
                     elif event.key in (pygame.K_ESCAPE, pygame.K_RETURN):
                         running = False
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    if self._btn_rect and self._btn_rect.collidepoint(event.pos):
+                        copy_to_clipboard(self.details)
             surface.fill((0, 0, 0))
+            y = 10
             img = _f().render(self.message, True, (255, 0, 0))
-            surface.blit(img, (10, 10))
-            hint = _f().render(_("copy_details"), True, (255, 255, 255))
-            surface.blit(hint, (10, 40))
+            surface.blit(img, (10, y))
+            y += img.get_height() + 10
+            for line in self.preview.splitlines():
+                txt = _f().render(line, True, (255, 255, 255))
+                surface.blit(txt, (10, y))
+                y += txt.get_height() + 2
+            btn_img = _f().render(_("copy_details"), True, (0, 0, 0))
+            self._btn_rect = btn_img.get_rect(topleft=(10, y + 10))
+            pygame.draw.rect(surface, (255, 255, 255), self._btn_rect.inflate(8, 6))
+            surface.blit(btn_img, self._btn_rect)
             pygame.display.flip()
             clock.tick(30)
-        return result
+        return "quit"
 
 
 class ModalConfirm:
