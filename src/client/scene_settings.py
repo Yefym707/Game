@@ -17,7 +17,15 @@ from gamecore.i18n import gettext as _
 from .app import Scene
 from .input import InputManager
 from . import sfx
-from .ui.widgets import Button, Dropdown, RebindButton, Slider, Toggle, hover_hints
+from .ui.widgets import (
+    Button,
+    Dropdown,
+    RebindButton,
+    Slider,
+    Toggle,
+    LargeTextToggle,
+    hover_hints,
+)
 from .ui.theme import set_theme
 
 
@@ -55,66 +63,56 @@ class SettingsScene(Scene):
         super().__init__(app)
         self.cfg = app.cfg
         self.input: InputManager = app.input
-        self.widgets: list = []
+        self.general_widgets: list = []
+        self.access_widgets: list = []
+        self.widgets: list = self.general_widgets
         w, h = app.screen.get_size()
-        y = 80
         set_theme(self.cfg.get("theme", "dark"))
 
-        # key bindings ---------------------------------------------------
+        self.btn_general = Button(_("SETTINGS"), pygame.Rect(40, 20, 120, 32), lambda: self._set_tab("general"))
+        self.btn_access = Button(_("accessibility"), pygame.Rect(180, 20, 160, 32), lambda: self._set_tab("access"))
+
+        # general tab ----------------------------------------------------
+        y = 80
         for action in ["end_turn", "rest", "scavenge", "pause"]:
             rect = pygame.Rect(40, y, 260, 32)
-            self.widgets.append(RebindButton(rect, action, self.input))
+            self.general_widgets.append(RebindButton(rect, action, self.input))
             y += 40
 
-        # volume sliders -------------------------------------------------
         vol_y = 80
         for key in ["master", "step", "hit", "ui"]:
             val = self.cfg.get(f"volume_{key}", self.cfg.get("volume", 1.0))
-            self.widgets.append(
+            self.general_widgets.append(
                 Slider(pygame.Rect(360, vol_y, 200, 20), 0, 100, val * 100, lambda v, k=key: self._on_volume(k, v))
             )
             vol_y += 40
-
-        # UI scale slider ------------------------------------------------
-        self.widgets.append(
-            Slider(
-                pygame.Rect(360, vol_y, 200, 20),
-                100,
-                200,
-                max(1.0, self.cfg.get("ui_scale", 1.0)) * 100,
-                self._on_scale,
-            )
+        self.general_widgets.append(
+            Slider(pygame.Rect(360, vol_y, 200, 20), 100, 200, max(1.0, self.cfg.get("ui_scale", 1.0)) * 100, self._on_scale)
         )
 
-        # language dropdown ---------------------------------------------
-        self.widgets.append(
+        self.general_widgets.append(
             Dropdown(
                 pygame.Rect(360, 160, 200, 32),
-                [
-                    ("en", "en"),
-                    ("ru", "ru"),
-                ],
+                [("en", "en"), ("ru", "ru")],
                 self.cfg.get("lang", "en"),
                 self._on_lang,
             )
         )
-
-        # theme dropdown -----------------------------------------------
-        self.widgets.append(
+        self.general_widgets.append(
             Dropdown(
                 pygame.Rect(40, y, 260, 32),
                 [
                     ("light", _("theme_light")),
                     ("dark", _("theme_dark")),
                     ("apocalypse", _("theme_apocalypse")),
+                    ("high_contrast", _("high_contrast")),
                 ],
                 self.cfg.get("theme", "dark"),
                 self._on_theme,
             )
         )
         y += 40
-        # minimap toggle & size ---------------------------------------
-        self.widgets.append(
+        self.general_widgets.append(
             Toggle(
                 _("show_minimap"),
                 pygame.Rect(40, y, 260, 32),
@@ -122,19 +120,11 @@ class SettingsScene(Scene):
                 self._on_minimap,
             )
         )
-        self.widgets.append(
-            Slider(
-                pygame.Rect(360, y, 200, 20),
-                100,
-                300,
-                self.cfg.get("minimap_size", 200),
-                self._on_minimap_size,
-            )
+        self.general_widgets.append(
+            Slider(pygame.Rect(360, y, 200, 20), 100, 300, self.cfg.get("minimap_size", 200), self._on_minimap_size)
         )
         y += 40
-
-        # telemetry toggle ----------------------------------------------
-        self.widgets.append(
+        self.general_widgets.append(
             Toggle(
                 _("telemetry_opt_in"),
                 pygame.Rect(40, y, 260, 32),
@@ -143,26 +133,19 @@ class SettingsScene(Scene):
             )
         )
         y += 40
-        # endpoint input -------------------------------------------------
         self.endpoint_input = InputField(
             pygame.Rect(40, y, 260, 32),
             self.cfg.get("telemetry_endpoint", ""),
             self._on_endpoint,
         )
-        self.widgets.append(self.endpoint_input)
+        self.general_widgets.append(self.endpoint_input)
         y += 40
-        # send test event ------------------------------------------------
-        self.widgets.append(
-            Button(
-                _("send_test_event"),
-                pygame.Rect(40, y, 260, 32),
-                self._send_test_event,
-            )
+        self.general_widgets.append(
+            Button(_("send_test_event"), pygame.Rect(40, y, 260, 32), self._send_test_event)
         )
 
-        # post FX -------------------------------------------------------
         for fx in ["vignette", "desaturate", "bloom"]:
-            self.widgets.append(
+            self.general_widgets.append(
                 Toggle(
                     _(f"fx_{fx}"),
                     pygame.Rect(40, y, 260, 32),
@@ -170,7 +153,7 @@ class SettingsScene(Scene):
                     lambda v, k=fx: self._on_fx_toggle(k, v),
                 )
             )
-            self.widgets.append(
+            self.general_widgets.append(
                 Slider(
                     pygame.Rect(360, y, 200, 20),
                     0,
@@ -180,9 +163,7 @@ class SettingsScene(Scene):
                 )
             )
             y += 40
-
-        # color curve ---------------------------------------------------
-        self.widgets.append(
+        self.general_widgets.append(
             Toggle(
                 _("fx_color"),
                 pygame.Rect(40, y, 260, 32),
@@ -192,7 +173,7 @@ class SettingsScene(Scene):
         )
         curve = self.cfg.get("fx_color_curve", [1.0, 1.0, 1.0])
         for i, name in enumerate(["R", "G", "B"]):
-            self.widgets.append(
+            self.general_widgets.append(
                 Slider(
                     pygame.Rect(360, y, 200, 20),
                     0,
@@ -202,9 +183,48 @@ class SettingsScene(Scene):
                 )
             )
             y += 40
+        self.general_widgets.append(Button(_("apply"), pygame.Rect(w // 2 - 60, h - 80, 120, 40), self._apply))
 
-        # back/apply button ---------------------------------------------
-        self.widgets.append(Button(_("apply"), pygame.Rect(w // 2 - 60, h - 80, 120, 40), self._apply))
+        # accessibility tab ---------------------------------------------
+        ay = 80
+        self.access_widgets.append(
+            Slider(pygame.Rect(40, ay, 200, 20), 100, 200, max(1.0, self.cfg.get("ui_scale", 1.0)) * 100, self._on_scale)
+        )
+        ay += 40
+        self.access_widgets.append(
+            LargeTextToggle(pygame.Rect(40, ay, 260, 32), self.cfg.get("large_text", False), self._on_large_text)
+        )
+        ay += 40
+        self.access_widgets.append(
+            Toggle(_("subtitles"), pygame.Rect(40, ay, 260, 32), self.cfg.get("subtitles", False), self._on_subtitles)
+        )
+        ay += 40
+        self.access_widgets.append(
+            Toggle(
+                _("dyslexia_font"),
+                pygame.Rect(40, ay, 260, 32),
+                self.cfg.get("dyslexia_font", False),
+                self._on_dyslexia,
+            )
+        )
+        ay += 40
+        self.access_widgets.append(
+            Toggle(
+                _("high_contrast"),
+                pygame.Rect(40, ay, 260, 32),
+                self.cfg.get("theme") == "high_contrast",
+                self._on_high_contrast,
+            )
+        )
+        ay += 40
+        self.access_widgets.append(
+            Toggle(
+                _("invert_zoom"),
+                pygame.Rect(40, ay, 260, 32),
+                self.cfg.get("invert_zoom", False),
+                self._on_invert_zoom,
+            )
+        )
 
     # callbacks ----------------------------------------------------------
     def _on_volume(self, channel: str, value: float) -> None:
@@ -249,6 +269,26 @@ class SettingsScene(Scene):
         curve[idx] = round(value / 100.0, 2)
         self.cfg["fx_color_curve"] = curve
 
+    def _on_high_contrast(self, value: bool) -> None:
+        self.cfg["theme"] = "high_contrast" if value else "dark"
+        set_theme(self.cfg["theme"])
+
+    def _on_subtitles(self, value: bool) -> None:
+        self.cfg["subtitles"] = value
+
+    def _on_dyslexia(self, value: bool) -> None:
+        self.cfg["dyslexia_font"] = value
+
+    def _set_tab(self, name: str) -> None:
+        self.widgets = self.general_widgets if name == "general" else self.access_widgets
+
+    def _on_invert_zoom(self, value: bool) -> None:
+        self.cfg["invert_zoom"] = value
+        self.input.invert_zoom = value
+
+    def _on_large_text(self, value: bool) -> None:
+        self.cfg["large_text"] = value
+
     def _send_test_event(self) -> None:
         from telemetry import send, events
 
@@ -274,6 +314,8 @@ class SettingsScene(Scene):
 
             self.next_scene = MenuScene(self.app)
             return
+        self.btn_general.handle_event(event)
+        self.btn_access.handle_event(event)
         for w in self.widgets:
             w.handle_event(event)
 
@@ -284,6 +326,8 @@ class SettingsScene(Scene):
         from .ui.theme import get_theme
 
         surface.fill(get_theme().colors["bg"])
+        self.btn_general.draw(surface)
+        self.btn_access.draw(surface)
         for w in self.widgets:
             w.draw(surface)
         hover_hints.draw(surface)

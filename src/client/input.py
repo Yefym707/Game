@@ -8,6 +8,7 @@ real-time event processing which keeps the implementation lightweight and
 suitable for headless unit tests.
 """
 
+import locale
 from typing import Dict, Optional
 
 try:  # pragma: no cover - pygame may be missing in the test environment
@@ -57,6 +58,9 @@ DEFAULT_GAMEPAD: Dict[str, int] = {
     "pause": 7,      # Start
     "scavenge": 2,   # X
     "rest": 3,       # Y
+    "quick_save": 4,  # LB
+    "quick_load": 5,  # RB
+    "help": 6,       # Back/Select
 }
 
 
@@ -94,6 +98,8 @@ class InputManager:
                 self.gamepad.init()
         except Exception:  # pragma: no cover - joystick is optional
             self.gamepad = None
+        self.keyboard_layout = locale.getdefaultlocale()[0]
+        self.invert_zoom = bool(cfg.get("invert_zoom", False))
 
     # ------------------------------------------------------------------
     # persistence helpers
@@ -140,6 +146,9 @@ class InputManager:
         self.active = pid
         self.bindings = self.profiles[pid]
 
+    def wheel(self, step: int) -> int:
+        return -step if self.invert_zoom else step
+
 
 class InputState:
     """Simple structure storing currently triggered actions.
@@ -162,6 +171,16 @@ class InputState:
                 if event.button == btn:
                     self.actions.add(act)
                     break
+        elif event.type == pygame.JOYHATMOTION and manager.gamepad:
+            x, y = event.value
+            if y == 1:
+                self.actions.add("move_up")
+            elif y == -1:
+                self.actions.add("move_down")
+            if x == 1:
+                self.actions.add("move_right")
+            elif x == -1:
+                self.actions.add("move_left")
 
     def clear(self) -> None:
         self.actions.clear()

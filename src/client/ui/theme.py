@@ -10,6 +10,7 @@ class Theme:
     colors: Dict[str, tuple[int, int, int]]
     padding: int = 4
     radius: int = 4
+    border_width: int = 2
 
 
 THEMES: Dict[str, Theme] = {
@@ -51,6 +52,20 @@ THEMES: Dict[str, Theme] = {
         },
         padding=6,
         radius=6,
+    ),
+    "high_contrast": Theme(
+        colors={
+            "bg": (0, 0, 0),
+            "panel": (20, 20, 20),
+            "panel_hover": (40, 40, 40),
+            "text": (255, 255, 255),
+            "border": (255, 255, 0),
+            "tooltip": (10, 10, 10),
+            "toast": (0, 0, 0),
+        },
+        padding=8,
+        radius=4,
+        border_width=4,
     ),
 }
 

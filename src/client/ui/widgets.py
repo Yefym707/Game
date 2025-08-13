@@ -6,6 +6,7 @@ import pygame
 from ..sfx import ui_click
 from gamecore.i18n import gettext as _
 from .theme import get_theme
+from ..input import DEFAULT_GAMEPAD
 
 
 class HoverHints:
@@ -101,6 +102,20 @@ class Toggle(Button):
         self.text = f"{self.text.split(':')[0]}: {'on' if self.value else 'off'}"
 
 
+class LargeTextToggle(Toggle):
+    """Toggle that enlarges its label when enabled."""
+
+    def __init__(self, rect: pygame.Rect, value: bool, callback) -> None:
+        super().__init__(_("large_text"), rect, value, callback)
+        self.base_font = pygame.font.SysFont(None, 24)
+        self.large_font = pygame.font.SysFont(None, 32)
+        self.font = self.large_font if value else self.base_font
+
+    def _update(self) -> None:  # type: ignore[override]
+        super()._update()
+        self.font = self.large_font if self.value else self.base_font
+
+
 class Card(Button):
     """Large button styled as a card with a short description."""
 
@@ -186,7 +201,13 @@ class Dropdown:
     def draw(self, surface: pygame.Surface) -> None:
         th = get_theme()
         pygame.draw.rect(surface, th.colors["panel"], self.rect, border_radius=th.radius)
-        pygame.draw.rect(surface, th.colors["border"], self.rect, 2, border_radius=th.radius)
+        pygame.draw.rect(
+            surface,
+            th.colors["border"],
+            self.rect,
+            th.border_width,
+            border_radius=th.radius,
+        )
         label = self.labels[self.values.index(self.value)]
         img = self.font.render(label, True, th.colors["text"])
         surface.blit(img, img.get_rect(center=self.rect.center))
@@ -645,3 +666,66 @@ class ColorPicker:
         pygame.draw.rect(surface, (255, 255, 255), self.rect, 1)
         img = self.font.render(color_name, True, (0, 0, 0))
         surface.blit(img, img.get_rect(center=self.rect.center))
+
+
+class SubtitleBar:
+    """Display short event descriptions at the bottom of the screen."""
+
+    def __init__(self) -> None:
+        self.text = ""
+        self.timer = 0.0
+        self.font = pygame.font.SysFont(None, 24)
+        self.dyslexia = False
+
+    def show(self, text: str, dyslexia: bool = False) -> None:
+        self.text = text
+        self.timer = 3.0
+        self.dyslexia = dyslexia
+
+    def update(self, dt: float) -> None:
+        if self.timer > 0:
+            self.timer -= dt
+            if self.timer <= 0:
+                self.text = ""
+
+    def draw(self, surface: pygame.Surface) -> None:
+        if not self.text:
+            return
+        th = get_theme()
+        display = self.text if not self.dyslexia else " ".join(self.text)
+        img = self.font.render(display, True, th.colors["text"])
+        rect = img.get_rect(center=(surface.get_width() // 2, surface.get_height() - 30))
+        bg = rect.inflate(th.padding * 2, th.padding * 2)
+        pygame.draw.rect(surface, th.colors["panel"], bg, border_radius=th.radius)
+        pygame.draw.rect(surface, th.colors["border"], bg, th.border_width, border_radius=th.radius)
+        surface.blit(img, rect)
+
+
+class HelpOverlay:
+    """Overlay listing current keyboard and gamepad controls."""
+
+    def __init__(self, input_mgr) -> None:
+        self.input = input_mgr
+        self.visible = False
+        self.font = pygame.font.SysFont(None, 24)
+
+    def toggle(self) -> None:
+        self.visible = not self.visible
+
+    def draw(self, surface: pygame.Surface) -> None:
+        if not self.visible:
+            return
+        th = get_theme()
+        overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+        overlay.fill((*th.colors["bg"], 200))
+        surface.blit(overlay, (0, 0))
+        y = 40
+        for action, key in self.input.bindings.items():
+            key_name = pygame.key.name(key)
+            btn = DEFAULT_GAMEPAD.get(action)
+            txt = f"{_(action)}: {key_name}"
+            if btn is not None:
+                txt += f" / {btn}"
+            img = self.font.render(txt, True, th.colors["text"])
+            surface.blit(img, (40, y))
+            y += 30

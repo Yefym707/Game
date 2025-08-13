@@ -150,6 +150,7 @@ def play_hit() -> None:
     """Play a hit/attack sound."""
 
     _play("hit", "square", 400, 120, (0, 50, 0.2, 120))
+    vibrate(120)
 
 
 def ui_click() -> None:
@@ -166,4 +167,33 @@ __all__ = [
     "play_hit",
     "ui_click",
 ]
+
+# optional vibration ---------------------------------------------------------
+
+_HAPTIC: pygame.joystick.Joystick | None = None
+
+
+def _ensure_haptic() -> None:
+    global _HAPTIC
+    if _HAPTIC is not None:
+        return
+    try:  # pragma: no cover - joystick optional
+        if pygame.joystick.get_count():
+            joy = pygame.joystick.Joystick(0)
+            if hasattr(joy, "rumble"):
+                _HAPTIC = joy
+            else:
+                _HAPTIC = None
+    except Exception:
+        _HAPTIC = None
+
+
+def vibrate(ms: int = 100) -> None:
+    _ensure_haptic()
+    if not _HAPTIC:
+        return
+    try:  # pragma: no cover - may not be available
+        _HAPTIC.rumble(0.5, 0.5, ms)
+    except Exception:
+        pass
 

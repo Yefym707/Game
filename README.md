@@ -115,6 +115,15 @@ A optional minimap gives a quick overview of the board. It encodes tile types
 by color, marks the current camera viewport and allows clicking to jump the
 camera. Both the visibility and size of the minimap are configurable.
 
+## Accessibility & Controller
+
+The settings menu now exposes an Accessibility tab. It offers an extended UI
+scale slider, a high-contrast theme, optional subtitles and a dyslexia-friendly
+font mode that increases letter spacing. The game auto-detects keyboard layout,
+supports full gamepad mappings with optional vibration feedback and can invert
+zoom direction. Press **F1** or the controller's **Select** button to display an
+on-screen help overlay listing current bindings.
+
 ## Visual & UX Polish
 
 Camera motion is smoothed with a small deadzone so the view glides when the
