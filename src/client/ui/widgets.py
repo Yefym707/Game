@@ -153,6 +153,27 @@ class HelpOverlay:
             y += img.get_height() + 2
 
 
+class SubtitleBar:
+    """Tiny subtitle helper used in accessibility tests."""
+
+    def __init__(self) -> None:
+        self.text: str | None = None
+
+    def show(self, text: str) -> None:
+        self.text = text
+
+    def update(self, dt: float) -> None:  # pragma: no cover - placeholder
+        pass
+
+    def draw(self, surf: pygame.Surface) -> None:  # pragma: no cover - visual
+        if not self.text:
+            return
+        img = _f().render(self.text, True, (255, 255, 255))
+        rect = img.get_rect(midbottom=(surf.get_width() // 2, surf.get_height()))
+        pygame.draw.rect(surf, (0, 0, 0), rect.inflate(10, 10))
+        surf.blit(img, rect)
+
+
 class Minimap:
     """Very small clickable minimap.
 
@@ -194,6 +215,7 @@ __all__ = [
     "Toast",
     "Tooltip",
     "HelpOverlay",
+    "SubtitleBar",
     "Minimap",
     "hover_hints",
 ]
