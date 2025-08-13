@@ -52,6 +52,15 @@ python -m scripts.run_cli --seed 123
 python -m scripts.run_gui
 ```
 
+## Controls & Turn Flow
+
+The playable prototype supports a tiny subset of the final game's controls.  A
+unit is selected with the left mouse button, right clicking issues a move or
+attack depending on the target and **Space** ends the turn.  The rules module
+tracks action points and validates that moves stay within range and do not pass
+through walls.  Each successful action appends a short entry to the event log
+(``Move``, ``Hit`` or ``End Turn``).
+
 ## Game Flow: New Game / Continue / Load
 
 The main menu offers three entry points into a match:

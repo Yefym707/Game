@@ -10,6 +10,13 @@
   "help_end_turn": "Space: end turn",
   "help_pause": "Esc: pause",
   "help_help": "F1: help",
-  "error": "Error"
+  "error": "Error",
+  "out_of_ap": "Out of AP",
+  "blocked": "Blocked",
+  "out_of_range": "Out of range",
+  "log_move": "Move",
+  "log_hit": "Hit",
+  "log_miss": "Miss",
+  "log_end": "End Turn"
 }
 

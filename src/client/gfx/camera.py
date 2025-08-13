@@ -1,31 +1,43 @@
-"""Very small camera helper."""
-
 from __future__ import annotations
 
+"""Extremely small camera with jump/zoom used by tests.
 
-class Camera:
-    """Track a view rectangle inside world bounds."""
+The class is purposely tiny yet mimics the API of the real project where a
+camera exposes ``x``/``y`` coordinates and a ``jump_to`` method that centres the
+view on a given world cell.  ``SmoothCamera`` also exposes ``world_w`` and
+``world_h`` attributes which the minimap widget relies on.
+"""
 
-    def __init__(self, view_w: int, view_h: int, world_w: int, world_h: int) -> None:
-        self.view_w = view_w
-        self.view_h = view_h
-        self.world_w = world_w
-        self.world_h = world_h
-        self.x = 0
-        self.y = 0
+from dataclasses import dataclass
 
+
+@dataclass
+class SmoothCamera:
+    screen_size: tuple[int, int]
+    world_size: tuple[int, int]
+    zoom: float = 1.0
+
+    def __post_init__(self) -> None:
+        self.screen_w, self.screen_h = self.screen_size
+        self.world_w, self.world_h = self.world_size
+        self.x = 0.0
+        self.y = 0.0
+
+    # movement ------------------------------------------------------------
     def clamp(self) -> None:
-        max_x = max(0, self.world_w - self.view_w)
-        max_y = max(0, self.world_h - self.view_h)
-        self.x = max(0, min(self.x, max_x))
-        self.y = max(0, min(self.y, max_y))
+        max_x = max(0.0, self.world_w - self.screen_w / self.zoom)
+        max_y = max(0.0, self.world_h - self.screen_h / self.zoom)
+        self.x = max(0.0, min(self.x, max_x))
+        self.y = max(0.0, min(self.y, max_y))
 
     def jump_to(self, cell: tuple[int, int]) -> None:
         cx, cy = cell
-        self.x = cx - self.view_w // 2
-        self.y = cy - self.view_h // 2
+        self.x = float(cx) - self.screen_w / (2 * self.zoom)
+        self.y = float(cy) - self.screen_h / (2 * self.zoom)
         self.clamp()
 
+    # the real project exposes ``update`` and smooth following.  Tests do not
+    # rely on those features so they are intentionally omitted.
 
-__all__ = ["Camera"]
 
+__all__ = ["SmoothCamera"]

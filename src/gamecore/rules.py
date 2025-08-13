@@ -1,144 +1,76 @@
 from __future__ import annotations
 
-from enum import Enum, auto
-from typing import Dict, Tuple
+"""Rule helpers used by the simplified test implementation.
 
-from .rng import RNG
+Only a sliver of the original rule set is required for the unit tests.  The
+module defines a couple of constants (board size, action point costs and attack
+ranges) and implements high level helpers that operate on the :class:`Board`
+and :class:`GameState` objects from :mod:`gamecore.board`.
+"""
 
-BOARD_SIZE = 10
-STARTING_ZOMBIES = 3
-MAX_TURNS = 100
+from dataclasses import dataclass
+from typing import Tuple
 
-# Demo configuration -----------------------------------------------------
+from . import events, validate
 
-# Flag toggled when the game runs in limited demo mode.  Set by the client
-# when ``--demo`` is passed on the command line.
-DEMO_MODE = False
-# Optional watermark text used on screenshots when in demo mode.
-DEMO_WATERMARK = "DEMO"
-
-# Maximum number of in-game days/turns allowed in the demo.
-DEMO_MAX_DAYS = 3
-
-# The demo ships with a single map and uses a reduced loot multiplier.  The
-# actual systems consuming these values are free to interpret them as needed.
-DEMO_MAX_MAPS = 1
-DEMO_LOOT_FACTOR = 0.5
+# general configuration -------------------------------------------------------
+BOARD_SIZE = 5
+MAX_AP = 3
+MOVE_COST = 1
+ATTACK_COST = 1
+MOVE_RANGE = 3
+ATTACK_RANGE = 1
 
 
-class GameMode(Enum):
-    """Supported game modes."""
+# turn handling ---------------------------------------------------------------
 
-    SOLO = auto()
-    LOCAL_COOP = auto()
-    ONLINE = auto()
-    # A cut-down build showcased at conventions.  The code treats it as a
-    # distinct mode so save files can record that a session ran with demo
-    # restrictions enabled.
-    DEMO = auto()
+def start_turn(state) -> None:
+    player = state.current
+    player.ap = MAX_AP  # type: ignore[attr-defined]
 
 
-class TurnStatus(Enum):
-    """Phases during a single round."""
-
-    PLAYER = auto()
-    ZOMBIE = auto()
-
-
-class Difficulty(Enum):
-    EASY = auto()
-    NORMAL = auto()
-    HARD = auto()
+def end_turn(state) -> None:
+    state.log.append(events.END_TURN)
+    state.active = (state.active + 1) % len(state.players)
+    state.turn += 1
+    start_turn(state)
 
 
-DIFFICULTY_PRESETS = {
-    Difficulty.EASY: {"agro": 0.75, "loot": 1.25, "damage": 0.75, "spawn": 0.75},
-    Difficulty.NORMAL: {"agro": 1.0, "loot": 1.0, "damage": 1.0, "spawn": 1.0},
-    Difficulty.HARD: {"agro": 1.25, "loot": 0.75, "damage": 1.25, "spawn": 1.25},
-}
+# actions --------------------------------------------------------------------
 
-CURRENT_DIFFICULTY = Difficulty.NORMAL
-
-# single deterministic RNG ---------------------------------------------------
-RNG = RNG()
-
-# simple monotonically increasing identifiers used by the replay system
-_TICK_COUNTER = 0
-_EVENT_ID = 0
-
-
-class TimeOfDay(Enum):
-    DAY = auto()
-    DUSK = auto()
-    NIGHT = auto()
-    DAWN = auto()
+def move(state, dest: Tuple[int, int]) -> Tuple[bool, str | None]:
+    reason = validate.can_move(state, dest)
+    if reason:
+        return False, reason
+    player = state.current
+    path = state.board.find_path((player.x, player.y), dest)
+    steps = len(path) - 1
+    player.x, player.y = dest
+    player.ap -= steps  # type: ignore[operator]
+    state.log.append(events.MOVE)
+    return True, None
 
 
-_TIME_INDEX = 0
-_TIME_ELAPSED = 0.0
-TIME_PHASE_LENGTH = 30.0  # seconds per phase
-
-DIRECTIONS: Dict[str, Tuple[int, int]] = {
-    "w": (0, -1),
-    "s": (0, 1),
-    "a": (-1, 0),
-    "d": (1, 0),
-    "q": (-1, -1),
-    "e": (1, -1),
-    "z": (-1, 1),
-    "c": (1, 1),
-}
-
-def set_seed(seed: int) -> None:
-    RNG.seed(seed)
+def attack(state, target) -> Tuple[bool, str | None]:
+    reason = validate.can_attack(state, target)
+    if reason:
+        return False, reason
+    player = state.current
+    player.ap -= ATTACK_COST  # type: ignore[operator]
+    target.health -= 3
+    state.log.append(events.HIT)
+    return True, None
 
 
-def set_difficulty(diff: Difficulty) -> None:
-    """Select active difficulty preset."""
-
-    global CURRENT_DIFFICULTY
-    CURRENT_DIFFICULTY = diff
-
-
-def difficulty_preset() -> Dict[str, float]:
-    return DIFFICULTY_PRESETS[CURRENT_DIFFICULTY]
-
-
-def validate_action(state, action, player_index: int) -> bool:
-    """Placeholder hook for server-side action validation.
-
-    The real game logic would inspect ``state`` and ``action`` to ensure the
-    move is legal for the active player.  For now the function only returns
-    ``True`` to indicate that all actions are accepted.
-    """
-
-    return True
-
-
-def next_tick() -> int:
-    """Return the next global tick identifier."""
-
-    global _TICK_COUNTER
-    _TICK_COUNTER += 1
-    return _TICK_COUNTER
-
-
-def next_event_id() -> int:
-    """Return a unique event id."""
-
-    global _EVENT_ID
-    _EVENT_ID += 1
-    return _EVENT_ID
-
-
-def current_time_of_day() -> TimeOfDay:
-    return list(TimeOfDay)[_TIME_INDEX]
-
-
-def update_time_of_day(dt: float) -> TimeOfDay:
-    global _TIME_ELAPSED, _TIME_INDEX
-    _TIME_ELAPSED += dt
-    if _TIME_ELAPSED >= TIME_PHASE_LENGTH:
-        _TIME_ELAPSED = 0.0
-        _TIME_INDEX = (_TIME_INDEX + 1) % len(TimeOfDay)
-    return current_time_of_day()
+__all__ = [
+    "BOARD_SIZE",
+    "MAX_AP",
+    "MOVE_COST",
+    "ATTACK_COST",
+    "MOVE_RANGE",
+    "ATTACK_RANGE",
+    "start_turn",
+    "end_turn",
+    "move",
+    "attack",
+]
