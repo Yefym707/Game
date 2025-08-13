@@ -12,6 +12,8 @@ CONFIG_PATH = Path.home() / ".oko_zombie" / "config.json"
 # Language code used as a fallback for missing keys/translations
 DEFAULT_LANG = "en"
 
+log = logging.getLogger(__name__)
+
 
 def _load_lang() -> str:
     try:
@@ -78,7 +80,7 @@ def safe_get(key: str, default: T | None = None) -> T:
     if key in _default_translations:
         return _default_translations[key]  # type: ignore[return-value]
     if key not in _missing_logged:
-        logging.getLogger(__name__).warning("missing translation: %s", key)
+        log.warning("missing translation: %s", key)
         _missing_logged.add(key)
     if default is not None:
         return default
