@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 import pygame
 
+from .tileset import TILE_SIZE
 from . import anim
 
 
@@ -62,7 +63,7 @@ class SmoothCamera:
         t = min(self.follow_speed * dt, 1.0)
         self.x += (self.target_x - self.x) * t
         self.y += (self.target_y - self.y) * t
-        self._clamp()
+        self.clamp_to_bounds()
         if self._shake:
             if self._shake.update(dt):
                 self._shake = None
@@ -70,7 +71,7 @@ class SmoothCamera:
             else:
                 self.shake_offset = self._shake.offset
 
-    def _clamp(self) -> None:
+    def clamp_to_bounds(self) -> None:
         max_x = max(0.0, self.world_w - self.screen_w / self.zoom)
         max_y = max(0.0, self.world_h - self.screen_h / self.zoom)
         self.x = max(0.0, min(self.x, max_x))
@@ -95,7 +96,18 @@ class SmoothCamera:
         after = self.screen_to_world(focus)
         self.x += before[0] - after[0]
         self.y += before[1] - after[1]
-        self._clamp()
+        self.clamp_to_bounds()
 
     def shake(self, duration: float, amplitude: float, freq: float) -> None:
         self._shake = anim.Shake(duration, amplitude * self.shake_scale, freq)
+
+    # direct positioning ---------------------------------------------
+    def jump_to(self, cell: tuple[int, int]) -> None:
+        """Center the camera on ``cell`` immediately."""
+
+        px = cell[0] * TILE_SIZE + TILE_SIZE / 2
+        py = cell[1] * TILE_SIZE + TILE_SIZE / 2
+        self.x = px - self.screen_w / (2 * self.zoom)
+        self.y = py - self.screen_h / (2 * self.zoom)
+        self.target_x, self.target_y = self.x, self.y
+        self.clamp_to_bounds()

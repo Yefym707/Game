@@ -166,6 +166,14 @@ A optional minimap gives a quick overview of the board. It encodes tile types
 by color, marks the current camera viewport and allows clicking to jump the
 camera. Both the visibility and size of the minimap are configurable.
 
+## Minimap 2.0 & Scene Transitions
+
+The minimap now ships with a legend clarifying tile colors, a frame showing the
+current viewport and clickable navigation that centers the camera on the chosen
+cell. Small unicode markers highlight events such as players or zombies. Scene
+changes between the menu, game and settings employ short fade or slide
+transitions for a smoother flow.
+
 ## Accessibility & Controller
 
 The settings menu now exposes an Accessibility tab. It offers an extended UI

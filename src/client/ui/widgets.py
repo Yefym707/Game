@@ -77,6 +77,27 @@ class HoverOutline:
         )
 
 
+class LegendWidget:
+    """Display a list of colored squares with labels."""
+
+    def __init__(self, items: list[tuple[tuple[int, int, int], str]], rect: pygame.Rect) -> None:
+        self.items = items
+        self.rect = pygame.Rect(rect)
+        self.font = pygame.font.SysFont(None, 16)
+
+    def draw(self, surface: pygame.Surface) -> None:
+        th = get_theme()
+        x, y = self.rect.topleft
+        size = 10
+        for color, label in self.items:
+            square = pygame.Rect(x, y, size, size)
+            surface.fill(color, square)
+            pygame.draw.rect(surface, th.colors["border"], square, 1)
+            img = self.font.render(label, True, th.colors["text"])
+            surface.blit(img, (x + size + th.padding, y - 2))
+            y += size + th.padding
+
+
 class Panel:
     """Simple container with rounded corners and a subtle drop shadow."""
 

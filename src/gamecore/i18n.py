@@ -167,6 +167,14 @@ INVERT_ZOOM = "invert_zoom"
 LARGE_TEXT = "large_text"
 NIGHT_VIGNETTE = "night_vignette"
 
+# minimap legend -------------------------------------------------------------
+LEGEND_WALL = "legend_wall"
+LEGEND_FLOOR = "legend_floor"
+LEGEND_LOOT = "legend_loot"
+LEGEND_PLAYER = "legend_player"
+LEGEND_ZOMBIE = "legend_zombie"
+LEGEND_GOAL = "legend_goal"
+
 # invite related --------------------------------------------------------------
 INVITE = "INVITE"
 COPY_LINK = "COPY_LINK"

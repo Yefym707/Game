@@ -23,6 +23,7 @@ from .ui.widgets import (
     SubtitleBar,
     HelpOverlay,
     hover_hints,
+    LegendWidget,
 )
 from .ui.theme import get_theme
 from .input import InputManager, DEFAULT_GAMEPAD
@@ -139,10 +140,25 @@ class GameScene(Scene):
         self._minimap_rect: pygame.Rect | None = None
         if self.minimap_enabled:
             self._build_minimap()
+            th = get_theme()
+            pal = th.palette["ui"]
+            self._legend = LegendWidget(
+                [
+                    (self._tile_color("#"), i18n.gettext(i18n.LEGEND_WALL)),
+                    (self._tile_color("."), i18n.gettext(i18n.LEGEND_FLOOR)),
+                    (pal.info, i18n.gettext(i18n.LEGEND_LOOT)),
+                    (pal.accent, i18n.gettext(i18n.LEGEND_PLAYER)),
+                    (pal.danger, i18n.gettext(i18n.LEGEND_ZOMBIE)),
+                    (pal.warn, i18n.gettext(i18n.LEGEND_GOAL)),
+                ],
+                pygame.Rect(0, 0, 100, 100),
+            )
+            self._mm_font = pygame.font.SysFont(None, 12)
         self.reconnecting = False
         self.reconnect_progress = 0.0
         self.vote_paused = False
         self.spectator = getattr(net_client, "spectator", False) if net_client else False
+        self.cursor_font = pygame.font.SysFont(None, 20)
 
     def _show_error(self, msg: str) -> None:
         """Display an error message without crashing."""
@@ -250,9 +266,9 @@ class GameScene(Scene):
             if self._minimap_rect and self._minimap_rect.collidepoint(event.pos):
                 mx = event.pos[0] - self._minimap_rect.x
                 my = event.pos[1] - self._minimap_rect.y
-                tx = mx / self.minimap_scale * TILE_SIZE
-                ty = my / self.minimap_scale * TILE_SIZE
-                self.camera.follow((tx, ty))
+                tx = int(mx / self.minimap_scale)
+                ty = int(my / self.minimap_scale)
+                self.camera.jump_to((tx, ty))
                 return
         if event.type == pygame.MOUSEMOTION:
             wx, wy = self.camera.screen_to_world(event.pos)
@@ -445,6 +461,7 @@ class GameScene(Scene):
             self.subtitles.draw(surface)
             self.help.draw(surface)
             hover_hints.draw(surface)
+            self._draw_cursor(surface)
             hint = self.app.font.render(_("photo_hint"), True, (255, 255, 255))
             surface.blit(hint, (8, h - hint.get_height() - 8))
         self._apply_postfx(surface)
@@ -471,31 +488,66 @@ class GameScene(Scene):
         self._minimap_surface = surf
 
     def _tile_color(self, tile: str) -> tuple[int, int, int]:
-        if tile == ".":
-            return (60, 60, 60)
+        th = get_theme()
+        pal = th.palette["ui"]
         if tile == "#":
-            return (100, 100, 100)
+            return pal.neutral
+        if tile == ".":
+            return th.colors["panel"]
         if tile == "T":
-            return (0, 120, 0)
+            return pal.info
         if tile == "W":
-            return (0, 0, 120)
-        return (120, 120, 120)
+            return pal.warn
+        return pal.accent
 
     def _draw_minimap(self, surface: pygame.Surface) -> None:
         if not self.minimap_enabled:
             return
         mm = self._minimap_surface.copy()
+        th = get_theme()
+        for p in self.state.players:
+            px = int(p.x * self.minimap_scale)
+            py = int(p.y * self.minimap_scale)
+            img = self._mm_font.render("❤", True, th.palette["ui"].accent)
+            mm.blit(img, (px, py))
+        for z in self.state.zombies:
+            px = int(z.x * self.minimap_scale)
+            py = int(z.y * self.minimap_scale)
+            img = self._mm_font.render("⚔", True, th.palette["ui"].danger)
+            mm.blit(img, (px, py))
         view_rect = pygame.Rect(
             self.camera.x / TILE_SIZE * self.minimap_scale,
             self.camera.y / TILE_SIZE * self.minimap_scale,
             (self.camera.screen_w / self.camera.zoom) / TILE_SIZE * self.minimap_scale,
             (self.camera.screen_h / self.camera.zoom) / TILE_SIZE * self.minimap_scale,
         )
-        pygame.draw.rect(mm, (255, 0, 0), view_rect, 1)
+        pygame.draw.rect(mm, th.palette["ui"].accent, view_rect, 1)
         x = surface.get_width() - mm.get_width() - 10
         y = 10
         self._minimap_rect = pygame.Rect(x, y, mm.get_width(), mm.get_height())
         surface.blit(mm, (x, y))
+        self._legend.rect.topleft = (x + mm.get_width() + 10, y)
+        self._legend.draw(surface)
+
+    def _cursor_symbol(self) -> str:
+        pos = pygame.mouse.get_pos()
+        if self._minimap_rect and self._minimap_rect.collidepoint(pos):
+            return "☝"
+        wx, wy = self.camera.screen_to_world(pos)
+        x = int(wx // TILE_SIZE)
+        y = int(wy // TILE_SIZE)
+        if not self.state.board.in_bounds(x, y):
+            return "✖"
+        for z in self.state.zombies:
+            if z.x == x and z.y == y:
+                return "⚔"
+        return "¬"
+
+    def _draw_cursor(self, surface: pygame.Surface) -> None:
+        sym = self._cursor_symbol()
+        img = self.cursor_font.render(sym, True, (255, 255, 255))
+        mx, my = pygame.mouse.get_pos()
+        surface.blit(img, (mx, my))
 
     def _draw_entity(self, surface: pygame.Surface, ent) -> None:
         tile = self.tileset.get(ent.symbol)

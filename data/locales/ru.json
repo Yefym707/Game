@@ -175,4 +175,10 @@
   ,"focus_ring": "Контур фокуса"
   ,"hover_outline": "Обводка наведения"
   ,"icon_label": "Подпись с иконкой"
+  ,"legend_wall": "Стена"
+  ,"legend_floor": "Пол"
+  ,"legend_loot": "Лут"
+  ,"legend_player": "Игрок"
+  ,"legend_zombie": "Зомби"
+  ,"legend_goal": "Цель"
   }

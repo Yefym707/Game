@@ -12,7 +12,7 @@ from gamecore import config as gconfig
 from telemetry import init as telemetry_init, shutdown as telemetry_shutdown
 from integrations import steam
 from . import input as cinput
-from .gfx.anim import FadeTransition
+from .gfx.anim import FadeTransition, SlideTransition, SceneTransitions
 from . import sfx
 from .scene_replay import ReplayScene  # imported for routing; used by menu
 from .scene_photo import PhotoScene  # imported for hotkey access
@@ -52,12 +52,13 @@ class App:
         pygame.display.set_caption(_("window_title"))
         self.screen = pygame.display.set_mode((w, h), flags)
         sfx.init(self.cfg)
+        pygame.mouse.set_visible(False)
         # unified input layer
         self.input = cinput.InputManager(self.cfg)
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont(None, 24)
         self.scene: Scene = LoadingScene(self)
-        self.transition: FadeTransition | None = None
+        self.transition: FadeTransition | SlideTransition | None = None
         steam.on_join_request(self._steam_join)
         self._global_toasts: list[str] = []
 
@@ -103,8 +104,20 @@ class App:
             else:
                 self.scene.update(dt)
                 if self.scene.next_scene:
-                    self.transition = FadeTransition(self, self.scene.next_scene)
+                    next_scene = self.scene.next_scene
                     self.scene.next_scene = None
+                    curr = self.scene.__class__.__name__
+                    nxt = next_scene.__class__.__name__
+                    if curr == "MenuScene" and nxt == "GameScene":
+                        self.transition = SceneTransitions.fade_out(self, next_scene, 0.3)
+                    elif curr == "GameScene" and nxt == "MenuScene":
+                        self.transition = SceneTransitions.fade_out(self, next_scene, 0.3)
+                    elif curr == "MenuScene" and nxt == "SettingsScene":
+                        self.transition = SceneTransitions.slide_out(self, next_scene, 0.3)
+                    elif curr == "SettingsScene" and nxt == "MenuScene":
+                        self.transition = SceneTransitions.slide_in(self, next_scene, 0.3)
+                    else:
+                        self.transition = SceneTransitions.fade_out(self, next_scene, 0.3)
             self.scene.draw(self.screen)
             if self.transition:
                 self.transition.draw(self.screen)
