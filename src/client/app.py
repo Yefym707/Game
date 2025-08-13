@@ -18,6 +18,7 @@ from .scene_replay import ReplayScene  # imported for routing; used by menu
 from .scene_photo import PhotoScene  # imported for hotkey access
 from .gfx import postfx
 from .ui import theme as ui_theme
+from .scene_loading import LoadingScene
 
 
 class Scene:
@@ -55,9 +56,7 @@ class App:
         self.input = cinput.InputManager(self.cfg)
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont(None, 24)
-        from .scene_menu import MenuScene
-
-        self.scene: Scene = MenuScene(self)
+        self.scene: Scene = LoadingScene(self)
         self.transition: FadeTransition | None = None
         steam.on_join_request(self._steam_join)
         self._global_toasts: list[str] = []
@@ -69,51 +68,91 @@ class App:
         if log_file.exists() and log_file.stat().st_size > 256 * 1024:
             log_file.write_text("")
         logging.basicConfig(filename=log_file, level=logging.INFO)
+
+        while True:
+            try:
+                self._loop()
+                break
+            except Exception:  # pragma: no cover - safety net
+                logging.exception("main loop crash")
+                if not self._error_dialog():
+                    break
+
+        pygame.quit()
+        telemetry_shutdown("quit")
+
+    def _loop(self) -> None:
         running = True
-        try:
-            while running:
-                dt = self.clock.tick(self.cfg.get("fps_cap", 60)) / 1000.0
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        running = False
-                        break
-                    if event.type == pygame.KEYDOWN and event.key == pygame.K_F3:
-                        self.cfg["perf_overlay"] = not self.cfg.get("perf_overlay", False)
-                    if not self.transition:
-                        self.scene.handle_event(event)
-                if self.transition:
-                    self.transition.update(dt)
-                else:
-                    self.scene.update(dt)
-                    if self.scene.next_scene:
-                        self.transition = FadeTransition(self, self.scene.next_scene)
-                        self.scene.next_scene = None
-                self.scene.draw(self.screen)
-                if self.transition:
-                    self.transition.draw(self.screen)
-                    if self.transition.finished:
-                        self.transition = None
+        fps = self.cfg.get("fps_cap", 60)
+        target_dt = 1.0 / fps
+        prev = time.perf_counter()
+        while running:
+            frame_start = time.perf_counter()
+            dt = frame_start - prev
+            prev = frame_start
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                    break
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_F3:
+                    self.cfg["perf_overlay"] = not self.cfg.get("perf_overlay", False)
+                if not self.transition:
+                    self.scene.handle_event(event)
+            if self.transition:
+                self.transition.update(dt)
+            else:
+                self.scene.update(dt)
+                if self.scene.next_scene:
+                    self.transition = FadeTransition(self, self.scene.next_scene)
+                    self.scene.next_scene = None
+            self.scene.draw(self.screen)
+            if self.transition:
+                self.transition.draw(self.screen)
+                if self.transition.finished:
+                    self.transition = None
 
-                fx_time = 0.0
-                if postfx.count_enabled(self.cfg):
-                    start = time.perf_counter()
-                    frame = self.screen.copy()
-                    frame = postfx.apply_chain(frame, self.cfg)
-                    fx_time = (time.perf_counter() - start) * 1000.0
-                    self.screen.blit(frame, (0, 0))
+            fx_time = 0.0
+            if postfx.count_enabled(self.cfg):
+                start_fx = time.perf_counter()
+                frame = self.screen.copy()
+                frame = postfx.apply_chain(frame, self.cfg)
+                fx_time = (time.perf_counter() - start_fx) * 1000.0
+                self.screen.blit(frame, (0, 0))
 
-                if self.cfg.get("perf_overlay"):
-                    txt = f"dt:{dt*1000:.1f}ms fps:{1.0/dt if dt else 0:.1f} calls:{1+postfx.count_enabled(self.cfg)} fx:{fx_time:.1f}ms"
-                    img = self.font.render(txt, True, (255, 255, 255))
-                    self.screen.blit(img, (8, 8))
+            if self.cfg.get("perf_overlay"):
+                txt = f"dt:{dt*1000:.1f}ms fps:{1.0/dt if dt else 0:.1f} calls:{1+postfx.count_enabled(self.cfg)} fx:{fx_time:.1f}ms"
+                img = self.font.render(txt, True, (255, 255, 255))
+                self.screen.blit(img, (8, 8))
 
-                pygame.display.flip()
-        except Exception:  # pragma: no cover - safety net
-            logging.exception("main loop crash")
-            raise
-        finally:
-            pygame.quit()
-            telemetry_shutdown("quit")
+            pygame.display.flip()
+
+            elapsed = time.perf_counter() - frame_start
+            delay = target_dt - elapsed
+            if delay > 0:
+                time.sleep(delay)
+
+    def _error_dialog(self) -> bool:
+        msg = _("error")
+        font = self.font
+        surface = self.screen
+        surface.fill((0, 0, 0))
+        txt = font.render(msg, True, (255, 0, 0))
+        retry = font.render(_("restart"), True, (255, 255, 255))
+        quit_txt = font.render(_("menu_quit"), True, (255, 255, 255))
+        surface.blit(txt, (20, 20))
+        surface.blit(retry, (20, 60))
+        surface.blit(quit_txt, (20, 90))
+        pygame.display.flip()
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return False
+                if event.type == pygame.KEYDOWN:
+                    if event.key in (pygame.K_q, pygame.K_ESCAPE):
+                        return False
+                    if event.key in (pygame.K_r, pygame.K_RETURN):
+                        return True
+            time.sleep(0.05)
 
     # steam integration -------------------------------------------------
     def _steam_join(self, data: str) -> None:
