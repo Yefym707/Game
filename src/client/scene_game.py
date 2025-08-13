@@ -17,6 +17,7 @@ from .gfx.camera import SmoothCamera
 from .gfx.tileset import TILE_SIZE
 from .gfx.anim import float_text, screen_shake
 from .ui.widgets import HelpOverlay, Toast, MinimapWidget
+from .scene_base import Scene
 from .ui.theme import get_theme
 from gamecore import board as gboard, rules, validate
 from gamecore.i18n import safe_get
@@ -24,9 +25,9 @@ from gamecore.i18n import safe_get
 hover_hints = []  # tests patch this with translated help strings
 
 
-class GameScene:
+class GameScene(Scene):
     def __init__(self, app, new_game: bool = True, level_data: Optional[List[str]] = None) -> None:
-        self.app = app
+        super().__init__(app)
         self.level_data = level_data
         self.help = HelpOverlay(app.input_map)
         self.toasts: list[Toast] = []
