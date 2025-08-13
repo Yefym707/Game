@@ -43,6 +43,40 @@ class HoverHints:
 hover_hints = HoverHints()
 
 
+class FocusRing:
+    """Draw a ring around a widget to indicate keyboard focus."""
+
+    def __init__(self, rect: pygame.Rect) -> None:
+        self.rect = pygame.Rect(rect)
+
+    def draw(self, surface: pygame.Surface) -> None:
+        th = get_theme()
+        pygame.draw.rect(
+            surface,
+            th.palette["ui"].accent,
+            self.rect.inflate(4, 4),
+            th.border_xs,
+            border_radius=th.radius_md,
+        )
+
+
+class HoverOutline:
+    """Thin outline used on mouse hover."""
+
+    def __init__(self, rect: pygame.Rect) -> None:
+        self.rect = pygame.Rect(rect)
+
+    def draw(self, surface: pygame.Surface) -> None:
+        th = get_theme()
+        pygame.draw.rect(
+            surface,
+            th.palette["ui"].neutral,
+            self.rect.inflate(2, 2),
+            th.border_xs,
+            border_radius=th.radius_sm,
+        )
+
+
 class Button:
     """Clickable rectangular button."""
 
@@ -370,7 +404,8 @@ class IconLabel:
         self.font = pygame.font.SysFont(None, 18)
 
     def draw(self, surface: pygame.Surface, pos: tuple[int, int]) -> None:
-        img = self.font.render(f"{self.icon} {self.text}", True, (200, 200, 200))
+        th = get_theme()
+        img = self.font.render(f"{self.icon} {self.text}", True, th.colors["text"])
         surface.blit(img, pos)
 
 

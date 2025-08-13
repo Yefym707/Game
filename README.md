@@ -43,6 +43,13 @@ python -m scripts.run_cli --seed 123
 python -m scripts.run_gui
 ```
 
+## Borders & Highlights
+
+UI elements use three border widths (`border_xs`, `border_sm`, `border_md`) and
+rounded corners (`radius_sm`, `radius_md`, `radius_lg`). Highlight colors are
+drawn from the active theme's `palette.ui` (`neutral`, `accent`, `danger`,
+`warn`, `info`) ensuring consistent visuals across themes and scales.
+
 ## Loading & Frame Pacing
 
 The client boots into a lightweight loading scene. Resources such as

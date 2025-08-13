@@ -4,8 +4,15 @@ from enum import IntEnum, auto
 
 
 class Layer(IntEnum):
-    BACKGROUND = 0
-    TILE = auto()
-    ENTITY = auto()
+    """Render layers ordered back to front."""
+
+    BG = 0
+    TILES = auto()
+    ENTITIES = auto()
     OVERLAY = auto()
     UI = auto()
+
+    # Backward compatibility -------------------------------------------------
+    BACKGROUND = BG
+    TILE = TILES
+    ENTITY = ENTITIES

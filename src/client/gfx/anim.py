@@ -11,6 +11,9 @@ from dataclasses import dataclass
 import math
 import pygame
 
+
+_FLOAT_STACKS: dict[tuple[int, int], int] = {}
+
 # ---------------------------------------------------------------------------
 # tween helpers
 
@@ -184,26 +187,39 @@ class FloatText:
     text: str
     pos: tuple[float, float]
     color: tuple[int, int, int] = (255, 255, 255)
-    duration: float = 1.0
+    duration: float = 0.45
     rise: float = 30.0
+    drift: float = 8.0
     time: float = 0.0
     font: pygame.font.Font | None = None
+    stack: int = 0
 
     def __post_init__(self) -> None:
         if self.font is None:
             self.font = pygame.font.SysFont(None, 18)
+        key = (int(self.pos[0]), int(self.pos[1]))
+        self.stack = _FLOAT_STACKS.get(key, 0)
+        _FLOAT_STACKS[key] = self.stack + 1
 
     def update(self, dt: float) -> bool:
         self.time += dt
-        return self.time >= self.duration
+        finished = self.time >= self.duration
+        if finished:
+            key = (int(self.pos[0]), int(self.pos[1]))
+            _FLOAT_STACKS[key] = max(0, _FLOAT_STACKS.get(key, 1) - 1)
+        return finished
 
     def draw(self, surface: pygame.Surface) -> None:
         t = min(self.time / self.duration, 1.0)
         alpha = int((1.0 - t) * 255)
-        y = self.pos[1] - self.rise * t
+        x = self.pos[0] + self.drift * t
+        y = self.pos[1] - self.rise * t - self.stack * self.font.get_linesize()
         img = self.font.render(self.text, True, self.color)
         img.set_alpha(alpha)
-        surface.blit(img, (self.pos[0], y))
+        w, h = surface.get_size()
+        x = max(0.0, min(x, w - img.get_width()))
+        y = max(0.0, min(y, h - img.get_height()))
+        surface.blit(img, (x, y))
 
 
 @dataclass
