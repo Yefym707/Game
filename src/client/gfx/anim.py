@@ -271,3 +271,16 @@ class Shake:
             math.cos(ang) * self.amplitude * decay,
         )
         return self.time >= self.duration
+
+
+def float_text(text: str, pos: tuple[float, float], color=(255, 255, 255)) -> FloatText:
+    """Convenience wrapper returning a :class:`FloatText` animation."""
+
+    return FloatText(text, pos, color)
+
+
+def screen_shake(camera, amplitude: float, duration: float) -> None:
+    """Trigger a small camera shake effect using ``camera``."""
+
+    if hasattr(camera, "shake"):
+        camera.shake(duration, amplitude, 25.0)

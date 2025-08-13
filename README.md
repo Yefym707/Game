@@ -94,6 +94,15 @@ the accessibility settings.  A dedicated *High Contrast* theme provides dark
 backgrounds, bright text and amber/blue accents alongside subtle shadow layers
 to improve readability and accessibility.
 
+## Readable UI: Panels & Minimap
+
+The interface arranges information in scalable side panels. The left panel
+shows the active unit with name, health and action points while the right side
+hosts the event log and a colour coded minimap. All elements respect the global
+UI scale (1.0–2.0) for legible text on both 1080p and 1366×768 displays. The
+minimap highlights terrain types, players and zombies and draws a rectangle for
+the current camera view; clicking it jumps the camera to the selected cell.
+
 ## Loading & Frame Pacing
 
 The client boots into a lightweight loading scene. Resources such as

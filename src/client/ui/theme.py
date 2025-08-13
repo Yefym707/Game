@@ -1,7 +1,7 @@
 """Runtime switchable UI themes."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict
 
 
@@ -18,15 +18,43 @@ class UIPalette:
 
 @dataclass
 class Theme:
+    """Collection of UI colors and sizing constants.
+
+    ``apply_scale`` recomputes all size related attributes allowing the
+    interface to be scaled globally (``1.0`` – ``2.0``).  The ``*_base``
+    attributes store the unscaled defaults.
+    """
+
     colors: Dict[str, tuple[int, int, int]]
     palette: Dict[str, UIPalette]
-    padding: int = 4
-    radius_sm: int = 2
-    radius_md: int = 4
-    radius_lg: int = 8
-    border_xs: int = 1
-    border_sm: int = 2
-    border_md: int = 4
+    base_padding: int = 4
+    base_radius_sm: int = 2
+    base_radius_md: int = 4
+    base_radius_lg: int = 8
+    base_border_xs: int = 1
+    base_border_sm: int = 2
+    base_border_md: int = 4
+    scale: float = 1.0
+    padding: int = field(init=False)
+    radius_sm: int = field(init=False)
+    radius_md: int = field(init=False)
+    radius_lg: int = field(init=False)
+    border_xs: int = field(init=False)
+    border_sm: int = field(init=False)
+    border_md: int = field(init=False)
+
+    def __post_init__(self) -> None:
+        self.apply_scale(self.scale)
+
+    def apply_scale(self, scale: float) -> None:
+        self.scale = max(1.0, min(scale, 2.0))
+        self.padding = int(self.base_padding * self.scale)
+        self.radius_sm = int(self.base_radius_sm * self.scale)
+        self.radius_md = int(self.base_radius_md * self.scale)
+        self.radius_lg = int(self.base_radius_lg * self.scale)
+        self.border_xs = max(1, int(self.base_border_xs * self.scale))
+        self.border_sm = max(1, int(self.base_border_sm * self.scale))
+        self.border_md = max(1, int(self.base_border_md * self.scale))
 
     @property
     def radius(self) -> int:
@@ -57,8 +85,8 @@ THEMES: Dict[str, Theme] = {
                 info=(30, 144, 255),
             )
         },
-        padding=6,
-        radius_md=6,
+        base_padding=6,
+        base_radius_md=6,
     ),
     "dark": Theme(
         colors={
@@ -79,8 +107,8 @@ THEMES: Dict[str, Theme] = {
                 info=(80, 160, 255),
             )
         },
-        padding=6,
-        radius_md=6,
+        base_padding=6,
+        base_radius_md=6,
     ),
     "apocalypse": Theme(
         colors={
@@ -101,8 +129,8 @@ THEMES: Dict[str, Theme] = {
                 info=(120, 180, 200),
             )
         },
-        padding=6,
-        radius_md=6,
+        base_padding=6,
+        base_radius_md=6,
     ),
     "high_contrast": Theme(
         colors={
@@ -125,13 +153,14 @@ THEMES: Dict[str, Theme] = {
                 info=(0, 170, 255),
             )
         },
-        padding=8,
-        radius_md=4,
-        border_md=4,
+        base_padding=8,
+        base_radius_md=4,
+        base_border_md=4,
     ),
 }
 
 _current: Theme = THEMES["dark"]
+_ui_scale = 1.0
 
 
 def set_theme(name: str) -> None:
@@ -139,6 +168,15 @@ def set_theme(name: str) -> None:
 
     global _current
     _current = THEMES.get(name, _current)
+    _current.apply_scale(_ui_scale)
+
+
+def set_ui_scale(scale: float) -> None:
+    """Update global UI scale and apply it to the current theme."""
+
+    global _ui_scale
+    _ui_scale = max(1.0, min(scale, 2.0))
+    _current.apply_scale(_ui_scale)
 
 
 def get_theme() -> Theme:
