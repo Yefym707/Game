@@ -10,6 +10,13 @@
   "help_end_turn": "Пробел: конец хода",
   "help_pause": "Esc: пауза",
   "help_help": "F1: помощь",
-  "error": "Ошибка"
+  "error": "Ошибка",
+  "out_of_ap": "Нет ОД",
+  "blocked": "Заблокировано",
+  "out_of_range": "Вне радиуса",
+  "log_move": "Ход",
+  "log_hit": "Удар",
+  "log_miss": "Промах",
+  "log_end": "Конец хода"
 }
 
