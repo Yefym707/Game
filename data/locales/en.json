@@ -171,4 +171,7 @@
   ,"always_prefer_local": "Always prefer local"
   ,"always_prefer_cloud": "Always prefer cloud"
   ,"open_backups_folder": "Open backups folder"
+  ,"focus_ring": "Focus ring"
+  ,"hover_outline": "Hover outline"
+  ,"icon_label": "Icon label"
   }

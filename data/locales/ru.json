@@ -171,4 +171,7 @@
   ,"always_prefer_local": "Всегда локальное"
   ,"always_prefer_cloud": "Всегда облачное"
   ,"open_backups_folder": "Открыть папку бэкапов"
+  ,"focus_ring": "Контур фокуса"
+  ,"hover_outline": "Обводка наведения"
+  ,"icon_label": "Подпись с иконкой"
   }

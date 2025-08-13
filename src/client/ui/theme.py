@@ -6,11 +6,35 @@ from typing import Dict
 
 
 @dataclass
+class UIPalette:
+    """Subset of theme colors used for highlights and UI states."""
+
+    neutral: tuple[int, int, int]
+    accent: tuple[int, int, int]
+    danger: tuple[int, int, int]
+    warn: tuple[int, int, int]
+    info: tuple[int, int, int]
+
+
+@dataclass
 class Theme:
     colors: Dict[str, tuple[int, int, int]]
+    palette: Dict[str, UIPalette]
     padding: int = 4
-    radius: int = 4
-    border_width: int = 2
+    radius_sm: int = 2
+    radius_md: int = 4
+    radius_lg: int = 8
+    border_xs: int = 1
+    border_sm: int = 2
+    border_md: int = 4
+
+    @property
+    def radius(self) -> int:
+        return self.radius_md
+
+    @property
+    def border_width(self) -> int:
+        return self.border_sm
 
 
 THEMES: Dict[str, Theme] = {
@@ -24,8 +48,17 @@ THEMES: Dict[str, Theme] = {
             "tooltip": (250, 250, 210),
             "toast": (0, 0, 0),
         },
+        palette={
+            "ui": UIPalette(
+                neutral=(120, 120, 120),
+                accent=(0, 120, 215),
+                danger=(200, 40, 40),
+                warn=(240, 170, 0),
+                info=(30, 144, 255),
+            )
+        },
         padding=6,
-        radius=6,
+        radius_md=6,
     ),
     "dark": Theme(
         colors={
@@ -37,8 +70,17 @@ THEMES: Dict[str, Theme] = {
             "tooltip": (50, 50, 50),
             "toast": (20, 20, 20),
         },
+        palette={
+            "ui": UIPalette(
+                neutral=(180, 180, 180),
+                accent=(0, 170, 255),
+                danger=(220, 80, 80),
+                warn=(240, 170, 0),
+                info=(80, 160, 255),
+            )
+        },
         padding=6,
-        radius=6,
+        radius_md=6,
     ),
     "apocalypse": Theme(
         colors={
@@ -50,8 +92,17 @@ THEMES: Dict[str, Theme] = {
             "tooltip": (60, 50, 50),
             "toast": (30, 20, 20),
         },
+        palette={
+            "ui": UIPalette(
+                neutral=(170, 130, 120),
+                accent=(200, 110, 60),
+                danger=(200, 60, 60),
+                warn=(220, 160, 70),
+                info=(120, 180, 200),
+            )
+        },
         padding=6,
-        radius=6,
+        radius_md=6,
     ),
     "high_contrast": Theme(
         colors={
@@ -63,9 +114,18 @@ THEMES: Dict[str, Theme] = {
             "tooltip": (10, 10, 10),
             "toast": (0, 0, 0),
         },
+        palette={
+            "ui": UIPalette(
+                neutral=(255, 255, 255),
+                accent=(255, 255, 0),
+                danger=(255, 0, 0),
+                warn=(255, 165, 0),
+                info=(0, 200, 255),
+            )
+        },
         padding=8,
-        radius=4,
-        border_width=4,
+        radius_md=4,
+        border_md=4,
     ),
 }
 

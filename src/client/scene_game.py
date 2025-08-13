@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import math
 import pygame
 from typing import Any
 
@@ -412,17 +413,17 @@ class GameScene(Scene):
     def draw(self, surface: pygame.Surface, ui: bool = True) -> None:
         w, h = surface.get_size()
         layers = {layer: pygame.Surface((w, h), pygame.SRCALPHA) for layer in Layer}
-        layers[Layer.BACKGROUND].fill((0, 0, 0))
+        layers[Layer.BG].fill((0, 0, 0))
         self.tileset.draw_map(self.state.board, self.camera, layers)
         self._draw_highlights(layers[Layer.OVERLAY])
         for p in self.state.players:
-            self._draw_entity(layers[Layer.ENTITY], p)
+            self._draw_entity(layers[Layer.ENTITIES], p)
         for z in self.state.zombies:
-            self._draw_entity(layers[Layer.ENTITY], z)
+            self._draw_entity(layers[Layer.ENTITIES], z)
         for a in self.animations:
             if hasattr(a, "draw"):
                 a.draw(layers[Layer.OVERLAY])
-        for layer in (Layer.BACKGROUND, Layer.TILE, Layer.ENTITY, Layer.OVERLAY):
+        for layer in (Layer.BG, Layer.TILES, Layer.ENTITIES, Layer.OVERLAY):
             surface.blit(layers[layer], (0, 0))
         self._apply_lighting(surface)
         if self.weather:
@@ -502,23 +503,96 @@ class GameScene(Scene):
         tile_size = int(TILE_SIZE * self.camera.zoom)
         player = self.state.players[self.state.active]
         px, py = player.x, player.y
+
+        def _dashed_rect(rect: pygame.Rect, color: tuple[int, int, int]) -> None:
+            step = 4
+            for x in range(rect.left, rect.right, step * 2):
+                pygame.draw.line(surface, color, (x, rect.top), (min(x + step, rect.right), rect.top), th.border_sm)
+                pygame.draw.line(surface, color, (x, rect.bottom - 1), (min(x + step, rect.right), rect.bottom - 1), th.border_sm)
+            for y in range(rect.top, rect.bottom, step * 2):
+                pygame.draw.line(surface, color, (rect.left, y), (rect.left, min(y + step, rect.bottom)), th.border_sm)
+                pygame.draw.line(surface, color, (rect.right - 1, y), (rect.right - 1, min(y + step, rect.bottom)), th.border_sm)
+
+        def _dashed_line(color: tuple[int, int, int], start: tuple[float, float], end: tuple[float, float]) -> None:
+            dash = 6
+            length = math.hypot(end[0] - start[0], end[1] - start[1])
+            if length == 0:
+                return
+            dx = (end[0] - start[0]) / length
+            dy = (end[1] - start[1]) / length
+            steps = int(length / dash)
+            for i in range(0, steps, 2):
+                s = (start[0] + dx * dash * i, start[1] + dy * dash * i)
+                e = (start[0] + dx * dash * (i + 1), start[1] + dy * dash * (i + 1))
+                pygame.draw.line(surface, color, s, e, th.border_xs)
+
+        sx, sy = self.camera.world_to_screen((px * TILE_SIZE, py * TILE_SIZE))
+        rect = pygame.Rect(sx, sy, tile_size, tile_size)
+        pygame.draw.rect(surface, th.palette["ui"].neutral, rect, th.border_sm)
+        inner = rect.inflate(-th.border_sm * 2, -th.border_sm * 2)
+        pygame.draw.rect(surface, th.palette["ui"].accent, inner, th.border_xs)
+
         for dx, dy in rules.DIRECTIONS.values():
             tx, ty = px + dx, py + dy
             sx, sy = self.camera.world_to_screen((tx * TILE_SIZE, ty * TILE_SIZE))
             rect = pygame.Rect(sx, sy, tile_size, tile_size)
-            pygame.draw.rect(surface, (0, 255, 0), rect, th.border_width)
+            fill = (*th.palette["ui"].info, int(255 * 0.15))
+            pygame.draw.rect(surface, fill, rect)
+            pygame.draw.rect(surface, th.palette["ui"].info, rect, th.border_sm)
+
         for z in self.state.zombies:
             if abs(z.x - px) + abs(z.y - py) == 1:
                 sx, sy = self.camera.world_to_screen((z.x * TILE_SIZE, z.y * TILE_SIZE))
                 rect = pygame.Rect(sx, sy, tile_size, tile_size)
-                pygame.draw.rect(surface, (255, 0, 0), rect, th.border_width)
+                fill = (*th.palette["ui"].danger, int(255 * 0.15))
+                pygame.draw.rect(surface, fill, rect)
+                _dashed_rect(rect, th.palette["ui"].danger)
+
         if self.hover_tile:
             path = self._simple_path((px, py), self.hover_tile)
-            for step in path:
-                sx, sy = self.camera.world_to_screen((step[0] * TILE_SIZE, step[1] * TILE_SIZE))
-                pygame.draw.circle(
-                    surface, (255, 255, 0), (sx + tile_size // 2, sy + tile_size // 2), 3
+            if path:
+                start = self.camera.world_to_screen(
+                    (px * TILE_SIZE + TILE_SIZE / 2, py * TILE_SIZE + TILE_SIZE / 2)
                 )
+                prev = start
+                centers: list[tuple[float, float]] = []
+                for step in path:
+                    cx, cy = self.camera.world_to_screen(
+                        (
+                            step[0] * TILE_SIZE + TILE_SIZE / 2,
+                            step[1] * TILE_SIZE + TILE_SIZE / 2,
+                        )
+                    )
+                    centers.append((cx, cy))
+                    _dashed_line(th.palette["ui"].accent, prev, (cx, cy))
+                    prev = (cx, cy)
+
+                end = centers[-1]
+                prev = start if len(centers) == 1 else centers[-2]
+                ang = math.atan2(end[1] - prev[1], end[0] - prev[0])
+                size = tile_size // 4
+                pts = [
+                    end,
+                    (
+                        end[0] - size * math.cos(ang - 0.5),
+                        end[1] - size * math.sin(ang - 0.5),
+                    ),
+                    (
+                        end[0] - size * math.cos(ang + 0.5),
+                        end[1] - size * math.sin(ang + 0.5),
+                    ),
+                ]
+                pygame.draw.polygon(surface, th.palette["ui"].accent, pts)
+
+                hx, hy = self.hover_tile
+                hx, hy = self.camera.world_to_screen((hx * TILE_SIZE, hy * TILE_SIZE))
+                hrect = pygame.Rect(hx, hy, tile_size, tile_size)
+                pygame.draw.rect(
+                    surface,
+                    (*th.palette["ui"].accent, int(255 * 0.2)),
+                    hrect,
+                )
+                pygame.draw.rect(surface, th.palette["ui"].accent, hrect, th.border_sm)
 
     def _simple_path(self, start: tuple[int, int], end: tuple[int, int]) -> list[tuple[int, int]]:
         x, y = start
