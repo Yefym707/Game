@@ -47,7 +47,10 @@ class Tileset:
         to render the tiles using Pillow.
         """
 
-        from tools import build_tiles
+        try:
+            from tools import build_tiles  # runtime shim or real module
+        except Exception:  # pragma: no cover - fallback should not trigger
+            from tools import _Noop as build_tiles
 
         mapping_path: Path | None = None
         for loc in (root / "textures.json", root / "scripts" / "textures.json"):

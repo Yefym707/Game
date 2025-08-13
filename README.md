@@ -24,6 +24,15 @@ python tools/package_release.py --target linux
 
 This gathers the built binary and runtime resources in `build/staging/<platform>/`.
 
+## Runtime tools shim
+
+Release builds do not ship with the development helpers found in the top level
+`tools/` directory.  A lightweight package under `src/tools` provides a safe
+shim so `import tools` always succeeds.  When matching modules exist in the
+`tools/` folder they are imported transparently; otherwise the shim returns
+no‑op placeholders and logs a warning.  This keeps production builds small
+while still allowing optional helpers during development.
+
 
 ## CI: Artifacts & Steam Upload
 
