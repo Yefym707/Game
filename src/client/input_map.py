@@ -9,9 +9,12 @@ class InputMap:
     """Translate pygame events into high level action strings."""
 
     def __init__(self) -> None:
+        """Create the input map and disable key repeat."""
+
+        pygame.key.set_repeat()  # disable key repeat – actions fire once
         self._map: dict[tuple[str, int], str] = {
-            ("mouse", 1): "select",
-            ("mouse", 3): "move",
+            ("mouse", 1): "select",  # left mouse button
+            ("mouse", 3): "action",  # right mouse button – move/attack
             ("key", pygame.K_SPACE): "end_turn",
             ("key", pygame.K_ESCAPE): "pause",
             ("key", pygame.K_F1): "help",

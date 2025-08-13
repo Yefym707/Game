@@ -14,9 +14,11 @@
   "out_of_ap": "Нет ОД",
   "blocked": "Заблокировано",
   "out_of_range": "Вне радиуса",
+  "not_your_turn": "Не ваш ход",
   "log_move": "Ход",
   "log_hit": "Удар",
   "log_miss": "Промах",
+  "log_blocked": "Блокировано",
   "log_end": "Конец хода"
 }
 
