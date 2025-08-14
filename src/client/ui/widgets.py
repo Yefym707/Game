@@ -21,7 +21,8 @@ from ..input_map import InputManager, name_for_key
 _font: pygame.font.Font | None = None
 _fonts: dict[int, pygame.font.Font] = {}
 _default_size = 0
-hover_hints: List[str] = []  # filled by tests; mirrors real project
+hover_hints: "HoverHints" | None = None
+help_hints: List[str] = []  # filled by tests; mirrors real project
 
 
 # ---------------------------------------------------------------------------
@@ -31,13 +32,14 @@ hover_hints: List[str] = []  # filled by tests; mirrors real project
 def init_ui(scale: float = 1.0) -> None:
     """Initialise pygame font subsystem and cache a default font."""
 
-    global _font, _fonts, _default_size
+    global _font, _fonts, _default_size, hover_hints
     if not pygame.font.get_init():  # pragma: no cover - defensive
         pygame.font.init()
     size = int(14 * max(1.0, min(scale, 2.0)))
     _font = pygame.font.SysFont(None, size)
     _fonts = {size: _font}
     _default_size = size
+    hover_hints = HoverHints()
 
 
 def _f(size: int | None = None) -> pygame.font.Font:
@@ -47,6 +49,27 @@ def _f(size: int | None = None) -> pygame.font.Font:
     if size not in _fonts:
         _fonts[size] = pygame.font.SysFont(None, size)
     return _fonts[size]
+
+
+class HoverHints:
+    """Tiny manager for floating hover hints."""
+
+    def __init__(self) -> None:
+        self.text: str | None = None
+        self.pos: tuple[int, int] = (0, 0)
+
+    def show(self, text: str, pos: tuple[int, int]) -> None:
+        self.text = text
+        self.pos = pos
+
+    def clear(self) -> None:
+        self.text = None
+
+    def draw(self, surf: pygame.Surface) -> None:
+        if not self.text:
+            return
+        img = _f().render(self.text, True, (255, 255, 255))
+        surf.blit(img, self.pos)
 
 
 # ---------------------------------------------------------------------------
@@ -450,7 +473,7 @@ class HelpOverlay:
     def draw(self, surf: pygame.Surface) -> None:  # pragma: no cover - visual
         if not self.visible:
             return
-        lines = hover_hints or []
+        lines = help_hints or []
         y = 10
         for line in lines:
             img = _f().render(line, True, (255, 255, 255))
@@ -604,4 +627,5 @@ __all__ = [
     "Minimap",
     "MinimapWidget",
     "hover_hints",
+    "help_hints",
 ]

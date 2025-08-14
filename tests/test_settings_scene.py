@@ -14,14 +14,13 @@ pygame.font.init()
 
 from client import scene_settings  # noqa: E402  pylint: disable=wrong-import-position
 from client.ui import widgets  # noqa: E402  pylint: disable=wrong-import-position
-from client.input import InputManager  # noqa: E402  pylint: disable=wrong-import-position
+from client.input_map import InputManager  # noqa: E402  pylint: disable=wrong-import-position
 
 
 def test_settings_scene(monkeypatch) -> None:
     widgets.init_ui()
     monkeypatch.setattr(scene_settings.gconfig, "save_config", lambda cfg: None)
     monkeypatch.setattr(scene_settings.gconfig, "DEFAULT_SAVE_CONFLICT_POLICY", "ask", False)
-    scene_settings.hover_hints = SimpleNamespace(draw=lambda _surf: None)
 
     cfg: dict[str, object] = {
         "ui_theme": "dark",
@@ -29,7 +28,8 @@ def test_settings_scene(monkeypatch) -> None:
         "ui_scale": 1.0,
         "large_text": False,
     }
-    app = SimpleNamespace(cfg=cfg, input=InputManager(cfg), screen=pygame.display.set_mode((640, 480)))
+    input_mgr = InputManager.from_config(cfg.get("keybinds"))
+    app = SimpleNamespace(cfg=cfg, input=input_mgr, screen=pygame.display.set_mode((640, 480)))
     scene = scene_settings.SettingsScene(app)
 
     surface = pygame.Surface((640, 480))
