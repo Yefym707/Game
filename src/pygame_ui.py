@@ -75,6 +75,20 @@ class PygameUI:
         self._flash_pos: tuple[int, int] | None = None
         self._flash_until: int = 0
 
+        # Help/overlay and objective messages
+        self.show_help = False
+        self.help_lines = [
+            "Goal: find the antidote and survive.",
+            "Arrows: move",
+            "A or Space: attack",
+            "S: search",
+            "E/Enter: end turn",
+            "Esc: pause",
+            "F1: toggle help",
+        ]
+        self.message = "Objective: Find the antidote and survive."
+        self.message_until = pygame.time.get_ticks() + 4000
+
     # ------------------------------------------------------------------
     def draw_board(self) -> None:
         board = self.client.board
@@ -132,6 +146,30 @@ class PygameUI:
             self.screen.blit(surf, (x_offset, y))
             y += surf.get_height() + 5
 
+        # Temporary objective message shown at start of the game
+        now = pygame.time.get_ticks()
+        if now < self.message_until:
+            surf = self.font.render(self.message, True, (255, 255, 0))
+            self.screen.blit(
+                surf,
+                (10, self.client.board.height * self.cell_size - surf.get_height() - 10),
+            )
+
+    # ------------------------------------------------------------------
+    def draw_help(self) -> None:
+        if not self.show_help:
+            return
+        overlay = pygame.Surface(self.screen.get_size())
+        overlay.set_alpha(220)
+        overlay.fill((0, 0, 0))
+        self.screen.blit(overlay, (0, 0))
+        y = 10
+        for line in self.help_lines:
+            surf = self.font.render(line, True, (255, 255, 255))
+            self.screen.blit(surf, (10, y))
+            y += surf.get_height() + 5
+        # TODO: Load and display legend image here
+
     # ------------------------------------------------------------------
     def run(self) -> None:
         """Main interactive loop.
@@ -153,6 +191,8 @@ class PygameUI:
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         running = False
+                    elif event.key == pygame.K_F1:
+                        self.show_help = not self.show_help
                     # movement -------------------------------------------------
                     elif event.key in (
                         pygame.K_UP,
@@ -216,6 +256,7 @@ class PygameUI:
             # draw frame
             self.draw_board()
             self.draw_stats()
+            self.draw_help()
             pygame.display.flip()
             clock.tick(60)
 

@@ -125,7 +125,8 @@ def run_game_cli() -> None:
 
         print(f"Starting scenario: {scenario.name}")
         if scenario.description:
-            print(scenario.description)
+            print(f"Objective: {scenario.description}")
+        print("Type 'help' for a reminder of controls and goals.")
 
         scenario_finished = False
         while not scenario_finished:
@@ -149,6 +150,12 @@ def run_game_cli() -> None:
                 if cmd in {"quit", "exit"}:
                     print("Quitting game.")
                     return
+                if cmd == "help":
+                    print(
+                        "Find supplies, manage hunger and thirst, and avoid or fight zombies. "
+                        "Objective: find the antidote and return to the start."
+                    )
+                    continue
                 parts = cmd.split()
                 if not parts:
                     continue
