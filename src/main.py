@@ -34,10 +34,24 @@ def load_scenarios() -> List[dict]:
 
 def print_help() -> None:
     print(
-        "Commands: n/s/e/w – move, map – map, rest – rest,\n",
-        "  trader – interact with trader, inv – inventory,\n",
-        "  save/load – save or load game, quit – exit."
+        "Commands: n/s/e/w – move, map – map, rest – rest,\n"
+        "  trader – interact with trader, inv – inventory,\n"
+        "  save/load – save or load game, help – help, quit – exit.\n"
+        "Find supplies, manage hunger and thirst, and avoid or fight zombies.\n"
+        "Objective: find the antidote and return to the start."
     )
+
+
+def how_to_play() -> None:
+    print("\n=== How to Play ===")
+    print(
+        "Find supplies, manage hunger and thirst, and avoid or fight zombies.\n"
+        "Goal: locate the antidote and bring it back to the starting point."
+    )
+    print(
+        "Use n/s/e/w to move, rest to recover, inv to view inventory, and save/load to manage progress."
+    )
+    # TODO: Load and display legend image here
 
 
 def interact_with_trader(campaign: Campaign) -> None:
@@ -76,6 +90,12 @@ def interact_with_trader(campaign: Campaign) -> None:
 def game_loop(campaign: Campaign) -> None:
     print("Welcome to the text-based survival game!")
     print_help()
+    # Display objective of the first scenario if available
+    if campaign.scenarios:
+        first = campaign.scenarios[0]
+        desc = getattr(first, "description", "") or getattr(first, "desc", "")
+        if desc:
+            print(f"Objective: {desc}")
     while campaign.player.is_alive():
         print(f"\nTurn: {campaign.turn_count} | Time: {campaign.time_of_day}")
         print(campaign.game_map.__str__(campaign.enemies.enemies))
@@ -148,15 +168,18 @@ def main_menu() -> None:
     while True:
         print("\n=== Survival Game ===")
         print("1. Start New Game")
-        print("2. Exit")
+        print("2. How to Play")
+        print("3. Exit")
         choice = input("> ").strip().lower()
         if choice in {"1", "start", "new"}:
             campaign = Campaign(load_scenarios())
             game_loop(campaign)
-        elif choice in {"2", "exit", "quit"}:
+        elif choice in {"2", "how", "help"}:
+            how_to_play()
+        elif choice in {"3", "exit", "quit"}:
             break
         else:
-            print("Unknown command. Choose 1 or 2.")
+            print("Unknown command. Choose 1, 2 or 3.")
 
 
 def main() -> None:
