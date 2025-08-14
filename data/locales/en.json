@@ -48,5 +48,13 @@
   "settings.save_conflict.ask": "Ask every time",
   "settings.save_conflict.prefer_local": "Prefer local",
   "settings.save_conflict.prefer_cloud": "Prefer cloud",
-  "toast.settings_applied": "Settings applied"
+  "toast.settings_applied": "Settings applied",
+  "scenario_intro_name": "Introduction",
+  "scenario_intro_desc": "Get acquainted with the basics of survival on this board.",
+  "scenario_rescue_name": "Rescue the Survivors",
+  "scenario_rescue_desc": "Find and rescue all survivors on the map.",
+  "scenario_finale_name": "Final Battle",
+  "scenario_finale_desc": "Hold out against the final wave of enemies.",
+  "event_thirst_desc": "You feel extremely thirsty!",
+  "event_hunger_desc": "You are getting hungry!"
 }

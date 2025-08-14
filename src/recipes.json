@@ -1,21 +1,20 @@
 [
     {
-        "name": "Вода",
-        "ingredients": { "бутылка": 1 },
-        "result": "вода",
+        "name": "Water",
+        "ingredients": { "bottle": 1 },
+        "result": "water",
         "result_qty": 1
     },
     {
-        "name": "Еда",
-        "ingredients": { "ткань": 1, "ветка": 1 },
-        "result": "еда",
+        "name": "Food",
+        "ingredients": { "cloth": 1, "stick": 1 },
+        "result": "food",
         "result_qty": 1
     },
     {
-        "name": "Противоядие",
-        "ingredients": { "ткань": 1, "лекарство": 1 },
-        "result": "противоядие",
+        "name": "Antidote",
+        "ingredients": { "cloth": 1, "medicine": 1 },
+        "result": "antidote",
         "result_qty": 1
     }
-    // ... остальные рецепты
 ]

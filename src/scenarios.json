@@ -1,24 +1,24 @@
 [
     {
         "id": "intro",
-        "name": "Введение",
-        "description": "Ознакомьтесь с основами выживания на этом поле.",
+        "name_key": "scenario_intro_name",
+        "desc_key": "scenario_intro_desc",
         "win_condition": {"survive_turns": 3},
         "lose_condition": {"player_dead": true},
         "next_scenario": "rescue"
     },
     {
         "id": "rescue",
-        "name": "Спасти выживших",
-        "description": "Найдите и спасите всех выживших на карте.",
+        "name_key": "scenario_rescue_name",
+        "desc_key": "scenario_rescue_desc",
         "win_condition": {"rescued": 3},
         "lose_condition": {"player_dead": true},
         "next_scenario": "finale"
     },
     {
         "id": "finale",
-        "name": "Последний бой",
-        "description": "Удержитесь от финальной волны врагов.",
+        "name_key": "scenario_finale_name",
+        "desc_key": "scenario_finale_desc",
         "win_condition": {"survive_turns": 5},
         "lose_condition": {"player_dead": true},
         "next_scenario": null

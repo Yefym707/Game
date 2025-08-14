@@ -1,13 +1,12 @@
 [
     {
         "id": "thirst_event",
-        "description": "Вас мучает сильная жажда!",
+        "desc_key": "event_thirst_desc",
         "effect": { "status": { "effect_type": "thirst", "duration": 4 } }
     },
     {
         "id": "hunger_event",
-        "description": "Вы проголодались!",
+        "desc_key": "event_hunger_desc",
         "effect": { "status": { "effect_type": "hunger", "duration": 4 } }
     }
-    // ... остальные события
 ]

@@ -8,7 +8,7 @@ class Zone:
         self.zone_type = zone_type  # 'resource', 'trap', 'event', 'quest', 'merchant', 'camp'
         self.explored = explored
         self.quest = quest
-        self.meta = meta or {}  # доп.данные: для merchant — инвентарь, для camp — уровень лагеря
+        self.meta = meta or {}  # extra data: for merchant — inventory, for camp — camp level
 
     def to_dict(self):
         return {
@@ -47,12 +47,12 @@ class GameMap:
                     meta = {}
                     if ztype == "merchant":
                         goods = {
-                            "еда": {"sell": 5, "buy": 2, "min_rep": 0},
-                            "вода": {"sell": 4, "buy": 2, "min_rep": 0},
-                            "бинты": {"sell": 8, "buy": 4, "min_rep": 0},
-                            "античный_артефакт": {"sell": 50, "buy": 20, "min_rep": 3}
+                            "food": {"sell": 5, "buy": 2, "min_rep": 0},
+                            "water": {"sell": 4, "buy": 2, "min_rep": 0},
+                            "bandages": {"sell": 8, "buy": 4, "min_rep": 0},
+                            "ancient_artifact": {"sell": 50, "buy": 20, "min_rep": 3}
                         }
-                        meta = {"goods": goods, "name": f"Торговец_{x}_{y}"}
+                        meta = {"goods": goods, "name": f"Trader_{x}_{y}"}
                     if ztype == "camp":
                         meta = {"level": 1}
                     zones.append(Zone((x, y), ztype, meta=meta))
@@ -105,16 +105,16 @@ class GameMap:
         )
 
     def __str__(self, enemies: Optional[list]=None, token_manager: Any = None):
-        """
-        Отрисовка карты в консоль.
-        Принимает список врагов и опционально token_manager для отображения символов токенов.
-        Логика отображения (при видимости):
-          - P  — игрок
-          - E  — враг
-          - <token_symbol> — символ токена (если нет персонажа на тайле)
+        """Render a text representation of the map.
+
+        Accepts a list of enemies and optionally a ``token_manager`` to show
+        token symbols. Rendering rules (for visible tiles):
+          - P  — player
+          - E  — enemy
+          - <token_symbol> — token symbol (if no character on the tile)
           - zone-dependent symbol ($ ^ ? Q M C)
-          - .  — пустая видимая клетка
-          - #  — скрытая клетка
+          - .  — empty visible cell
+          - #  — hidden cell
         """
         enemies = enemies or []
         enemy_positions = set(e.pos for e in enemies)

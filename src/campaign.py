@@ -63,68 +63,70 @@ class Campaign:
         self.progress.setdefault("completed", [])
 
     def tick_time(self):
-        # меняем время суток каждые 5 ходов
+        # change the time of day every 5 turns
         prev = self.time_of_day
         if self.turn_count % 5 == 0 and self.turn_count > 0:
             self.time_of_day = "night" if self.time_of_day == "day" else "day"
-            # если наступила ночь — усиливаем врагов и иногда появится дополнительный противник
+            # when night falls strengthen enemies and sometimes spawn an extra opponent
             if self.time_of_day == "night":
                 self._apply_night_effects()
-            # при переходе на день можно ослабить врагов (опционально)
+            # when switching to day we could weaken enemies again (optional)
             if prev == "night" and self.time_of_day == "day":
-                # можно реализовать ослабление или восстановление видимости и т.п.
+                # implement weakening or visibility restoration etc. if desired
                 pass
 
     def _apply_night_effects(self):
-        # Усиливаем существующих врагов (увеличиваем им здоровье на +1, не выше логического предела)
+        # strengthen existing enemies (increase their health by +1 within logical limits)
         for e in self.enemies.enemies:
             e.health += 1
-        # шанс появления ещё одного врага ночью
+        # chance to spawn another enemy at night
         import random
         if random.random() < 0.4:
-            extra = EnemyManager.spawn_on_map(self.game_map.width, self.game_map.height, count=1, player_pos=self.game_map.player_pos)
-            # добавляем врагов из extra
+            extra = EnemyManager.spawn_on_map(
+                self.game_map.width, self.game_map.height, count=1, player_pos=self.game_map.player_pos
+            )
+            # add enemies from the extra manager
             self.enemies.enemies.extend(extra.enemies)
 
     def rest_at_camp(self):
-        """Отдых в лагере — учитывает уровень лагеря в зоне (meta.level)."""
+        """Rest at a camp — takes camp level in the zone (meta.level) into account."""
         zone = self.game_map.get_zone_at(self.game_map.player_pos)
         if not zone or zone.zone_type != "camp":
-            return "Здесь нельзя отдохнуть — нет лагеря."
+            return "You cannot rest here — no camp found."
         level = zone.meta.get("level", 1)
         missing = self.player.max_health - self.player.health
-        # Чем выше уровень лагеря, тем больше восстановления (пример)
+        # the higher the camp level the more healing
         heal_amount = min(missing, 3 + level)
         if heal_amount > 0:
             self.player.heal(heal_amount)
-        # Снимаем голод/жажду и уменьшаем яд
+        # remove hunger/thirst and reduce poison
         self.status_effects = [e for e in self.status_effects if e.effect_type not in ("thirst", "hunger")]
         for e in self.status_effects:
             if e.effect_type == "poison":
                 e.duration = max(0, e.duration - 1)
         self.turn_count += 1
-        return f"Вы отдохнули в лагере уровня {level}. Восстановлено {heal_amount} здоровья."
+        return f"You rested at a level {level} camp. Restored {heal_amount} health."
 
     def upgrade_camp(self):
         zone = self.game_map.get_zone_at(self.game_map.player_pos)
         if not zone or zone.zone_type != "camp":
-            return "Здесь нет лагеря для улучшения."
+            return "No camp here to upgrade."
         level = zone.meta.get("level", 1)
-        cost = level * 6  # простая формула стоимости
+        cost = level * 6  # simple cost formula
         if not self.inventory.spend_coins(cost):
-            return f"Улучшение лагеря стоит {cost} монет — у вас недостаточно монет."
+            return f"Upgrading the camp costs {cost} coins — you don't have enough."
         zone.meta["level"] = level + 1
-        # Небольшая награда за улучшение в прогрессе (репутация у торговцев или т.п.) можно добавить
-        return f"Лагерь улучшен до уровня {level+1} за {cost} монет."
+        # optional: reward for upgrading, e.g. trader reputation
+        return f"Camp upgraded to level {level+1} for {cost} coins."
 
     def get_trader_at_player(self) -> Optional[Trader]:
         zone = self.game_map.get_zone_at(self.game_map.player_pos)
         if zone and zone.zone_type == "merchant":
-            # торговцы недоступны ночью
+            # traders are not available at night
             if self.time_of_day == "night":
                 return None
             goods = zone.meta.get("goods", {})
-            name = zone.meta.get("name", "Торговец")
+            name = zone.meta.get("name", "Trader")
             return Trader(name, goods)
         return None
     # ------------------------------------------------------------------

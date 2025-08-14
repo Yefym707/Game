@@ -1,1 +1,3 @@
-[см. предыдущие ответы — InitiativeCard/InitiativeDeck с эффектами, интеграция с кампанией и токенами]
+"""Placeholder for the initiative system."""
+
+# In this minimal codebase the initiative mechanics are not implemented.
