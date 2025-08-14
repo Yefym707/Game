@@ -63,6 +63,13 @@ def interact_with_trader(campaign: Campaign) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Simple text front end for the survival game.
+
+# The module now contains a small start menu which lets the player choose
+# between starting a new campaign or exiting the application.  The menu loop is
+# kept separate from ``game_loop`` so that once a play session finishes the
+# player is returned to the menu and may start another run or quit gracefully.
+
 # game loop
 
 def game_loop(campaign: Campaign) -> None:
@@ -134,10 +141,25 @@ def game_loop(campaign: Campaign) -> None:
     print("Игра окончена.")
 
 
+def main_menu() -> None:
+    """Display the start menu and dispatch to the game loop."""
+
+    while True:
+        print("\n=== Survival Game ===")
+        print("1. Start New Game")
+        print("2. Exit")
+        choice = input("> ").strip().lower()
+        if choice in {"1", "start", "new"}:
+            campaign = Campaign(load_scenarios())
+            game_loop(campaign)
+        elif choice in {"2", "exit", "quit"}:
+            break
+        else:
+            print("Неизвестная команда. Выберите 1 или 2.")
+
+
 def main() -> None:
-    scenarios = load_scenarios()
-    campaign = Campaign(scenarios)
-    game_loop(campaign)
+    main_menu()
 
 
 if __name__ == "__main__":  # pragma: no cover - manual execution only
