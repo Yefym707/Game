@@ -40,18 +40,61 @@ class Inventory:
         return True
 
     def use_item(self, item_name: str, campaign) -> str:
+        """Use an item from the inventory and apply its effect to ``campaign``.
+
+        The game originally only supported using medkits which made other
+        consumables effectively useless.  To make the game loop more engaging
+        this method now understands a couple of common items:
+
+        ``аптечка`` – heals the player by three points.
+        ``еда`` – removes the ``hunger`` status effect if present.
+        ``вода`` – removes the ``thirst`` status effect if present.
+        ``противоядие`` – cures ``poison``.
+
+        Unknown items fall back to a default message so additional content can
+        be added without changing this method.
+        """
+
         if not self.has_item(item_name):
             return "Нет такого предмета в инвентаре."
 
-        # Примеры существующих эффектов
         if item_name == "аптечка":
             if campaign.player.health < campaign.player.max_health:
                 campaign.player.heal(3)
                 self.remove_item(item_name, 1)
                 return "Вы использовали аптечку и восстановили 3 здоровья."
-            else:
-                return "У вас и так максимум здоровья."
-        # ... другие use_item ветки как раньше ...
+            return "У вас и так максимум здоровья."
+
+        if item_name == "еда":
+            # Eating clears the hunger status effect if it is active.
+            before = len(campaign.status_effects)
+            campaign.status_effects = [
+                e for e in campaign.status_effects if e.effect_type != "hunger"
+            ]
+            self.remove_item(item_name, 1)
+            if len(campaign.status_effects) < before:
+                return "Вы поели и утолили голод."
+            return "Вы перекусили, но особых изменений не почувствовали."
+
+        if item_name == "вода":
+            # Drinking water removes thirst effects.
+            campaign.status_effects = [
+                e for e in campaign.status_effects if e.effect_type != "thirst"
+            ]
+            self.remove_item(item_name, 1)
+            return "Вы утолили жажду."
+
+        if item_name == "противоядие":
+            # Antidote removes poison if present.
+            removed = False
+            for e in list(campaign.status_effects):
+                if e.effect_type == "poison":
+                    campaign.status_effects.remove(e)
+                    removed = True
+            if removed:
+                self.remove_item(item_name, 1)
+                return "Вы приняли противоядие и избавились от яда."
+            return "Противоядие не требуется."
 
         return "Этот предмет нельзя использовать напрямую."
 
