@@ -62,6 +62,12 @@ The playable prototype supports a tiny subset of the final game's controls:
 * **Esc** – pause
 * **F1** – toggle a help overlay with the current bindings
 
+### Keybinds
+
+Custom key bindings are stored in `~/.oko_zombie/config.json` under the
+`"keybinds"` section. They can be changed in the **Settings** menu via the
+corresponding buttons.
+
 The rules module tracks action points and validates that moves stay within
 range and do not pass through walls.  Failed actions return a localised reason
 which the client displays as a small toast message so the player knows why an

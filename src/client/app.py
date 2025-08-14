@@ -15,7 +15,7 @@ import sys
 from logging.handlers import RotatingFileHandler
 import traceback
 from types import SimpleNamespace
-from typing import Dict
+from typing import Dict, Optional
 
 import pygame
 
@@ -24,7 +24,7 @@ from gamecore import config as gconfig
 
 from . import sfx
 from .util_paths import logs_dir
-from .input_map import InputMap
+from .input_map import InputMap, InputManager
 from .scene_menu import MenuScene
 from .scene_settings import SettingsScene
 from .ui.widgets import HelpOverlay, ModalError, init_ui
@@ -46,13 +46,14 @@ def _setup_logging() -> None:
 class App:
     """Small pygame application managing a single scene."""
 
-    def __init__(self, cfg: Dict, safe_mode: bool = False) -> None:
+    def __init__(self, cfg: Optional[Dict] = None, safe_mode: bool = False) -> None:
         pygame.init()
         pygame.font.init()
-        init_ui(cfg.get("ui_scale", 1.0))
+        self.cfg = cfg if cfg is not None else gconfig.load_config()
+        init_ui(self.cfg.get("ui_scale", 1.0))
         pygame.mouse.set_visible(True)
         self.safe_mode = safe_mode
-        self.cfg = cfg
+        self.input = InputManager.from_config(self.cfg.get("keybinds"))
         self.screen = pygame.display.set_mode((640, 480))
         self.font = pygame.font.SysFont(None, 16)
         self.input_map = InputMap()
@@ -60,12 +61,16 @@ class App:
         self.scene.enter()
         self.help = HelpOverlay(self.input_map)
         self.running = True
-        self._last_theme = cfg.get("ui_theme", "dark")
-        self._last_scale = cfg.get("ui_scale", 1.0)
+        self._last_theme = self.cfg.get("ui_theme", "dark")
+        self._last_scale = self.cfg.get("ui_scale", 1.0)
 
     # main loop ---------------------------------------------------------
     def run(self) -> None:
-        self._loop()
+        try:
+            self._loop()
+        finally:
+            self.cfg["keybinds"] = self.input.to_config()
+            gconfig.save_config(self.cfg)
 
     def _loop(self) -> None:  # pragma: no cover - exercised indirectly
         clock = pygame.time.Clock()

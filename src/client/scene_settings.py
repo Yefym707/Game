@@ -14,7 +14,7 @@ import pygame
 from gamecore import config as gconfig
 from gamecore.i18n import gettext as _, set_language
 from .scene_base import Scene
-from .input import InputManager
+from .input_map import InputManager
 from . import sfx
 from .ui.widgets import (
     Button,
@@ -28,19 +28,6 @@ from .ui.widgets import (
     hover_hints,
 )
 from .ui.theme import set_theme
-
-
-class _RebindButton(RebindButton):
-    def __init__(self, rect: pygame.Rect, action: str, input: InputManager, cfg: dict) -> None:
-        super().__init__(rect, action, input)
-        self.cfg = cfg
-
-    def handle_event(self, event: pygame.event.Event) -> None:
-        listening = self.listening
-        super().handle_event(event)
-        if listening and not self.listening and event.type == pygame.KEYDOWN:
-            self.input.save(self.cfg)
-            gconfig.save_config(self.cfg)
 
 
 class InputField:
@@ -90,7 +77,7 @@ class SettingsScene(Scene):
         y = 80
         for action in ["end_turn", "rest", "scavenge", "pause"]:
             rect = pygame.Rect(40, y, 260, 32)
-            btn = _RebindButton(rect, action, self.input, self.cfg)
+            btn = RebindButton(rect, action, self.input, self._on_rebind)
             btn.tooltip = Tooltip(_("press_new_key"))
             self.general_widgets.append(btn)
             y += 40
@@ -195,9 +182,9 @@ class SettingsScene(Scene):
                 )
             )
             self.general_widgets.append(
-                Slider(
-                    pygame.Rect(360, y, 200, 20),
-                    0,
+            Slider(
+                pygame.Rect(360, y, 200, 20),
+                0,
                     100,
                     self.cfg.get(f"fx_{fx}_intensity", 0.5) * 100,
                     lambda v, k=fx: self._on_fx_intensity(k, v),
@@ -281,6 +268,10 @@ class SettingsScene(Scene):
         )
 
     # callbacks ----------------------------------------------------------
+    def _on_rebind(self, action: str, key: int) -> None:
+        self.app.cfg["keybinds"] = self.input.to_config()
+        gconfig.save_config(self.app.cfg)
+
     def _on_volume(self, channel: str, value: float) -> None:
         vol = max(0.0, min(1.0, value / 100.0))
         self.cfg[f"volume_{channel}"] = vol
