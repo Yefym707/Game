@@ -19,7 +19,7 @@ from gamecore import board as gboard
 
 def test_ui_smoke() -> None:
     widgets.init_ui()
-    widgets.hover_hints[:] = ["h1", "h2"]
+    widgets.help_hints[:] = ["h1", "h2"]
 
     app = App({})
     scene = GameScene(app, new_game=True)

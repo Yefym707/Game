@@ -17,7 +17,8 @@ from gamecore.i18n import gettext as _, safe_get, set_language
 from .scene_base import Scene
 from .input_map import InputManager
 from . import sfx
-from .ui.widgets import (
+import client.ui.widgets as uiw
+from client.ui.widgets import (
     Button,
     Dropdown,
     RebindButton,
@@ -27,7 +28,6 @@ from .ui.widgets import (
     Label,
     Tooltip,
     Toast,
-    hover_hints,
 )
 from .ui.theme import set_theme
 
@@ -395,7 +395,7 @@ class SettingsScene(Scene):
             w.draw(surface)
             if hasattr(w, "tooltip") and w.rect.collidepoint(mouse_pos):
                 w.tooltip.draw(surface, (w.rect.right + 10, w.rect.y))
-        hover_hints.draw(surface)
+        uiw.hover_hints.draw(surface)
         y = 10
         for t in self.toasts:
             t.draw(surface, y)

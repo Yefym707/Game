@@ -22,7 +22,7 @@ from .ui.theme import get_theme
 from gamecore import board as gboard, rules, validate
 from gamecore.i18n import safe_get
 
-hover_hints = []  # tests patch this with translated help strings
+hints_list: list[str] = []  # tests patch this with translated help strings
 
 
 class GameScene(Scene):
@@ -205,4 +205,4 @@ class GameScene(Scene):
             y += 20
 
 
-__all__ = ["GameScene", "hover_hints"]
+__all__ = ["GameScene", "hints_list"]
