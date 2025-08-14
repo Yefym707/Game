@@ -27,6 +27,24 @@ def _colored_board(board: GameBoard) -> str:
     return "\n".join(lines)
 
 
+def _load_locale(lang: str = "en") -> dict:
+    """Return mapping of localisation keys to strings.
+
+    The JSON files live in ``../data/locales`` relative to this module.
+    ``lang`` defaults to ``"en"`` which keeps the helper lightweight and
+    avoids pulling in a full translation system for the small CLI.
+    """
+
+    loc_path = os.path.join(
+        os.path.dirname(__file__), "..", "data", "locales", f"{lang}.json"
+    )
+    try:
+        with open(loc_path, "r", encoding="utf-8") as fh:
+            return json.load(fh)
+    except FileNotFoundError:
+        return {}
+
+
 def run_game_cli() -> None:
     """Run an interactive console session of the game.
 
@@ -38,7 +56,7 @@ def run_game_cli() -> None:
     """
 
     # ------------------------------------------------------------------
-    # load scenarios
+    # load scenarios ------------------------------------------------------
     scenarios_file = os.path.join(os.path.dirname(__file__), "scenarios.json")
     try:
         with open(scenarios_file, "r", encoding="utf-8") as fh:
@@ -55,8 +73,31 @@ def run_game_cli() -> None:
             }
         ]
 
-    scenarios = {sc["id"]: sc for sc in data}
-    current_id = data[0]["id"] if data else None
+    locale = _load_locale()
+    scenarios = {}
+    for sc in data:
+        name = sc.get("name")
+        desc = sc.get("description")
+        if sc.get("name_key"):
+            name = locale.get(sc["name_key"], sc["name_key"])
+        if sc.get("desc_key"):
+            desc = locale.get(sc["desc_key"], sc["desc_key"])
+        sc = dict(sc)
+        sc["name"] = name
+        sc["description"] = desc
+        scenarios[sc["id"]] = sc
+
+    # let the player choose a scenario ----------------------------------
+    ids = list(scenarios.keys())
+    current_id = ids[0] if ids else None
+    if len(ids) > 1:
+        print("Available scenarios:")
+        for sid in ids:
+            sc = scenarios[sid]
+            print(f"  {sid}: {sc['name']} - {sc['description']}")
+        choice = input("Choose scenario> ").strip().lower()
+        if choice in scenarios:
+            current_id = choice
 
     player = Player()
 

@@ -55,6 +55,15 @@
   "scenario_rescue_desc": "Find and rescue all survivors on the map.",
   "scenario_finale_name": "Final Battle",
   "scenario_finale_desc": "Hold out against the final wave of enemies.",
+  "scenario_short_name": "Short Survival",
+  "scenario_short_desc": "A quick scenario – search the small area for the antidote and survive a few days.",
+  "scenario_short_goal": "Find the antidote and stay alive.",
+  "scenario_medium_name": "Medium Survival",
+  "scenario_medium_desc": "A standard mission that balances risk and reward in a larger zone.",
+  "scenario_medium_goal": "Scavenge for the antidote and escape the zone.",
+  "scenario_long_name": "Long Survival",
+  "scenario_long_desc": "An extended challenge across a vast city packed with undead.",
+  "scenario_long_goal": "Secure the antidote and make it back alive.",
   "event_thirst_desc": "You feel extremely thirsty!",
   "event_hunger_desc": "You are getting hungry!"
 }
