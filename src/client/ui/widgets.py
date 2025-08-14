@@ -16,8 +16,11 @@ from gamecore.i18n import gettext as _
 from ..clipboard import copy as copy_to_clipboard
 from ..gfx.tileset import TILE_SIZE
 from .theme import get_theme
+from ..input import InputManager
 
 _font: pygame.font.Font | None = None
+_fonts: dict[int, pygame.font.Font] = {}
+_default_size = 0
 hover_hints: List[str] = []  # filled by tests; mirrors real project
 
 
@@ -28,16 +31,22 @@ hover_hints: List[str] = []  # filled by tests; mirrors real project
 def init_ui(scale: float = 1.0) -> None:
     """Initialise pygame font subsystem and cache a default font."""
 
-    global _font
+    global _font, _fonts, _default_size
     if not pygame.font.get_init():  # pragma: no cover - defensive
         pygame.font.init()
     size = int(14 * max(1.0, min(scale, 2.0)))
     _font = pygame.font.SysFont(None, size)
+    _fonts = {size: _font}
+    _default_size = size
 
 
-def _f() -> pygame.font.Font:
+def _f(size: int | None = None) -> pygame.font.Font:
     assert _font is not None, "widgets.init_ui() must be called first"
-    return _font
+    if size is None or size == _default_size:
+        return _font
+    if size not in _fonts:
+        _fonts[size] = pygame.font.SysFont(None, size)
+    return _fonts[size]
 
 
 # ---------------------------------------------------------------------------
@@ -253,6 +262,143 @@ class Dropdown:
             elif self.rect.collidepoint(event.pos):
                 self.open = True
 
+    def draw(self, surface: pygame.Surface) -> None:  # pragma: no cover - alias
+        self.render(surface)
+
+
+class Toggle:
+    def __init__(self, label: str, rect: pygame.Rect, value: bool, on_change: Callable[[bool], None]) -> None:
+        self.label = label
+        self.rect = pygame.Rect(rect)
+        self.value = value
+        self.on_change = on_change
+
+    def render(self, surface: pygame.Surface) -> None:  # pragma: no cover - visual
+        theme = get_theme()
+        colors = theme.colors
+        pygame.draw.rect(surface, colors["panel"], self.rect)
+        pygame.draw.rect(surface, colors["border"], self.rect, theme.border_xs)
+        img = _f().render(self.label, True, colors["text"])
+        surface.blit(
+            img,
+            (self.rect.x + theme.padding, self.rect.y + (self.rect.height - img.get_height()) // 2),
+        )
+        size = self.rect.height - 2 * theme.padding
+        box = pygame.Rect(self.rect.right - size - theme.padding, self.rect.y + theme.padding, size, size)
+        pygame.draw.rect(surface, colors["border"], box, theme.border_xs)
+        if self.value:
+            pygame.draw.rect(surface, get_theme().palette["ui"].accent, box.inflate(-4, -4))
+
+    draw = render
+
+    def handle_event(self, event: pygame.event.Event) -> None:
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.rect.collidepoint(event.pos):
+            self.value = not self.value
+            self.on_change(self.value)
+
+
+class Slider:
+    def __init__(
+        self,
+        rect: pygame.Rect,
+        vmin: int,
+        vmax: int,
+        value: int | float,
+        on_change: Callable[[float], None],
+    ) -> None:
+        self.rect = pygame.Rect(rect)
+        self.vmin = float(vmin)
+        self.vmax = float(vmax)
+        self.value = float(value)
+        self.on_change = on_change
+        self._drag = False
+
+    def _set_from_pos(self, x: int) -> None:
+        rel = (x - self.rect.x) / self.rect.width
+        rel = max(0.0, min(1.0, rel))
+        self.value = self.vmin + rel * (self.vmax - self.vmin)
+        self.on_change(self.value)
+
+    def render(self, surface: pygame.Surface) -> None:  # pragma: no cover - visual
+        theme = get_theme()
+        colors = theme.colors
+        pygame.draw.rect(surface, colors["panel"], self.rect)
+        pygame.draw.rect(surface, colors["border"], self.rect, theme.border_xs)
+        rel = (self.value - self.vmin) / (self.vmax - self.vmin)
+        knob_x = self.rect.x + int(rel * self.rect.width)
+        knob = pygame.Rect(knob_x - 4, self.rect.y, 8, self.rect.height)
+        pygame.draw.rect(surface, get_theme().palette["ui"].accent, knob)
+
+    draw = render
+
+    def handle_event(self, event: pygame.event.Event) -> None:
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.rect.collidepoint(event.pos):
+            self._drag = True
+            self._set_from_pos(event.pos[0])
+        elif event.type == pygame.MOUSEMOTION and self._drag:
+            self._set_from_pos(event.pos[0])
+        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1 and self._drag:
+            self._drag = False
+
+
+class RebindButton:
+    def __init__(self, rect: pygame.Rect, action: str, input: InputManager) -> None:
+        self.rect = pygame.Rect(rect)
+        self.action = action
+        self.input = input
+        self.listening = False
+
+    def render(self, surface: pygame.Surface) -> None:  # pragma: no cover - visual
+        theme = get_theme()
+        colors = theme.colors
+        pygame.draw.rect(surface, colors["panel"], self.rect)
+        pygame.draw.rect(surface, colors["border"], self.rect, theme.border_xs)
+        if self.listening:
+            text = _("press_new_key")
+        else:
+            key = self.input.bindings.get(self.action)
+            key_name = pygame.key.name(key) if key is not None else "?"
+            text = f"{_(self.action)}: {key_name}"
+        img = _f().render(text, True, colors["text"])
+        surface.blit(img, (self.rect.x + theme.padding, self.rect.y + (self.rect.height - img.get_height()) // 2))
+
+    draw = render
+
+    def handle_event(self, event: pygame.event.Event) -> None:
+        if self.listening and event.type == pygame.KEYDOWN:
+            self.input.rebind(self.action, event.key)
+            self.listening = False
+        elif (
+            event.type == pygame.MOUSEBUTTONDOWN
+            and event.button == 1
+            and self.rect.collidepoint(event.pos)
+        ):
+            self.listening = True
+
+
+class LargeTextToggle(Toggle):
+    def __init__(self, rect: pygame.Rect, value: bool, on_change: Callable[[bool], None]) -> None:
+        super().__init__(_("large_text"), rect, value, on_change)
+        self._font_size = int(_f().get_height() * 1.5)
+
+    def render(self, surface: pygame.Surface) -> None:  # pragma: no cover - visual
+        theme = get_theme()
+        colors = theme.colors
+        pygame.draw.rect(surface, colors["panel"], self.rect)
+        pygame.draw.rect(surface, colors["border"], self.rect, theme.border_xs)
+        img = _f(self._font_size).render(self.label, True, colors["text"])
+        surface.blit(
+            img,
+            (self.rect.x + theme.padding, self.rect.y + (self.rect.height - img.get_height()) // 2),
+        )
+        size = self.rect.height - 2 * theme.padding
+        box = pygame.Rect(self.rect.right - size - theme.padding, self.rect.y + theme.padding, size, size)
+        pygame.draw.rect(surface, colors["border"], box, theme.border_xs)
+        if self.value:
+            pygame.draw.rect(surface, get_theme().palette["ui"].accent, box.inflate(-4, -4))
+
+    draw = render
+
 
 # ---------------------------------------------------------------------------
 # help overlay and minimap
@@ -414,6 +560,10 @@ __all__ = [
     "Toast",
     "Tooltip",
     "Dropdown",
+    "Toggle",
+    "Slider",
+    "RebindButton",
+    "LargeTextToggle",
     "HelpOverlay",
     "SubtitleBar",
     "Minimap",

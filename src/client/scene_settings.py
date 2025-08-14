@@ -12,7 +12,6 @@ the underlying configuration objects.
 import pygame
 
 from gamecore import config as gconfig
-from gamecore import i18n
 from gamecore.i18n import gettext as _
 from .scene_base import Scene
 from .input import InputManager
@@ -68,7 +67,7 @@ class SettingsScene(Scene):
         self.access_widgets: list = []
         self.widgets: list = self.general_widgets
         w, h = app.screen.get_size()
-        set_theme(self.cfg.get("theme", "dark"))
+        set_theme(self.cfg.get("ui_theme", "dark"))
 
         self.btn_general = Button(_("SETTINGS"), pygame.Rect(40, 20, 120, 32), lambda: self._set_tab("general"))
         self.btn_access = Button(_("accessibility"), pygame.Rect(180, 20, 160, 32), lambda: self._set_tab("access"))
@@ -95,7 +94,7 @@ class SettingsScene(Scene):
             Dropdown(
                 pygame.Rect(360, 160, 200, 32),
                 [("en", "en"), ("ru", "ru")],
-                self.cfg.get("lang", "en"),
+                self.cfg.get("language", "en"),
                 self._on_lang,
             )
         )
@@ -108,7 +107,7 @@ class SettingsScene(Scene):
                     ("apocalypse", _("theme_apocalypse")),
                     ("high_contrast", _("high_contrast")),
                 ],
-                self.cfg.get("theme", "dark"),
+                self.cfg.get("ui_theme", "dark"),
                 self._on_theme,
             )
         )
@@ -226,7 +225,7 @@ class SettingsScene(Scene):
             Toggle(
                 _("high_contrast"),
                 pygame.Rect(40, ay, 260, 32),
-                self.cfg.get("theme") == "high_contrast",
+                self.cfg.get("ui_theme") == "high_contrast",
                 self._on_high_contrast,
             )
         )
@@ -255,29 +254,32 @@ class SettingsScene(Scene):
 
     # callbacks ----------------------------------------------------------
     def _on_volume(self, channel: str, value: float) -> None:
-        vol = round(value / 100.0, 2)
+        vol = max(0.0, min(1.0, value / 100.0))
         self.cfg[f"volume_{channel}"] = vol
         if channel == "master":
-            # legacy key used by menu scene
             self.cfg["volume"] = vol
         sfx.set_volume(vol, channel)
+        gconfig.save_config(self.cfg)
 
     def _on_scale(self, value: float) -> None:
-        self.cfg["ui_scale"] = max(1.0, round(value / 100.0, 2))
+        self.cfg["ui_scale"] = round(max(1.0, value / 100.0), 2)
+        gconfig.save_config(self.cfg)
 
     def _on_lang(self, value: str) -> None:
-        self.cfg["lang"] = value
-        i18n.set_language(value)
+        self.cfg["language"] = value
+        gconfig.save_config(self.cfg)
 
     def _on_theme(self, value: str) -> None:
-        self.cfg["theme"] = value
+        self.cfg["ui_theme"] = value
         set_theme(value)
+        gconfig.save_config(self.cfg)
 
     def _on_minimap(self, value: bool) -> None:
         self.cfg["minimap_enabled"] = value
 
     def _on_minimap_size(self, value: float) -> None:
         self.cfg["minimap_size"] = int(value)
+        gconfig.save_config(self.cfg)
 
     def _on_tel_opt(self, value: bool) -> None:
         self.cfg["telemetry_opt_in"] = value
@@ -300,8 +302,9 @@ class SettingsScene(Scene):
         self.cfg["fx_color_curve"] = curve
 
     def _on_high_contrast(self, value: bool) -> None:
-        self.cfg["theme"] = "high_contrast" if value else "dark"
-        set_theme(self.cfg["theme"])
+        self.cfg["ui_theme"] = "high_contrast" if value else "dark"
+        set_theme(self.cfg["ui_theme"])
+        gconfig.save_config(self.cfg)
 
     def _on_night_vignette(self, value: float) -> None:
         self.cfg["night_vignette"] = round(value / 100.0, 2)
@@ -320,7 +323,8 @@ class SettingsScene(Scene):
         self.input.invert_zoom = value
 
     def _on_large_text(self, value: bool) -> None:
-        self.cfg["large_text"] = value
+        self.cfg["large_text"] = bool(value)
+        gconfig.save_config(self.cfg)
 
     def _send_test_event(self) -> None:
         from telemetry import send, events
