@@ -1,1 +1,0 @@
-"""Pygame GUI client package."""
