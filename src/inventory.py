@@ -1,28 +1,52 @@
-import json
-from typing import Dict, Any, Optional
+from dataclasses import dataclass, field
+from typing import Dict, Any
+
 from crafting import Recipe
 
-class Inventory:
-    def __init__(self, items: Dict[str, int] = None, coins: int = 0):
-        self.items = items or {}
-        self.coins = coins
 
-    def add_item(self, item_name: str, quantity: int = 1):
+@dataclass
+class Inventory:
+    """Simple container tracking a player's items and coins."""
+
+    items: Dict[str, int] = field(default_factory=dict)
+    coins: int = 0
+
+    def add_item(self, item_name: str, quantity: int = 1) -> None:
+        """Add ``quantity`` of ``item_name`` to the inventory."""
+
+        if quantity <= 0:
+            raise ValueError("quantity must be positive")
         self.items[item_name] = self.items.get(item_name, 0) + quantity
 
-    def remove_item(self, item_name: str, quantity: int = 1):
-        if item_name in self.items:
-            self.items[item_name] -= quantity
-            if self.items[item_name] <= 0:
-                del self.items[item_name]
+    def remove_item(self, item_name: str, quantity: int = 1) -> None:
+        """Remove ``quantity`` of ``item_name`` from the inventory."""
+
+        if quantity <= 0:
+            raise ValueError("quantity must be positive")
+        if self.items.get(item_name, 0) < quantity:
+            raise ValueError("not enough items to remove")
+
+        new_qty = self.items[item_name] - quantity
+        if new_qty:
+            self.items[item_name] = new_qty
+        else:
+            del self.items[item_name]
 
     def has_item(self, item_name: str, quantity: int = 1) -> bool:
+        """Return ``True`` if ``quantity`` of ``item_name`` is available."""
+
+        if quantity <= 0:
+            raise ValueError("quantity must be positive")
         return self.items.get(item_name, 0) >= quantity
 
-    def add_coins(self, amount: int):
+    def add_coins(self, amount: int) -> None:
+        """Increase the amount of coins held."""
+
         self.coins += amount
 
     def spend_coins(self, amount: int) -> bool:
+        """Attempt to spend ``amount`` coins and return ``True`` on success."""
+
         if self.coins >= amount:
             self.coins -= amount
             return True
@@ -40,20 +64,7 @@ class Inventory:
         return True
 
     def use_item(self, item_name: str, campaign) -> str:
-        """Use an item from the inventory and apply its effect to ``campaign``.
-
-        The game originally only supported using medkits which made other
-        consumables effectively useless.  To make the game loop more engaging
-        this method now understands a couple of common items:
-
-        ``аптечка`` – heals the player by three points.
-        ``еда`` – removes the ``hunger`` status effect if present.
-        ``вода`` – removes the ``thirst`` status effect if present.
-        ``противоядие`` – cures ``poison``.
-
-        Unknown items fall back to a default message so additional content can
-        be added without changing this method.
-        """
+        """Use an item from the inventory and apply its effect to ``campaign``."""
 
         if not self.has_item(item_name):
             return "Нет такого предмета в инвентаре."
@@ -66,7 +77,6 @@ class Inventory:
             return "У вас и так максимум здоровья."
 
         if item_name == "еда":
-            # Eating clears the hunger status effect if it is active.
             before = len(campaign.status_effects)
             campaign.status_effects = [
                 e for e in campaign.status_effects if e.effect_type != "hunger"
@@ -77,7 +87,6 @@ class Inventory:
             return "Вы перекусили, но особых изменений не почувствовали."
 
         if item_name == "вода":
-            # Drinking water removes thirst effects.
             campaign.status_effects = [
                 e for e in campaign.status_effects if e.effect_type != "thirst"
             ]
@@ -85,7 +94,6 @@ class Inventory:
             return "Вы утолили жажду."
 
         if item_name == "противоядие":
-            # Antidote removes poison if present.
             removed = False
             for e in list(campaign.status_effects):
                 if e.effect_type == "poison":
@@ -105,7 +113,7 @@ class Inventory:
     def from_dict(data: Dict[str, Any]):
         return Inventory(items=dict(data.get("items", {})), coins=int(data.get("coins", 0)))
 
-    def __str__(self):
+    def __str__(self) -> str:
         if not self.items and self.coins == 0:
             return "Инвентарь пуст. Монет: 0"
         parts = []
@@ -113,3 +121,4 @@ class Inventory:
             parts += [f"{item}: {qty}" for item, qty in self.items.items()]
         parts.append(f"Монет: {self.coins}")
         return "\n".join(parts)
+
