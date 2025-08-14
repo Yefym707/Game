@@ -8,7 +8,10 @@
   "no_valid_save": "No valid save",
   "loading": "Loading",
   "tips": [
-    "Stay alert!"
+    "Stay alert!",
+    "Watch your hunger and thirst.",
+    "Use shelters to rest safely.",
+    "Search buildings for supplies."
   ],
   "load_delete_confirm": "Delete save?",
   "load_empty": "No saves",
@@ -16,7 +19,9 @@
   "newgame_solo": "Solo",
   "newgame_local_coop": "Local Co-op",
   "newgame_players": "Players",
+  "newgame_players_hint": "Arrows adjust player count",
   "newgame_difficulty": "Difficulty",
+  "newgame_difficulty_hint": "Arrows adjust difficulty",
   "easy": "Easy",
   "normal": "Normal",
   "hard": "Hard",
