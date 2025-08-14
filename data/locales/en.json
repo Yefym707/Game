@@ -43,5 +43,10 @@
   "ap": "AP",
   "minimap": "Minimap",
   "selected": "Selected",
-  "path_blocked": "Path blocked"
+  "path_blocked": "Path blocked",
+  "settings.save_conflict_policy": "Save conflict policy",
+  "settings.save_conflict.ask": "Ask every time",
+  "settings.save_conflict.prefer_local": "Prefer local",
+  "settings.save_conflict.prefer_cloud": "Prefer cloud",
+  "toast.settings_applied": "Settings applied"
 }

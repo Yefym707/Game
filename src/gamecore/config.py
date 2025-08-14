@@ -9,6 +9,9 @@ from typing import Any, Dict
 CONFIG_DIR = Path.home() / ".oko_zombie"
 CONFIG_FILE = CONFIG_DIR / "config.json"
 
+DEFAULT_SAVE_CONFLICT_POLICY = "ask"
+SAVE_CONFLICT_POLICIES = ("ask", "prefer_local", "prefer_cloud")
+
 DEFAULT_CONFIG: Dict[str, Any] = {
     "last_used_slot": None,
     "default_player_names": ["Alice", "Bob", "Carol", "Dave"],
@@ -20,6 +23,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "ui_theme": "dark",
     "language": "en",
     "keybinds": {},
+    "save_conflict_policy": DEFAULT_SAVE_CONFLICT_POLICY,
 }
 
 
@@ -32,6 +36,8 @@ def load_config() -> Dict[str, Any]:
         data = {}
     cfg = DEFAULT_CONFIG.copy()
     cfg.update(data)
+    val = cfg.get("save_conflict_policy")
+    cfg["save_conflict_policy"] = normalize_save_conflict_policy(val if isinstance(val, str) else DEFAULT_SAVE_CONFLICT_POLICY)
     try:
         from client.input_map import InputManager
 
@@ -50,5 +56,16 @@ def save_config(cfg: Dict[str, Any]) -> None:
         json.dump(cfg, fh, indent=2)
 
 
-__all__ = ["load_config", "save_config", "CONFIG_DIR"]
+def normalize_save_conflict_policy(val: str) -> str:
+    return val if val in SAVE_CONFLICT_POLICIES else DEFAULT_SAVE_CONFLICT_POLICY
+
+
+__all__ = [
+    "load_config",
+    "save_config",
+    "CONFIG_DIR",
+    "DEFAULT_SAVE_CONFLICT_POLICY",
+    "SAVE_CONFLICT_POLICIES",
+    "normalize_save_conflict_policy",
+]
 

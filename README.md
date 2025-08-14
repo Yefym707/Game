@@ -198,6 +198,16 @@ Every save file includes a `save_version` field. When an old save is loaded the
 module `gamecore.save_migrations` upgrades it step by step until it matches the
 current format, ensuring long term compatibility.
 
+## Save Conflict Policy
+
+When both a local and cloud save exist, the policy determines which copy wins:
+
+* **ask** – prompt every time.
+* **prefer_local** – keep the local file.
+* **prefer_cloud** – use the cloud copy.
+
+The default policy is **ask**.
+
 ## Cloud Save Conflicts & Backups
 
 Saves are written atomically and the previous version is always copied to

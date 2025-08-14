@@ -12,7 +12,8 @@ the underlying configuration objects.
 import pygame
 
 from gamecore import config as gconfig
-from gamecore.i18n import gettext as _, set_language
+from gamecore.config import DEFAULT_SAVE_CONFLICT_POLICY, SAVE_CONFLICT_POLICIES
+from gamecore.i18n import gettext as _, safe_get, set_language
 from .scene_base import Scene
 from .input_map import InputManager
 from . import sfx
@@ -25,6 +26,7 @@ from .ui.widgets import (
     LargeTextToggle,
     Label,
     Tooltip,
+    Toast,
     hover_hints,
 )
 from .ui.theme import set_theme
@@ -67,6 +69,7 @@ class SettingsScene(Scene):
         self.general_widgets: list = []
         self.access_widgets: list = []
         self.widgets: list = self.general_widgets
+        self.toasts: list[Toast] = []
         w, h = app.screen.get_size()
         set_theme(self.cfg.get("ui_theme", "dark"))
 
@@ -139,18 +142,14 @@ class SettingsScene(Scene):
             Slider(pygame.Rect(360, y, 200, 20), 100, 300, self.cfg.get("minimap_size", 200), self._on_minimap_size)
         )
         y += 40
-        self.general_widgets.append(
-            Dropdown(
-                pygame.Rect(40, y, 260, 32),
-                [
-                    ("ask", _("ask")),
-                    ("prefer_local", _("prefer_local")),
-                    ("prefer_cloud", _("prefer_cloud")),
-                ],
-                self.cfg.get("save_conflict_policy", gconfig.DEFAULT_SAVE_CONFLICT_POLICY),
-                self._on_conflict_policy,
-            )
+        policy_dd = Dropdown(
+            pygame.Rect(40, y, 260, 32),
+            [(p, safe_get(f"settings.save_conflict.{p}")) for p in SAVE_CONFLICT_POLICIES],
+            self.cfg.get("save_conflict_policy", DEFAULT_SAVE_CONFLICT_POLICY),
+            self._on_conflict_policy,
         )
+        policy_dd.tooltip = Tooltip(safe_get("settings.save_conflict_policy"))
+        self.general_widgets.append(policy_dd)
         y += 40
         self.general_widgets.append(
             Toggle(
@@ -311,7 +310,10 @@ class SettingsScene(Scene):
         self.cfg["telemetry_endpoint"] = value
 
     def _on_conflict_policy(self, value: str) -> None:
-        self.cfg["save_conflict_policy"] = value
+        new_val = gconfig.normalize_save_conflict_policy(value)
+        self.cfg["save_conflict_policy"] = new_val
+        gconfig.save_config(self.cfg)
+        self.toasts.append(Toast(safe_get("toast.settings_applied")))
 
     def _on_fx_toggle(self, key: str, value: bool) -> None:
         self.cfg[f"fx_{key}" if key != "color" else "fx_color"] = value
@@ -394,3 +396,7 @@ class SettingsScene(Scene):
             if hasattr(w, "tooltip") and w.rect.collidepoint(mouse_pos):
                 w.tooltip.draw(surface, (w.rect.right + 10, w.rect.y))
         hover_hints.draw(surface)
+        y = 10
+        for t in self.toasts:
+            t.draw(surface, y)
+            y += 20
