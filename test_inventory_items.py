@@ -12,9 +12,9 @@ def test_use_food_water_and_antidote():
     camp = Campaign([])
     inv = camp.inventory
 
-    inv.add_item("еда", 1)
-    inv.add_item("вода", 1)
-    inv.add_item("противоядие", 1)
+    inv.add_item("food", 1)
+    inv.add_item("water", 1)
+    inv.add_item("antidote", 1)
 
     camp.status_effects = [
         StatusEffect("hunger", 2),
@@ -22,15 +22,15 @@ def test_use_food_water_and_antidote():
         StatusEffect("poison", 2),
     ]
 
-    inv.use_item("еда", camp)
-    assert not inv.has_item("еда")
+    inv.use_item("food", camp)
+    assert not inv.has_item("food")
     assert all(e.effect_type != "hunger" for e in camp.status_effects)
 
-    inv.use_item("вода", camp)
-    assert not inv.has_item("вода")
+    inv.use_item("water", camp)
+    assert not inv.has_item("water")
     assert all(e.effect_type != "thirst" for e in camp.status_effects)
 
-    inv.use_item("противоядие", camp)
-    assert not inv.has_item("противоядие")
+    inv.use_item("antidote", camp)
+    assert not inv.has_item("antidote")
     assert all(e.effect_type != "poison" for e in camp.status_effects)
 

@@ -12,7 +12,7 @@ from player import Player
 
 def test_campaign_can_be_saved_and_loaded(tmp_path):
     gm = GameMap(4, 4, player_pos=(1, 1))
-    inv = Inventory({"еда": 2}, coins=5)
+    inv = Inventory({"food": 2}, coins=5)
     player = Player(health=4, max_health=5)
     enemies = EnemyManager([Enemy((2, 2))])
 

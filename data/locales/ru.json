@@ -48,5 +48,13 @@
   "settings.save_conflict.ask": "Спрашивать каждый раз",
   "settings.save_conflict.prefer_local": "Предпочитать локальные",
   "settings.save_conflict.prefer_cloud": "Предпочитать облачные",
-  "toast.settings_applied": "Настройки применены"
+  "toast.settings_applied": "Настройки применены",
+  "scenario_intro_name": "Введение",
+  "scenario_intro_desc": "Ознакомьтесь с основами выживания на этом поле.",
+  "scenario_rescue_name": "Спасти выживших",
+  "scenario_rescue_desc": "Найдите и спасите всех выживших на карте.",
+  "scenario_finale_name": "Последний бой",
+  "scenario_finale_desc": "Удержитесь от финальной волны врагов.",
+  "event_thirst_desc": "Вас мучает сильная жажда!",
+  "event_hunger_desc": "Вы проголодались!"
 }

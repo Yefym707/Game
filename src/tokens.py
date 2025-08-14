@@ -4,12 +4,11 @@ from typing import Dict, List, Tuple, Any
 Position = Tuple[int, int]
 
 class TokenManager:
-    """
-    Хранит токены/маркеры на тайлах: mapping "x,y" -> list of token dicts.
-    Каждый токен: {"token": str, "duration": Optional[int]}
-    Новое:
-      - get_symbols_at(pos): короткая строка символов для отображения на карте
-      - apply_enter учитывает новые токены spike и dense_smoke
+    """Store tokens/markers on tiles: mapping "x,y" -> list of token dicts.
+    Each token: {"token": str, "duration": Optional[int]}
+    New features:
+      - ``get_symbols_at(pos)``: short string of symbols for map rendering
+      - ``apply_enter`` handles new token types ``spike`` and ``dense_smoke``
     """
     SYMBOLS = {
         "smoke": "~",
@@ -58,9 +57,8 @@ class TokenManager:
         return out
 
     def tick(self) -> List[Tuple[Position, Dict[str, Any]]]:
-        """
-        Декрементит duration у токенов с числовым duration и удаляет истёкшие.
-        Возвращает список удалённых токенов [(pos, token_entry), ...]
+        """Decrease duration for tokens with numeric duration and remove expired ones.
+        Returns a list of removed tokens ``[(pos, token_entry), ...]``.
         """
         removed = []
         to_delete = []
@@ -109,21 +107,20 @@ class TokenManager:
             return TokenManager()
 
     # --------------------------
-    # Игровая логика токенов
+    # Token game logic
     # --------------------------
 
     def apply_enter(self, pos: Position, entity_type: str, campaign) -> List[Dict[str, Any]]:
-        """
-        Вызывается, когда сущность входит на клетку pos.
-        entity_type: 'player' или 'enemy'
-        Возвращает список триггеров:
-          {'token':str, 'type':'damage'|'heal'|'info', 'amount':int, 'consume':bool}
-        Дополненные правила:
-          - 'trap_marker'  : наносит 2 урона и потребляется
-          - 'spike'        : наносит 2 урона и потребляется (новый тип)
-          - 'bear_trap'    : наносит 3 урона и потребляется
-          - 'dense_smoke'  : не наносит урона, но делает попадание ещё сложнее (handled elsewhere)
-          - 'healing_aura' : не триггерит при входе, лечит в фазе очистки
+        """Called when an entity enters tile ``pos``.
+        ``entity_type``: ``'player'`` or ``'enemy'``.
+        Returns a list of triggers:
+          ``{'token':str, 'type':'damage'|'heal'|'info', 'amount':int, 'consume':bool}``
+        Additional rules:
+          - ``trap_marker``  : deals 2 damage and is consumed
+          - ``spike``        : deals 2 damage and is consumed (new type)
+          - ``bear_trap``    : deals 3 damage and is consumed
+          - ``dense_smoke``  : no damage but makes hits harder (handled elsewhere)
+          - ``healing_aura`` : no trigger on enter, heals during cleanup phase
         """
         triggers = []
         for entry in self.get_tokens(pos):
@@ -142,16 +139,15 @@ class TokenManager:
                 triggers.append({"token": t, "type": "info", "amount": 0, "consume": False})
             else:
                 triggers.append({"token": t, "type": "info", "amount": 0, "consume": False})
-        # удалить потребляемые токены
+        # remove consumed tokens
         for trig in list(triggers):
             if trig.get("consume"):
                 self.remove_token(pos, trig["token"])
         return triggers
 
     def get_hit_threshold_modifier(self, attacker_pos: Position, defender_pos: Position) -> int:
-        """
-        Возвращает модификатор порога попадания (integer), который прибавляется к базовому порогу попадания.
-        smoke на атакующем/защитнике -> +1, dense_smoke -> +2.
+        """Return modifier for hit threshold added to the base value.
+        Smoke on attacker/defender -> +1, dense_smoke -> +2.
         """
         mod = 0
         for pos in (attacker_pos, defender_pos):
@@ -163,9 +159,8 @@ class TokenManager:
         return mod
 
     def get_symbols_at(self, pos: Position, max_symbols: int = 2) -> str:
-        """
-        Возвращает короткую строку символов, представляющих токены на тайле.
-        Ограничиваем до max_symbols символов для компактности.
+        """Return a short string representing tokens on a tile.
+        Limited to ``max_symbols`` characters for compactness.
         """
         syms: List[str] = []
         for entry in self.get_tokens(pos):

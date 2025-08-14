@@ -20,6 +20,7 @@ from campaign import Campaign
 # ---------------------------------------------------------------------------
 # helper functions
 
+
 def _data_path(filename: str) -> str:
     """Return the absolute path to a data file located next to this module."""
 
@@ -33,16 +34,16 @@ def load_scenarios() -> List[dict]:
 
 def print_help() -> None:
     print(
-        "Команды: n/s/e/w – движение, map – карта, rest – отдых,\n"
-        "  trader – взаимодействие с торговцем, inv – инвентарь,\n"
-        "  save/load – сохранить или загрузить игру, quit – выход."
+        "Commands: n/s/e/w – move, map – map, rest – rest,\n",
+        "  trader – interact with trader, inv – inventory,\n",
+        "  save/load – save or load game, quit – exit."
     )
 
 
 def interact_with_trader(campaign: Campaign) -> None:
     trader = campaign.get_trader_at_player()
     if not trader:
-        print("Здесь нет торговца.")
+        print("There is no trader here.")
         return
     print(trader.list_goods(campaign))
     while True:
@@ -51,7 +52,7 @@ def interact_with_trader(campaign: Campaign) -> None:
             break
         parts = cmd.split()
         if len(parts) != 3:
-            print("Неверная команда.")
+            print("Invalid command.")
             continue
         action, item, qty = parts[0], parts[1], int(parts[2])
         if action == "buy":
@@ -59,7 +60,7 @@ def interact_with_trader(campaign: Campaign) -> None:
         elif action == "sell":
             print(trader.buy_from_player(item, campaign.inventory, qty, campaign))
         else:
-            print("Неизвестная команда.")
+            print("Unknown command.")
 
 
 # ---------------------------------------------------------------------------
@@ -73,10 +74,10 @@ def interact_with_trader(campaign: Campaign) -> None:
 # game loop
 
 def game_loop(campaign: Campaign) -> None:
-    print("Добро пожаловать в текстовую игру на выживание!")
+    print("Welcome to the text-based survival game!")
     print_help()
     while campaign.player.is_alive():
-        print(f"\nХод: {campaign.turn_count} | Время: {campaign.time_of_day}")
+        print(f"\nTurn: {campaign.turn_count} | Time: {campaign.time_of_day}")
         print(campaign.game_map.__str__(campaign.enemies.enemies))
         command = input("> ").strip().lower()
 
@@ -104,14 +105,14 @@ def game_loop(campaign: Campaign) -> None:
             continue
         elif command == "save":
             campaign.save(_data_path("savegame.json"))
-            print("Игра сохранена.")
+            print("Game saved.")
             continue
         elif command == "load":
             try:
                 campaign = Campaign.load(_data_path("savegame.json"), campaign.scenarios)
-                print("Загружено.")
+                print("Loaded.")
             except FileNotFoundError:
-                print("Сохранение не найдено.")
+                print("Save not found.")
             continue
         elif command == "help":
             print_help()
@@ -119,7 +120,7 @@ def game_loop(campaign: Campaign) -> None:
         elif command == "quit":
             break
         else:
-            print("Неизвестная команда. help – список команд.")
+            print("Unknown command. Type 'help' for a list of commands.")
             continue
 
         # ----- enemy phase -----
@@ -132,13 +133,13 @@ def game_loop(campaign: Campaign) -> None:
         enemy = campaign.enemies.get_enemy_at(campaign.game_map.player_pos)
         if enemy:
             effect = enemy.perform_attack(campaign)
-            print("Враг атакует вас!")
+            print("An enemy attacks you!")
             if effect:
-                print(f"Вы получили эффект: {effect.effect_type}")
+                print(f"You gained effect: {effect.effect_type}")
 
         campaign.tick_time()
 
-    print("Игра окончена.")
+    print("Game over.")
 
 
 def main_menu() -> None:
@@ -155,7 +156,7 @@ def main_menu() -> None:
         elif choice in {"2", "exit", "quit"}:
             break
         else:
-            print("Неизвестная команда. Выберите 1 или 2.")
+            print("Unknown command. Choose 1 or 2.")
 
 
 def main() -> None:
@@ -164,4 +165,3 @@ def main() -> None:
 
 if __name__ == "__main__":  # pragma: no cover - manual execution only
     main()
-

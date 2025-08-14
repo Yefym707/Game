@@ -3,9 +3,9 @@ from datetime import datetime
 from typing import List, Dict, Any
 
 class Journal:
-    """
-    Простой журнал (лог) для записей действий в партии.
-    Записи — словари: {time, turn, message}
+    """Simple log for recording actions during a session.
+
+    Entries are dictionaries: {time, turn, message}
     """
     def __init__(self, entries: List[Dict[str, Any]] = None):
         self.entries = entries or []
