@@ -43,5 +43,10 @@
   "ap": "ОД",
   "minimap": "Миникарта",
   "selected": "Выбран",
-  "path_blocked": "Путь заблокирован"
+  "path_blocked": "Путь заблокирован",
+  "settings.save_conflict_policy": "Политика конфликтов сейвов",
+  "settings.save_conflict.ask": "Спрашивать каждый раз",
+  "settings.save_conflict.prefer_local": "Предпочитать локальные",
+  "settings.save_conflict.prefer_cloud": "Предпочитать облачные",
+  "toast.settings_applied": "Настройки применены"
 }
