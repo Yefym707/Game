@@ -12,7 +12,7 @@ the underlying configuration objects.
 import pygame
 
 from gamecore import config as gconfig
-from gamecore.i18n import gettext as _
+from gamecore.i18n import gettext as _, set_language
 from .scene_base import Scene
 from .input import InputManager
 from . import sfx
@@ -24,9 +24,23 @@ from .ui.widgets import (
     Toggle,
     LargeTextToggle,
     Label,
+    Tooltip,
     hover_hints,
 )
 from .ui.theme import set_theme
+
+
+class _RebindButton(RebindButton):
+    def __init__(self, rect: pygame.Rect, action: str, input: InputManager, cfg: dict) -> None:
+        super().__init__(rect, action, input)
+        self.cfg = cfg
+
+    def handle_event(self, event: pygame.event.Event) -> None:
+        listening = self.listening
+        super().handle_event(event)
+        if listening and not self.listening and event.type == pygame.KEYDOWN:
+            self.input.save(self.cfg)
+            gconfig.save_config(self.cfg)
 
 
 class InputField:
@@ -76,41 +90,55 @@ class SettingsScene(Scene):
         y = 80
         for action in ["end_turn", "rest", "scavenge", "pause"]:
             rect = pygame.Rect(40, y, 260, 32)
-            self.general_widgets.append(RebindButton(rect, action, self.input))
+            btn = _RebindButton(rect, action, self.input, self.cfg)
+            btn.tooltip = Tooltip(_("press_new_key"))
+            self.general_widgets.append(btn)
             y += 40
 
         vol_y = 80
         for key in ["master", "step", "hit", "ui"]:
             val = self.cfg.get(f"volume_{key}", self.cfg.get("volume", 1.0))
-            self.general_widgets.append(
-                Slider(pygame.Rect(360, vol_y, 200, 20), 0, 100, val * 100, lambda v, k=key: self._on_volume(k, v))
+            slider = Slider(
+                pygame.Rect(360, vol_y, 200, 20),
+                0,
+                100,
+                val * 100,
+                lambda v, k=key: self._on_volume(k, v),
             )
+            slider.tooltip = Tooltip("Adjust volume")
+            self.general_widgets.append(slider)
             vol_y += 40
-        self.general_widgets.append(
-            Slider(pygame.Rect(360, vol_y, 200, 20), 100, 200, max(1.0, self.cfg.get("ui_scale", 1.0)) * 100, self._on_scale)
+        scale_slider = Slider(
+            pygame.Rect(360, vol_y, 200, 20),
+            100,
+            200,
+            max(1.0, self.cfg.get("ui_scale", 1.0)) * 100,
+            self._on_scale,
         )
+        scale_slider.tooltip = Tooltip("Adjust UI scale")
+        self.general_widgets.append(scale_slider)
 
-        self.general_widgets.append(
-            Dropdown(
-                pygame.Rect(360, 160, 200, 32),
-                [("en", "en"), ("ru", "ru")],
-                self.cfg.get("language", "en"),
-                self._on_lang,
-            )
+        lang_dd = Dropdown(
+            pygame.Rect(360, 160, 200, 32),
+            [("en", "en"), ("ru", "ru")],
+            self.cfg.get("language", "en"),
+            self._on_lang,
         )
-        self.general_widgets.append(
-            Dropdown(
-                pygame.Rect(40, y, 260, 32),
-                [
-                    ("light", _("theme_light")),
-                    ("dark", _("theme_dark")),
-                    ("apocalypse", _("theme_apocalypse")),
-                    ("high_contrast", _("high_contrast")),
-                ],
-                self.cfg.get("ui_theme", "dark"),
-                self._on_theme,
-            )
+        lang_dd.tooltip = Tooltip("Select language")
+        self.general_widgets.append(lang_dd)
+        theme_dd = Dropdown(
+            pygame.Rect(40, y, 260, 32),
+            [
+                ("light", _("theme_light")),
+                ("dark", _("theme_dark")),
+                ("apocalypse", _("theme_apocalypse")),
+                ("high_contrast", _("high_contrast")),
+            ],
+            self.cfg.get("ui_theme", "dark"),
+            self._on_theme,
         )
+        theme_dd.tooltip = Tooltip("Select theme")
+        self.general_widgets.append(theme_dd)
         y += 40
         self.general_widgets.append(
             Toggle(
@@ -267,6 +295,10 @@ class SettingsScene(Scene):
 
     def _on_lang(self, value: str) -> None:
         self.cfg["language"] = value
+        try:
+            set_language(value)
+        except Exception:  # pragma: no cover - defensive
+            pass  # TODO: handle language reload errors
         gconfig.save_config(self.cfg)
 
     def _on_theme(self, value: str) -> None:
@@ -365,6 +397,9 @@ class SettingsScene(Scene):
         surface.fill(get_theme().colors["bg"])
         self.btn_general.draw(surface)
         self.btn_access.draw(surface)
+        mouse_pos = pygame.mouse.get_pos()
         for w in self.widgets:
             w.draw(surface)
+            if hasattr(w, "tooltip") and w.rect.collidepoint(mouse_pos):
+                w.tooltip.draw(surface, (w.rect.right + 10, w.rect.y))
         hover_hints.draw(surface)

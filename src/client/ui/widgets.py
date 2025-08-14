@@ -203,6 +203,7 @@ class Dropdown:
         self.callback = callback
         self.open = False
         self.row_h = max(24, self.rect.height)
+        self._hover = next((i for i, (v, _t) in enumerate(options) if v == value), 0)
 
     # drawing ----------------------------------------------------------
     def render(self, surface: pygame.Surface) -> None:  # pragma: no cover - visual
@@ -229,7 +230,10 @@ class Dropdown:
                 self.rect.width,
                 self.row_h,
             )
-            bg = colors["panel_hover"] if val == self.value else colors["panel"]
+            if self.open:
+                bg = colors["panel_hover"] if i == self._hover else colors["panel"]
+            else:
+                bg = colors["panel_hover"] if val == self.value else colors["panel"]
             pygame.draw.rect(surface, bg, opt_rect)
             pygame.draw.rect(surface, colors["border"], opt_rect, theme.border_xs)
             img = _f().render(text, True, colors["text"])
@@ -240,6 +244,19 @@ class Dropdown:
 
     # events -----------------------------------------------------------
     def handle_event(self, event: pygame.event.Event) -> None:
+        if event.type == pygame.KEYDOWN and self.open:
+            if event.key == pygame.K_UP:
+                self._hover = (self._hover - 1) % len(self.options)
+            elif event.key == pygame.K_DOWN:
+                self._hover = (self._hover + 1) % len(self.options)
+            elif event.key == pygame.K_RETURN:
+                val = self.options[self._hover][0]
+                if val != self.value:
+                    self.value = val
+                    if self.callback:
+                        self.callback(val)
+                self.open = False
+            return
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.open:
                 for i, (val, _text) in enumerate(self.options):
@@ -256,11 +273,11 @@ class Dropdown:
                                 self.callback(val)
                         self.open = False
                         return
-                # click outside
                 if not self.rect.collidepoint(event.pos):
                     self.open = False
             elif self.rect.collidepoint(event.pos):
                 self.open = True
+                self._hover = next((i for i, (v, _t) in enumerate(self.options) if v == self.value), 0)
 
     def draw(self, surface: pygame.Surface) -> None:  # pragma: no cover - alias
         self.render(surface)
@@ -339,6 +356,13 @@ class Slider:
             self._set_from_pos(event.pos[0])
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1 and self._drag:
             self._drag = False
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_LEFT:
+                self.value = max(self.vmin, self.value - 1)
+                self.on_change(self.value)
+            elif event.key == pygame.K_RIGHT:
+                self.value = min(self.vmax, self.value + 1)
+                self.on_change(self.value)
 
 
 class RebindButton:
