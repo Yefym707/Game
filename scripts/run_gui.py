@@ -20,6 +20,8 @@ def _add_src() -> None:
     """
 
     base = getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1])
+    if str(base) not in sys.path:
+        sys.path.insert(0, str(base))
     src = Path(base) / "src"
     if str(src) not in sys.path:
         sys.path.insert(0, str(src))
@@ -34,7 +36,17 @@ def _parse_args() -> argparse.Namespace:
 if __name__ == "__main__":  # pragma: no cover - manual invocation only
     os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
     _add_src()
-    from client.app import main
+    try:
+        from client.app import main
+    except ModuleNotFoundError:  # pragma: no cover - exercised manually
+        # The full graphical client isn't bundled with this kata repository.
+        # Falling back to the console version ensures the entry point still
+        # works for manual testing instead of crashing with an import error.
+        from game import Game
+
+        def main(*, safe_mode: bool = False) -> None:
+            game = Game()
+            game.run()
 
     args = _parse_args()
     safe = args.safe or bool(int(os.environ.get("GAME_SAFE_MODE", "0")))
