@@ -1,101 +1,149 @@
-from typing import Dict, Tuple, Optional, Any
+"""Simple merchant NPC that can buy and sell items to the player.
+
+This module provides a small :class:`Trader` class which represents a non
+player character that keeps its own :class:`~inventory.Inventory` of items and
+coins.  It exposes two high level methods, :meth:`buy` and :meth:`sell`, which
+allow a :class:`~player.Player` to trade items for coins.  The implementation is
+light‑weight but intentionally mirrors the API of :class:`Inventory` so it can
+easily integrate with the rest of the project.
+"""
+
+from __future__ import annotations
+
+from typing import Any, Dict, Optional
+
+from inventory import Inventory
+
 
 class Trader:
+    """Merchant with an inventory and a list of prices.
+
+    Parameters
+    ----------
+    name:
+        Display name of the trader.
+    goods:
+        Mapping describing the initial stock.  The mapping may contain entries
+        in the form ``{"item": (price, quantity)}``.  For backwards
+        compatibility ``int`` values are treated as the price with a quantity of
+        one and dictionaries with ``price``/``quantity`` keys are also
+        understood.  Only the price information is kept – the quantities are
+        inserted into the internal :class:`Inventory`.
+    coins:
+        Amount of coins the trader starts with.
     """
-    Торговец с поддержкой репутации и редких товаров.
-    goods может быть в двух форматах:
-      - старый: { "еда": (sell_price, buy_price), ... }
-      - новый:  { "еда": {"sell":5,"buy":2, "min_rep": 0}, "редкий": {"sell":50,"buy":20,"min_rep":3} }
-    Репутация влияет на цены и доступность товаров.
-    """
-    def __init__(self, name: str, goods: Dict[str, Any]):
+
+    def __init__(
+        self,
+        name: str,
+        goods: Optional[Dict[str, Any]] = None,
+        coins: int = 0,
+    ) -> None:
         self.name = name
-        self.goods = {}
-        # нормализуем входные товары в формат item -> {"sell":..., "buy":..., "min_rep":...}
-        for item, data in goods.items():
-            if isinstance(data, tuple) or isinstance(data, list):
-                sell, buy = data[0], data[1] if len(data) > 1 else 0
-                self.goods[item] = {"sell": int(sell), "buy": int(buy), "min_rep": 0}
-            elif isinstance(data, dict):
-                self.goods[item] = {
-                    "sell": int(data.get("sell", 1)),
-                    "buy": int(data.get("buy", 0)),
-                    "min_rep": int(data.get("min_rep", 0))
-                }
-            else:
-                # fallback
-                self.goods[item] = {"sell": 1, "buy": 0, "min_rep": 0}
+        self.inventory = Inventory(coins=coins)
+        # Mapping of item name to its price in coins.
+        self.prices: Dict[str, int] = {}
 
-    def _price_multiplier(self, campaign) -> float:
-        try:
-            rep = campaign.progress.get("reputation", {}).get(self.name, 0)
-        except Exception:
-            rep = 0
-        if rep >= 5:
-            return 0.80
-        if rep >= 2:
-            return 0.92
-        if rep <= -5:
-            return 1.30
-        if rep <= -2:
-            return 1.12
-        return 1.0
+        if goods:
+            for item, data in goods.items():
+                price: int
+                quantity: int
+                if isinstance(data, (tuple, list)):
+                    price = int(data[0])
+                    quantity = int(data[1]) if len(data) > 1 else 1
+                elif isinstance(data, dict):
+                    price = int(
+                        data.get("price")
+                        or data.get("sell")
+                        or data.get("buy")
+                        or 0
+                    )
+                    quantity = int(
+                        data.get("quantity")
+                        or data.get("qty")
+                        or 0
+                    )
+                else:  # assume a bare price
+                    price = int(data)
+                    quantity = 1
 
-    def list_goods(self, campaign=None) -> str:
-        lines = [f"Торговец {self.name} — товары:"]
-        mult = self._price_multiplier(campaign) if campaign is not None else 1.0
-        rep = 0
-        if campaign:
-            rep = campaign.progress.get("reputation", {}).get(self.name, 0)
-        for item, meta in self.goods.items():
-            min_rep = meta.get("min_rep", 0)
-            if rep < min_rep:
-                lines.append(f" - {item}: (закрыт, нужно репутации {min_rep})")
-                continue
-            sell_price = max(1, int(meta["sell"] * mult))
-            # buy_price — что торговец даст игроку за предмет (зависит от мультипликатора обратным образом)
-            buy_price = max(0, int(meta["buy"] * (2 - mult)))
-            lines.append(f" - {item}: купить за {sell_price} монет | продать за {buy_price} монет (min_rep={min_rep})")
-        return "\n".join(lines)
+                self.prices[item] = price
+                if quantity > 0:
+                    self.inventory.add_item(item, quantity)
 
-    def sell_to_player(self, item: str, inventory, qty: int = 1, campaign=None) -> str:
-        if item not in self.goods:
-            return "У торговца нет такого товара."
-        meta = self.goods[item]
-        rep = 0
-        if campaign:
-            rep = campaign.progress.get("reputation", {}).get(self.name, 0)
-        min_rep = meta.get("min_rep", 0)
-        if rep < min_rep:
-            return f"Торговец не доверяет вам достаточно (нужна репутация {min_rep})."
-        mult = self._price_multiplier(campaign) if campaign is not None else 1.0
-        total = max(1, int(meta["sell"] * mult)) * qty
-        if not inventory.spend_coins(total):
-            return "У вас недостаточно монет."
-        inventory.add_item(item, qty)
-        if campaign:
-            rep_map = campaign.progress.setdefault("reputation", {})
-            rep_map[self.name] = rep_map.get(self.name, 0) + 1
-        return f"Вы купили {qty} x {item} за {total} монет."
+    # ------------------------------------------------------------------
+    # trading helpers
+    def buy(self, item_name: str, quantity: int, player: "Player") -> bool:
+        """Let the ``player`` buy ``quantity`` of ``item_name``.
 
-    def buy_from_player(self, item: str, inventory, qty: int = 1, campaign=None) -> str:
-        if item not in self.goods:
-            return "Торговец не заинтересован в этом предмете."
-        meta = self.goods[item]
-        mult = self._price_multiplier(campaign) if campaign is not None else 1.0
-        total = max(0, int(meta["buy"] * (2 - mult))) * qty
-        if not inventory.has_item(item, qty):
-            return "У вас нет такого количества предмета."
-        inventory.remove_item(item, qty)
-        inventory.add_coins(total)
-        if campaign:
-            rep_map = campaign.progress.setdefault("reputation", {})
-            rep_map[self.name] = rep_map.get(self.name, 0) - 1
-        return f"Вы продали {qty} x {item} за {total} монет."
+        The trade succeeds if the trader has enough stock and the player can
+        afford the price.  Items and coins are moved between the respective
+        inventories.  ``True`` is returned on success, ``False`` otherwise."""
 
-    def to_dict(self):
-        return {"name": self.name, "goods": self.goods}
+        if quantity <= 0:
+            raise ValueError("quantity must be positive")
+
+        price = self.prices.get(item_name)
+        if price is None:
+            return False
+        if not self.inventory.has_item(item_name, quantity):
+            return False
+
+        total = price * quantity
+        if not player.inventory.spend_coins(total):
+            return False
+
+        # transfer items and coins
+        self.inventory.remove_item(item_name, quantity)
+        player.inventory.add_item(item_name, quantity)
+        self.inventory.add_coins(total)
+        return True
+
+    def sell(self, item_name: str, quantity: int, player: "Player") -> bool:
+        """Buy ``quantity`` of ``item_name`` from ``player``.
+
+        The trade succeeds if the player owns the items and the trader has
+        enough coins to pay for them.  Coins and items are exchanged between the
+        two inventories.  ``True`` is returned on success."""
+
+        if quantity <= 0:
+            raise ValueError("quantity must be positive")
+
+        price = self.prices.get(item_name)
+        if price is None:
+            return False
+
+        total = price * quantity
+        if self.inventory.coins < total:
+            return False
+        if not player.inventory.has_item(item_name, quantity):
+            return False
+
+        player.inventory.remove_item(item_name, quantity)
+        player.inventory.add_coins(total)
+        self.inventory.add_item(item_name, quantity)
+        self.inventory.spend_coins(total)
+        return True
+
+    # ------------------------------------------------------------------
+    # serialisation helpers
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "prices": dict(self.prices),
+            "inventory": self.inventory.to_dict(),
+        }
 
     @staticmethod
-    def from_dict(d):
-        return Trader(d["name"], d["goods"])
+    def from_dict(data: Dict[str, Any]) -> "Trader":
+        trader = Trader(data.get("name", "Trader"), data.get("prices", {}))
+        inv = data.get("inventory")
+        if inv:
+            trader.inventory = Inventory.from_dict(inv)
+        return trader
+
+
+# ``Player`` is only required for type checking.  Importing at the end avoids
+# circular import issues during module initialisation.
+from player import Player  # noqa  E402  (import at end of file)
+
