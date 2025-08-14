@@ -1,21 +1,43 @@
 import json
 from typing import Optional, List
+
 from inventory import Inventory
 from game_map import GameMap
 from enemies import EnemyManager, StatusEffect
 from trader import Trader
+from player import Player
 
 class Campaign:
-    def __init__(self, scenarios, current_scenario_id=None, game_map: Optional[GameMap]=None, inventory: Optional[Inventory]=None, enemies: Optional[EnemyManager]=None, turn_count: int = 0, time_of_day: str = "day", status_effects: Optional[List[dict]] = None):
+    """Container with all mutable state of the current game session."""
+
+    def __init__(
+        self,
+        scenarios,
+        current_scenario_id: Optional[str] = None,
+        game_map: Optional[GameMap] = None,
+        inventory: Optional[Inventory] = None,
+        enemies: Optional[EnemyManager] = None,
+        player: Optional[Player] = None,
+        turn_count: int = 0,
+        time_of_day: str = "day",
+        status_effects: Optional[List[StatusEffect]] = None,
+        progress: Optional[dict] = None,
+    ):
         self.scenarios = scenarios
+        # default scenario id is the first one if provided
+        if current_scenario_id is None and scenarios:
+            current_scenario_id = scenarios[0].get("id")
         self.current_scenario_id = current_scenario_id
         self.game_map = game_map or GameMap(10, 8)
         self.inventory = inventory or Inventory()
-        self.enemies = enemies or EnemyManager.spawn_on_map(self.game_map.width, self.game_map.height, count=3, player_pos=self.game_map.player_pos)
+        self.player = player or Player()
+        self.enemies = enemies or EnemyManager.spawn_on_map(
+            self.game_map.width, self.game_map.height, count=3, player_pos=self.game_map.player_pos
+        )
         self.turn_count = turn_count
         self.time_of_day = time_of_day  # "day" or "night"
-        self.status_effects = [StatusEffect.from_dict(d) for d in (status_effects or [])]
-        self.progress = {}
+        self.status_effects = [se if isinstance(se, StatusEffect) else StatusEffect.from_dict(se) for se in (status_effects or [])]
+        self.progress = progress or {}
         self.skip_turn = False
 
     def tick_time(self):
@@ -83,5 +105,43 @@ class Campaign:
             name = zone.meta.get("name", "Торговец")
             return Trader(name, goods)
         return None
+    # ------------------------------------------------------------------
+    # saving and loading helpers
 
-    # остальной код save/load/аттак/эффекты — без изменений (поддерживает status_effects и progress)
+    def to_dict(self) -> dict:
+        return {
+            "current_scenario_id": self.current_scenario_id,
+            "game_map": self.game_map.to_dict(),
+            "inventory": self.inventory.to_dict(),
+            "player": self.player.to_dict(),
+            "enemies": self.enemies.to_dict(),
+            "turn_count": self.turn_count,
+            "time_of_day": self.time_of_day,
+            "status_effects": [e.to_dict() for e in self.status_effects],
+            "progress": self.progress,
+        }
+
+    @staticmethod
+    def from_dict(data: dict, scenarios) -> "Campaign":
+        return Campaign(
+            scenarios,
+            current_scenario_id=data.get("current_scenario_id"),
+            game_map=GameMap.from_dict(data["game_map"]),
+            inventory=Inventory.from_dict(data["inventory"]),
+            enemies=EnemyManager.from_dict(data["enemies"]),
+            player=Player.from_dict(data.get("player", {})),
+            turn_count=int(data.get("turn_count", 0)),
+            time_of_day=data.get("time_of_day", "day"),
+            status_effects=[StatusEffect.from_dict(d) for d in data.get("status_effects", [])],
+            progress=data.get("progress", {}),
+        )
+
+    def save(self, path: str) -> None:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(self.to_dict(), f, ensure_ascii=False, indent=2)
+
+    @staticmethod
+    def load(path: str, scenarios) -> "Campaign":
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return Campaign.from_dict(data, scenarios)

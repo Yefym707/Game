@@ -1,46 +1,145 @@
-# Вставлены/обновлены фрагменты, которые вызывают перемещение врагов и взаимодействие с торговцем.
-# Предполагается, что остальной main.py остался, здесь — ключевые правки.
+"""Entry point for running the text based survival game.
 
-# ... внутри игрового цикла, после действий игрока ...
+The original ``main.py`` in this repository was intentionally truncated and
+only contained a few comments.  This file provides a minimal interactive
+loop that ties together the other modules.  The goal is not to create a
+feature complete roguelike but to showcase how the provided building blocks
+can be combined into a playable experience.  The module can also serve as a
+reference for unit tests which exercise parts of the game logic.
+"""
 
-# Перемещение врагов: теперь передаём campaign, чтобы движение могло учитывать ночь
-campaign.enemies.move_towards_player(
-    campaign.game_map.player_pos,
-    campaign.game_map.width,
-    campaign.game_map.height,
-    campaign
-)
+from __future__ import annotations
 
-# Атака врагов по игроку (оставляем совместимость — Enemy.perform_attack возвращает эффект или None)
-enemy = campaign.enemies.get_enemy_at(campaign.game_map.player_pos)
-if enemy:
-    result = enemy.perform_attack(campaign)
-    print("Враг атакует вас!")
-    if result:
-        print(f"Вы получили эффект: {result}")
+import json
+import os
+from typing import List
 
-# Функция взаимодействия с торговцем — уже использует campaign при вызове методов торговца.
-def interact_with_trader(campaign):
+from campaign import Campaign
+
+
+# ---------------------------------------------------------------------------
+# helper functions
+
+def _data_path(filename: str) -> str:
+    """Return the absolute path to a data file located next to this module."""
+
+    return os.path.join(os.path.dirname(__file__), filename)
+
+
+def load_scenarios() -> List[dict]:
+    with open(_data_path("scenarios.json"), "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def print_help() -> None:
+    print(
+        "Команды: n/s/e/w – движение, map – карта, rest – отдых,\n"
+        "  trader – взаимодействие с торговцем, inv – инвентарь,\n"
+        "  save/load – сохранить или загрузить игру, quit – выход."
+    )
+
+
+def interact_with_trader(campaign: Campaign) -> None:
     trader = campaign.get_trader_at_player()
-    if not campaign.game_map.get_zone_at(campaign.game_map.player_pos) or campaign.game_map.get_zone_at(campaign.game_map.player_pos).zone_type != "merchant":
-        print("Здесь нет торговца.")
-        return
     if not trader:
-        print("Торговец сейчас недоступен (ночь). Попробуйте позже.")
+        print("Здесь нет торговца.")
         return
     print(trader.list_goods(campaign))
     while True:
-        action = input("Команда (buy item qty / sell item qty / exit): ").strip().lower()
-        if action == "exit":
+        cmd = input("(buy item qty / sell item qty / exit)> ").strip().lower()
+        if cmd == "exit":
             break
-        parts = action.split()
-        if len(parts) < 3:
-            print("Неверная команда. Пример: buy еда 2")
+        parts = cmd.split()
+        if len(parts) != 3:
+            print("Неверная команда.")
             continue
-        cmd, item, qty = parts[0], parts[1], int(parts[2])
-        if cmd == "buy":
+        action, item, qty = parts[0], parts[1], int(parts[2])
+        if action == "buy":
             print(trader.sell_to_player(item, campaign.inventory, qty, campaign))
-        elif cmd == "sell":
+        elif action == "sell":
             print(trader.buy_from_player(item, campaign.inventory, qty, campaign))
         else:
             print("Неизвестная команда.")
+
+
+# ---------------------------------------------------------------------------
+# game loop
+
+def game_loop(campaign: Campaign) -> None:
+    print("Добро пожаловать в текстовую игру на выживание!")
+    print_help()
+    while campaign.player.is_alive():
+        print(f"\nХод: {campaign.turn_count} | Время: {campaign.time_of_day}")
+        print(campaign.game_map.__str__(campaign.enemies.enemies))
+        command = input("> ").strip().lower()
+
+        # ----- player actions -----
+        if command in ("n", "s", "e", "w"):
+            dx = 1 if command == "e" else -1 if command == "w" else 0
+            dy = 1 if command == "s" else -1 if command == "n" else 0
+            campaign.game_map.move_player(dx, dy)
+            campaign.turn_count += 1
+        elif command == "map":
+            print(campaign.game_map.__str__(campaign.enemies.enemies))
+            continue
+        elif command == "rest":
+            print(campaign.rest_at_camp())
+            continue
+        elif command == "inv":
+            print(campaign.inventory)
+            continue
+        elif command.startswith("use "):
+            item = command.split(maxsplit=1)[1]
+            print(campaign.inventory.use_item(item, campaign))
+            continue
+        elif command == "trader":
+            interact_with_trader(campaign)
+            continue
+        elif command == "save":
+            campaign.save(_data_path("savegame.json"))
+            print("Игра сохранена.")
+            continue
+        elif command == "load":
+            try:
+                campaign = Campaign.load(_data_path("savegame.json"), campaign.scenarios)
+                print("Загружено.")
+            except FileNotFoundError:
+                print("Сохранение не найдено.")
+            continue
+        elif command == "help":
+            print_help()
+            continue
+        elif command == "quit":
+            break
+        else:
+            print("Неизвестная команда. help – список команд.")
+            continue
+
+        # ----- enemy phase -----
+        campaign.enemies.move_towards_player(
+            campaign.game_map.player_pos,
+            campaign.game_map.width,
+            campaign.game_map.height,
+            campaign,
+        )
+        enemy = campaign.enemies.get_enemy_at(campaign.game_map.player_pos)
+        if enemy:
+            effect = enemy.perform_attack(campaign)
+            print("Враг атакует вас!")
+            if effect:
+                print(f"Вы получили эффект: {effect.effect_type}")
+
+        campaign.tick_time()
+
+    print("Игра окончена.")
+
+
+def main() -> None:
+    scenarios = load_scenarios()
+    campaign = Campaign(scenarios)
+    game_loop(campaign)
+
+
+if __name__ == "__main__":  # pragma: no cover - manual execution only
+    main()
+
