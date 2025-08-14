@@ -10,16 +10,16 @@ The implementation below intentionally stays lightweight.  It stores a list of
 participants and exposes :meth:`start_turn` and :meth:`end_turn` helpers.  The
 former rolls a six sided die to determine how many actions the current
 participant gets.  :meth:`end_turn` advances to the next participant and
-increments the round counter once every participant has acted.  A placeholder
-hook :meth:`handle_end_of_round` is provided for future extensions such as
-event triggering.
+increments the round counter once every participant has acted.  If a game state
+is supplied an end-of-round event is drawn via :meth:`handle_end_of_round`.
 """
 
 from __future__ import annotations
 
-from typing import Iterable, List, Optional, Tuple, Any
+from typing import Iterable, List, Optional, Tuple, Any, Sequence
 
 import dice
+from event_deck import draw_event, Event, GameState
 
 
 class TurnManager:
@@ -31,9 +31,20 @@ class TurnManager:
         Iterable of objects representing the actors that take turns.  The
         objects are kept as-is which makes the manager agnostic of the actual
         player or enemy implementation.
+    game_state:
+        Optional :class:`event_deck.GameState` instance.  If provided a random
+        event is drawn and resolved whenever a round finishes.
+    event_deck:
+        Optional sequence of :class:`event_deck.Event` objects to draw from.  If
+        omitted the default event deck is used.
     """
 
-    def __init__(self, participants: Iterable[Any]):
+    def __init__(
+        self,
+        participants: Iterable[Any],
+        game_state: Optional[GameState] = None,
+        event_deck: Optional[Sequence[Event]] = None,
+    ) -> None:
         participants = list(participants)
         if not participants:
             raise ValueError("TurnManager requires at least one participant")
@@ -41,6 +52,8 @@ class TurnManager:
         self._index: int = 0
         self.round: int = 1
         self.actions_left: int = 0
+        self._game_state = game_state
+        self._event_deck = event_deck
 
     # ------------------------------------------------------------------
     # helper properties
@@ -105,14 +118,13 @@ class TurnManager:
         return self.current_player
 
     # ------------------------------------------------------------------
-    def handle_end_of_round(self) -> None:  # pragma: no cover - placeholder
-        """Hook for end-of-round logic.
+    def handle_end_of_round(self) -> None:
+        """Trigger a random event when a game state is available."""
 
-        Sub-classes may override this method to implement features such as
-        event triggering or status effect handling.  The default implementation
-        intentionally does nothing.
-        """
-
+        if self._game_state is None:
+            return None
+        event = draw_event(self._game_state, self._event_deck)
+        print(f"Event: {event.description}")
         return None
 
 
