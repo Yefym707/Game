@@ -26,6 +26,7 @@ from . import sfx
 from .util_paths import logs_dir
 from .input_map import InputMap
 from .scene_menu import MenuScene
+from .scene_settings import SettingsScene
 from .ui.widgets import HelpOverlay, ModalError, init_ui
 
 # optional subsystems are represented by tiny namespaces so tests can monkeypatch
@@ -59,6 +60,8 @@ class App:
         self.scene.enter()
         self.help = HelpOverlay(self.input_map)
         self.running = True
+        self._last_theme = cfg.get("ui_theme", "dark")
+        self._last_scale = cfg.get("ui_scale", 1.0)
 
     # main loop ---------------------------------------------------------
     def run(self) -> None:
@@ -74,9 +77,19 @@ class App:
                 self.handle_event(event)
             self.scene.update(0.0)
             if self.scene.next_scene:
+                prev_scene = self.scene
                 self.scene.exit()
                 self.scene = self.scene.next_scene
                 self.scene.enter()
+                if isinstance(prev_scene, SettingsScene):
+                    theme = self.cfg.get("ui_theme", "dark")
+                    scale = self.cfg.get("ui_scale", 1.0)
+                    if theme != self._last_theme:
+                        ui_theme.set_theme(theme)
+                        self._last_theme = theme
+                    if scale != self._last_scale:
+                        init_ui(scale)
+                        self._last_scale = scale
                 continue
             self.screen.fill((0, 0, 0))
             self.scene.draw(self.screen)
