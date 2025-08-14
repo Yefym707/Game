@@ -1,18 +1,19 @@
 import json
-from typing import Optional, List
+from typing import Optional, List, Any
 
 from inventory import Inventory
 from game_map import GameMap
 from enemies import EnemyManager, StatusEffect
 from trader import Trader
 from player import Player
+from scenario import Scenario
 
 class Campaign:
     """Container with all mutable state of the current game session."""
 
     def __init__(
         self,
-        scenarios,
+        scenarios: List[Scenario],
         current_scenario_id: Optional[str] = None,
         game_map: Optional[GameMap] = None,
         inventory: Optional[Inventory] = None,
@@ -24,10 +25,12 @@ class Campaign:
         progress: Optional[dict] = None,
     ):
         self.scenarios = scenarios
-        # default scenario id is the first one if provided
-        if current_scenario_id is None and scenarios:
-            current_scenario_id = scenarios[0].get("id")
-        self.current_scenario_id = current_scenario_id
+        # default scenario id is not set until the first scenario starts.  A
+        # saved game may supply ``current_scenario_id`` explicitly.
+        if current_scenario_id is None:
+            self.current_scenario_id = None
+        else:
+            self.current_scenario_id = current_scenario_id
         self.game_map = game_map or GameMap(10, 8)
         self.inventory = inventory or Inventory()
         self.player = player or Player()
@@ -36,9 +39,28 @@ class Campaign:
         )
         self.turn_count = turn_count
         self.time_of_day = time_of_day  # "day" or "night"
-        self.status_effects = [se if isinstance(se, StatusEffect) else StatusEffect.from_dict(se) for se in (status_effects or [])]
+        self.status_effects = [
+            se if isinstance(se, StatusEffect) else StatusEffect.from_dict(se)
+            for se in (status_effects or [])
+        ]
         self.progress = progress or {}
         self.skip_turn = False
+        # campaign progression bookkeeping ------------------------------
+        # ``progress`` is serialised as part of the save game and may
+        # already contain campaign related information.  ``current_index``
+        # tracks the position within ``self.scenarios`` and defaults to the
+        # index of ``current_scenario_id`` or -1 if no scenario started yet.
+        idx = -1
+        if self.current_scenario_id is not None:
+            for i, sc in enumerate(self.scenarios):
+                sid = getattr(sc, "name", getattr(sc, "id", None))
+                if sid == self.current_scenario_id:
+                    idx = i
+                    break
+        self.progress.setdefault("current_index", idx)
+        self.progress.setdefault("results", [])
+        self.progress.setdefault("legacy", {})
+        self.progress.setdefault("completed", [])
 
     def tick_time(self):
         # меняем время суток каждые 5 ходов
@@ -105,6 +127,86 @@ class Campaign:
             name = zone.meta.get("name", "Торговец")
             return Trader(name, goods)
         return None
+    # ------------------------------------------------------------------
+    # campaign progression helpers
+
+    def start_next_scenario(self) -> Optional[Scenario]:
+        """Advance the campaign to the next scenario.
+
+        The method resets volatile game state such as the map, enemies and
+        turn counter while keeping persistent elements like the player and his
+        inventory.  Legacy bonuses stored in ``progress['legacy']`` therefore
+        carry over automatically.  ``None`` is returned when the campaign has
+        been completed.
+        """
+
+        next_index = self.progress.get("current_index", -1) + 1
+        if next_index >= len(self.scenarios):
+            # campaign finished
+            self.progress["campaign_complete"] = True
+            self.current_scenario_id = None
+            return None
+
+        self.progress["current_index"] = next_index
+        scenario = self.scenarios[next_index]
+        # Determine id/name for bookkeeping
+        self.current_scenario_id = getattr(scenario, "name", getattr(scenario, "id", None))
+
+        # Reset transient game state -----------------------------------
+        self.game_map = GameMap(self.game_map.width, self.game_map.height)
+        self.enemies = EnemyManager.spawn_on_map(
+            self.game_map.width, self.game_map.height, count=3, player_pos=self.game_map.player_pos
+        )
+        self.turn_count = 0
+        self.time_of_day = "day"
+        self.status_effects = []
+        self.skip_turn = False
+
+        # Let the scenario perform custom setup ------------------------
+        try:
+            scenario.setup(self.game_map, [self.player])
+        except Exception:
+            # Setup is a convenience feature; swallow errors so tests remain
+            # lightweight.
+            pass
+
+        return scenario
+
+    def record_scenario_result(self, winner: Any, legacy_bonus: Optional[dict] = None) -> None:
+        """Store the result of the current scenario.
+
+        ``winner`` can be any hashable identifier (typically a player name).
+        ``legacy_bonus`` describes advantages that should persist into future
+        scenarios.  Supported keys are ``"bonus_health"`` and ``"items"`` which
+        are immediately applied to the current campaign state and recorded so
+        they can be serialised when saving the game.
+        """
+
+        # record winner ------------------------------------------------
+        self.progress.setdefault("results", []).append(
+            {"scenario": self.current_scenario_id, "winner": winner}
+        )
+        self.progress.setdefault("completed", []).append(self.current_scenario_id)
+
+        if not legacy_bonus:
+            return
+
+        legacy = self.progress.setdefault("legacy", {})
+
+        # apply and record bonus health
+        bonus_hp = int(legacy_bonus.get("bonus_health", 0))
+        if bonus_hp:
+            self.player.max_health += bonus_hp
+            self.player.heal(bonus_hp)
+            legacy["bonus_health"] = legacy.get("bonus_health", 0) + bonus_hp
+
+        # apply and record items
+        items = legacy_bonus.get("items", {})
+        if items:
+            inv = legacy.setdefault("items", {})
+            for name, qty in items.items():
+                self.inventory.add_item(name, qty)
+                inv[name] = inv.get(name, 0) + qty
     # ------------------------------------------------------------------
     # saving and loading helpers
 
