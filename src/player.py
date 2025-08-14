@@ -10,6 +10,7 @@ the expectations of the surrounding code base.
 
 from __future__ import annotations
 
+import random
 from typing import Optional
 
 from entity import Entity
@@ -33,6 +34,36 @@ class Player(Entity):
         self.name = name
         # Every player owns an inventory which defaults to an empty one.
         self.inventory: Inventory = inventory or Inventory()
+        # representation on the board
+        self.symbol: str = "P"
+        # action management
+        self.actions_left: int = 0
+        self.turn_over: bool = False
+
+    # ------------------------------------------------------------------
+    # turn helpers
+    def start_turn(self, actions: int) -> None:
+        """Begin a new turn with ``actions`` available."""
+
+        self.actions_left = max(0, actions)
+        self.turn_over = False
+
+    def end_turn(self) -> None:
+        """Mark the player's turn as finished."""
+
+        self.actions_left = 0
+        self.turn_over = True
+
+    def _use_action(self) -> None:
+        """Consume a single action and end the turn if none remain."""
+
+        if self.actions_left > 0:
+            self.actions_left -= 1
+            if self.actions_left <= 0:
+                self.end_turn()
+        else:
+            # No actions to spend – immediately end the turn.
+            self.end_turn()
 
     # ------------------------------------------------------------------
     # health helpers
@@ -68,6 +99,93 @@ class Player(Entity):
         """Return ``True`` if at least ``quantity`` of ``item_name`` is held."""
 
         return self.inventory.has_item(item_name, quantity)
+
+    # ------------------------------------------------------------------
+    # action helpers
+    def move(self, dx: int, dy: int, game_board) -> bool:
+        """Move by ``(dx, dy)`` on ``game_board`` if possible.
+
+        Returns ``True`` if the move was successful.  Moving consumes one
+        action.  The board is updated to reflect the new position.  Attempts to
+        move without available actions or into blocked/out-of-bounds tiles fail
+        without consuming an action.
+        """
+
+        if self.actions_left <= 0:
+            self.end_turn()
+            return False
+
+        new_x = self.x + dx
+        new_y = self.y + dy
+        if not game_board.is_tile_free(new_x, new_y):
+            return False
+
+        # update board and position
+        try:
+            game_board.remove_entity(self.x, self.y)
+        except ValueError:
+            pass
+        game_board.place_entity(new_x, new_y, self.symbol)
+        self.set_position(new_x, new_y)
+        self._use_action()
+        return True
+
+    def attack(self, target) -> bool:
+        """Attack an adjacent ``target`` reducing its health by one.
+
+        Returns ``True`` if the attack was executed.  The attack consumes one
+        action.  The ``target`` is expected to expose ``take_damage`` or
+        ``damage`` methods.  If the target's health drops to zero or below it is
+        considered defeated.
+        """
+
+        if self.actions_left <= 0:
+            self.end_turn()
+            return False
+
+        if abs(self.x - target.x) + abs(self.y - target.y) != 1:
+            return False
+
+        if hasattr(target, "take_damage"):
+            target.take_damage(1)
+        elif hasattr(target, "damage"):
+            target.damage(1)
+        else:  # pragma: no cover - defensive
+            target.health = max(0, target.health - 1)
+
+        self._use_action()
+        return True
+
+    def search(self, game_board) -> Optional[str]:
+        """Search the current tile for items.
+
+        If the board exposes an ``items`` mapping it is checked for a supply
+        token at the player's position.  Otherwise there is a small random
+        chance to find a ``"supply"``.  Found items are added to the player's
+        inventory and removed from the board.  Searching consumes one action.
+
+        Returns the name of the item found or ``None`` if nothing was
+        discovered.
+        """
+
+        if self.actions_left <= 0:
+            self.end_turn()
+            return None
+
+        found = None
+
+        items = getattr(game_board, "items", None)
+        if items is not None:
+            found = items.pop((self.x, self.y), None)
+
+        if found is None and random.random() < 0.2:
+            found = "supply"
+
+        if found is not None:
+            self.pick_up(found)
+
+        self._use_action()
+        return found
 
     # ------------------------------------------------------------------
     # serialisation helpers
