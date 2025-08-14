@@ -19,6 +19,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "disable_online": False,
     "ui_theme": "dark",
     "language": "en",
+    "keybinds": {},
 }
 
 
@@ -31,6 +32,15 @@ def load_config() -> Dict[str, Any]:
         data = {}
     cfg = DEFAULT_CONFIG.copy()
     cfg.update(data)
+    try:
+        from client.input_map import InputManager
+
+        if not isinstance(cfg.get("keybinds"), dict):
+            cfg["keybinds"] = InputManager.default_keybinds()
+        else:
+            cfg["keybinds"] = InputManager.from_config(cfg.get("keybinds")).to_config()
+    except Exception:  # pragma: no cover - defensive
+        pass
     return cfg
 
 

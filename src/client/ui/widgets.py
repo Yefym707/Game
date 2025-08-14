@@ -16,7 +16,7 @@ from gamecore.i18n import gettext as _
 from ..clipboard import copy as copy_to_clipboard
 from ..gfx.tileset import TILE_SIZE
 from .theme import get_theme
-from ..input import InputManager
+from ..input_map import InputManager, name_for_key
 
 _font: pygame.font.Font | None = None
 _fonts: dict[int, pygame.font.Font] = {}
@@ -366,10 +366,17 @@ class Slider:
 
 
 class RebindButton:
-    def __init__(self, rect: pygame.Rect, action: str, input: InputManager) -> None:
+    def __init__(
+        self,
+        rect: pygame.Rect,
+        action: str,
+        input_mgr: InputManager,
+        on_change: Callable[[str, int], None] | None = None,
+    ) -> None:
         self.rect = pygame.Rect(rect)
         self.action = action
-        self.input = input
+        self.input = input_mgr
+        self._on_change = on_change
         self.listening = False
 
     def render(self, surface: pygame.Surface) -> None:  # pragma: no cover - visual
@@ -380,9 +387,8 @@ class RebindButton:
         if self.listening:
             text = _("press_new_key")
         else:
-            key = self.input.bindings.get(self.action)
-            key_name = pygame.key.name(key) if key is not None else "?"
-            text = f"{_(self.action)}: {key_name}"
+            key = self.input.get(self.action)
+            text = f"{_(self.action)}: {name_for_key(key)}"
         img = _f().render(text, True, colors["text"])
         surface.blit(img, (self.rect.x + theme.padding, self.rect.y + (self.rect.height - img.get_height()) // 2))
 
@@ -390,14 +396,19 @@ class RebindButton:
 
     def handle_event(self, event: pygame.event.Event) -> None:
         if self.listening and event.type == pygame.KEYDOWN:
-            self.input.rebind(self.action, event.key)
+            if event.key == pygame.K_ESCAPE:
+                self.listening = False
+                return
+            self.input.set(self.action, event.key)
+            if self._on_change:
+                self._on_change(self.action, event.key)
             self.listening = False
         elif (
             event.type == pygame.MOUSEBUTTONDOWN
             and event.button == 1
             and self.rect.collidepoint(event.pos)
         ):
-            self.listening = True
+            self.listening = not self.listening
 
 
 class LargeTextToggle(Toggle):
