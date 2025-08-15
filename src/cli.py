@@ -4,6 +4,9 @@ import json
 import os
 from types import SimpleNamespace
 
+from gamecore import i18n
+tr = i18n.gettext
+
 from game_board import GameBoard
 from player import Player
 from turn_manager import TurnManager
@@ -28,21 +31,8 @@ def _colored_board(board: GameBoard) -> str:
 
 
 def _load_locale(lang: str = "en") -> dict:
-    """Return mapping of localisation keys to strings.
-
-    The JSON files live in ``../data/locales`` relative to this module.
-    ``lang`` defaults to ``"en"`` which keeps the helper lightweight and
-    avoids pulling in a full translation system for the small CLI.
-    """
-
-    loc_path = os.path.join(
-        os.path.dirname(__file__), "..", "data", "locales", f"{lang}.json"
-    )
-    try:
-        with open(loc_path, "r", encoding="utf-8") as fh:
-            return json.load(fh)
-    except FileNotFoundError:
-        return {}
+    """Deprecated helper – kept for backward compatibility."""
+    return {}
 
 
 def run_game_cli() -> None:
@@ -73,15 +63,14 @@ def run_game_cli() -> None:
             }
         ]
 
-    locale = _load_locale()
     scenarios = {}
     for sc in data:
         name = sc.get("name")
         desc = sc.get("description")
         if sc.get("name_key"):
-            name = locale.get(sc["name_key"], sc["name_key"])
+            name = tr(sc["name_key"])
         if sc.get("desc_key"):
-            desc = locale.get(sc["desc_key"], sc["desc_key"])
+            desc = tr(sc["desc_key"])
         sc = dict(sc)
         sc["name"] = name
         sc["description"] = desc
@@ -91,11 +80,11 @@ def run_game_cli() -> None:
     ids = list(scenarios.keys())
     current_id = ids[0] if ids else None
     if len(ids) > 1:
-        print("Available scenarios:")
+        print(tr("available_scenarios"))
         for sid in ids:
             sc = scenarios[sid]
             print(f"  {sid}: {sc['name']} - {sc['description']}")
-        choice = input("Choose scenario> ").strip().lower()
+        choice = input(tr("choose_scenario_prompt")).strip().lower()
         if choice in scenarios:
             current_id = choice
 
@@ -123,10 +112,10 @@ def run_game_cli() -> None:
         game_state.turn = 0
         manager = TurnManager([player], game_state=game_state)
 
-        print(f"Starting scenario: {scenario.name}")
+        print(tr("starting_scenario").format(name=scenario.name))
         if scenario.description:
-            print(f"Objective: {scenario.description}")
-        print("Type 'help' for a reminder of controls and goals.")
+            print(tr("objective").format(description=scenario.description))
+        print(tr("help_controls_hint"))
 
         scenario_finished = False
         while not scenario_finished:
@@ -136,11 +125,16 @@ def run_game_cli() -> None:
                 print(_colored_board(board))
                 inv = dict(getattr(current.inventory, "items", {}))
                 print(
-                    f"{current.name} | HP {current.health}/{current.max_health} | "
-                    f"Inventory: {inv} | Actions: {current.actions_left}"
+                    tr("player_status").format(
+                        name=current.name,
+                        hp=current.health,
+                        max_hp=current.max_health,
+                        inv=inv,
+                        actions=current.actions_left,
+                    )
                 )
                 cmd = (
-                    input("Action (move <dir>/attack x y/search/end/quit)> ")
+                    input(tr("action_prompt"))
                     .strip()
                     .lower()
                 )
@@ -148,13 +142,10 @@ def run_game_cli() -> None:
                     current.end_turn()
                     break
                 if cmd in {"quit", "exit"}:
-                    print("Quitting game.")
+                    print(tr("quitting_game"))
                     return
                 if cmd == "help":
-                    print(
-                        "Find supplies, manage hunger and thirst, and avoid or fight zombies. "
-                        "Objective: find the antidote and return to the start."
-                    )
+                    print(tr("help_text"))
                     continue
                 parts = cmd.split()
                 if not parts:
@@ -173,20 +164,20 @@ def run_game_cli() -> None:
                     offset = mapping.get(parts[1])
                     if offset:
                         if not current.move(offset[0], offset[1], board):
-                            print("Cannot move in that direction.")
+                            print(tr("move_blocked"))
                     else:
-                        print("Unknown direction.")
+                        print(tr("unknown_direction"))
                 elif parts[0] == "attack" and len(parts) == 3:
                     try:
                         tx, ty = int(parts[1]), int(parts[2])
                     except ValueError:
-                        print("Invalid coordinates.")
+                        print(tr("invalid_coordinates"))
                         continue
                     if abs(current.x - tx) + abs(current.y - ty) != 1:
-                        print("Target must be adjacent.")
+                        print(tr("target_must_be_adjacent"))
                         continue
                     if not board.within_bounds(tx, ty) or board.grid[ty][tx] != "Z":
-                        print("No zombie there.")
+                        print(tr("no_zombie_there"))
                         continue
                     dummy = SimpleNamespace(x=tx, y=ty, health=1)
 
@@ -201,31 +192,35 @@ def run_game_cli() -> None:
                                 game_state.zombies.remove((tx, ty))
                             except ValueError:
                                 pass
-                            print("Zombie defeated.")
+                            print(tr("zombie_defeated"))
                     else:
-                        print("Attack failed.")
+                        print(tr("attack_failed"))
                 elif parts[0] == "search":
                     item = current.search(board)
                     if item:
-                        print(f"Found {item}.")
+                        print(tr("found_item").format(item=item))
                     else:
-                        print("Nothing found.")
+                        print(tr("nothing_found"))
                 else:
-                    print("Unknown command.")
+                    print(tr("unknown_command"))
 
             if not current.is_alive():
-                print("All players died. Game Over.")
+                print(tr("all_players_died"))
                 return
 
             manager.end_turn()
             game_state.turn = manager.round - 1
             if scenario.is_completed(game_state):
-                print(f"{current.name} completed '{scenario.name}'!")
+                print(
+                    tr("scenario_completed").format(
+                        player=current.name, scenario=scenario.name
+                    )
+                )
                 scenario_finished = True
 
         current_id = sc_def.get("next_scenario")
 
-    print("Campaign finished.")
+    print(tr("campaign_finished"))
 
 
 __all__ = ["run_game_cli"]

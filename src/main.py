@@ -16,7 +16,9 @@ from typing import List
 
 from campaign import Campaign
 from scenario import Scenario
-from cli import _load_locale
+from gamecore import i18n
+
+tr = i18n.gettext
 
 
 # ---------------------------------------------------------------------------
@@ -35,11 +37,10 @@ def load_scenarios() -> List[Scenario]:
     with open(_data_path("scenarios.json"), "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    locale = _load_locale()
     scenarios: List[Scenario] = []
     for sc in data:
-        name = sc.get("name") or locale.get(sc.get("name_key", ""), sc.get("name_key", ""))
-        desc = sc.get("description") or locale.get(sc.get("desc_key", ""), sc.get("desc_key", ""))
+        name = sc.get("name") or tr(sc.get("name_key", ""))
+        desc = sc.get("description") or tr(sc.get("desc_key", ""))
         scenarios.append(
             Scenario(
                 name=name,
@@ -56,51 +57,31 @@ def load_scenarios() -> List[Scenario]:
 def print_help() -> None:
     """Display available commands and their descriptions."""
 
-    lines = [
-        "n/s/e/w - move north/south/east/west",
-        "attack [x y] - attack an adjacent enemy or coordinates",
-        "search - scavenge the current tile for items",
-        "rest - regain some health at a camp",
-        "inv - show inventory and items",
-        "trader - trade with a merchant on the same tile",
-        "save - write the current game to disk",
-        "load - load the last save if present",
-        "map - display the map again",
-        "help - show this help message",
-        "quit - exit the game",
-    ]
-    print("Commands:\n  " + "\n  ".join(lines))
-    print(
-        "Find supplies, manage hunger and thirst, and avoid or fight zombies.\n"
-        "Objective: find the antidote and return to the start."
-    )
+    lines = tr("help_commands").split("\n")
+    print(tr("commands_title") + "\n  " + "\n  ".join(lines))
+    print(tr("help_text"))
 
 
 def how_to_play() -> None:
-    print("\n=== How to Play ===")
-    print(
-        "Find supplies, manage hunger and thirst, and avoid or fight zombies.\n"
-        "Goal: locate the antidote and bring it back to the starting point."
-    )
-    print(
-        "Use n/s/e/w to move, rest to recover, inv to view inventory, and save/load to manage progress."
-    )
-    print("Legend: P=Player, Z=Zombie, #=Wall, I=Item")
+    print(f"\n=== {tr('how_to_play_title')} ===")
+    print(tr("how_to_play_desc"))
+    print(tr("how_to_play_controls"))
+    print(tr("legend"))
 
 
 def interact_with_trader(campaign: Campaign) -> None:
     trader = campaign.get_trader_at_player()
     if not trader:
-        print("There is no trader here.")
+        print(tr("no_trader_here"))
         return
     print(trader.list_goods(campaign))
     while True:
-        cmd = input("(buy item qty / sell item qty / exit)> ").strip().lower()
+        cmd = input(tr("trader_prompt")).strip().lower()
         if cmd == "exit":
             break
         parts = cmd.split()
         if len(parts) != 3:
-            print("Invalid command.")
+            print(tr("invalid_command"))
             continue
         action, item, qty = parts[0], parts[1], int(parts[2])
         if action == "buy":
@@ -108,7 +89,7 @@ def interact_with_trader(campaign: Campaign) -> None:
         elif action == "sell":
             print(trader.buy_from_player(item, campaign.inventory, qty, campaign))
         else:
-            print("Unknown command.")
+            print(tr("unknown_command"))
 
 
 # ---------------------------------------------------------------------------
@@ -122,18 +103,18 @@ def interact_with_trader(campaign: Campaign) -> None:
 # game loop
 
 def game_loop(campaign: Campaign) -> None:
-    print("Welcome to the text-based survival game!")
+    print(tr("welcome_message"))
     print_help()
     # Display objective of the first scenario if available
     if campaign.scenarios:
         first = campaign.scenarios[0]
         desc = getattr(first, "description", "") or getattr(first, "desc", "")
         if desc:
-            print(f"Objective: {desc}")
+            print(tr("objective").format(description=desc))
     while campaign.player.is_alive():
-        print(f"\nTurn: {campaign.turn_count} | Time: {campaign.time_of_day}")
+        print("\n" + tr("turn_time").format(turn=campaign.turn_count, time=campaign.time_of_day))
         print(campaign.game_map.__str__(campaign.enemies.enemies))
-        inv = ", ".join(f"{k}({v})" for k, v in campaign.inventory.items.items()) or "empty"
+        inv = ", ".join(f"{k}({v})" for k, v in campaign.inventory.items.items()) or tr("empty_inventory")
         current = None
         if campaign.current_scenario_id:
             for sc in campaign.scenarios:
@@ -147,10 +128,15 @@ def game_loop(campaign: Campaign) -> None:
         status = ", ".join(
             f"{e.effect_type} ({e.duration})" if e.duration >= 0 else e.effect_type
             for e in campaign.status_effects
-        ) or "None"
+        ) or tr("status_none")
         print(
-            f"HP: {campaign.player.health}/{campaign.player.max_health} | "
-            f"Inventory: {inv} | Objective: {obj} | Status: {status}"
+            tr("hp_status").format(
+                hp=campaign.player.health,
+                max_hp=campaign.player.max_health,
+                inv=inv,
+                obj=obj,
+                status=status,
+            )
         )
         command = input("> ").strip().lower()
 
@@ -180,12 +166,12 @@ def game_loop(campaign: Campaign) -> None:
                 try:
                     tx, ty = int(parts[1]), int(parts[2])
                 except ValueError:
-                    print("Invalid coordinates.")
+                    print(tr("invalid_coordinates"))
                     continue
                 enemy = campaign.enemies.get_enemy_at((tx, ty))
                 px, py = campaign.game_map.player_pos
                 if not enemy or abs(tx - px) + abs(ty - py) != 1:
-                    print("No enemy in range.")
+                    print(tr("no_enemy_in_range"))
                     continue
             else:
                 px, py = campaign.game_map.player_pos
@@ -194,7 +180,7 @@ def game_loop(campaign: Campaign) -> None:
                     if enemy:
                         break
                 if not enemy:
-                    print("No enemy in range.")
+                    print(tr("no_enemy_in_range"))
                     continue
 
             campaign.player.set_position(*campaign.game_map.player_pos)
@@ -203,38 +189,38 @@ def game_loop(campaign: Campaign) -> None:
             if campaign.player.attack(enemy):
                 dmg = pre_hp - enemy.health
                 if dmg > 0:
-                    print(f"You attack the zombie for {dmg} damage.")
+                    print(tr("you_attack_zombie").format(dmg=dmg))
                     if enemy.health <= 0:
-                        print("The zombie is defeated!")
+                        print(tr("zombie_defeated"))
                         campaign.enemies.enemies.remove(enemy)
                 else:
-                    print("You miss.")
+                    print(tr("attack_miss"))
                 campaign.turn_count += 1
             else:
-                print("No enemy in range.")
+                print(tr("no_enemy_in_range"))
             # proceed to enemy phase after a valid attack
         elif command == "search":
             campaign.player.set_position(*campaign.game_map.player_pos)
             campaign.player.start_turn(1)
             found = campaign.player.search(campaign.game_map)
             if found:
-                print(f"You found {found}.")
+                print(tr("you_found_item").format(item=found))
             else:
-                print("Nothing useful here.")
+                print(tr("nothing_useful"))
             campaign.turn_count += 1
         elif command == "trader":
             interact_with_trader(campaign)
             continue
         elif command == "save":
             campaign.save(_data_path("savegame.json"))
-            print("Game saved.")
+            print(tr("game_saved"))
             continue
         elif command == "load":
             try:
                 campaign = Campaign.load(_data_path("savegame.json"), campaign.scenarios)
-                print("Loaded.")
+                print(tr("loaded"))
             except FileNotFoundError:
-                print("Save not found.")
+                print(tr("save_not_found"))
             continue
         elif command == "help":
             print_help()
@@ -242,7 +228,7 @@ def game_loop(campaign: Campaign) -> None:
         elif command == "quit":
             break
         else:
-            print("Unknown command. Type 'help' for a list of commands.")
+            print(tr("unknown_command_help"))
             continue
 
         # ----- enemy phase -----
@@ -255,35 +241,34 @@ def game_loop(campaign: Campaign) -> None:
         enemy = campaign.enemies.get_enemy_at(campaign.game_map.player_pos)
         if enemy:
             effect = enemy.perform_attack(campaign)
-            print("An enemy attacks you!")
+            print(tr("enemy_attacks"))
             if effect:
-                print(f"You gained effect: {effect.effect_type}")
+                print(tr("gained_effect").format(effect=effect.effect_type))
 
         campaign.tick_time()
 
-    print("Game over.")
+    print(tr("game_over"))
 
 
 def main_menu() -> None:
     """Display the start menu and dispatch to the game loop."""
 
-    locale = _load_locale()
     while True:
-        print("\n=== Survival Game ===")
-        print(f"1. {locale.get('menu_new_game', 'Start New Game')}")
-        print(f"2. {locale.get('menu_load', 'Load Game')}")
-        print(f"3. {locale.get('menu_how_to_play', 'How to Play')}")
-        print(f"4. {locale.get('menu_quit', 'Quit')}")
+        print("\n=== " + tr("main_menu_title") + " ===")
+        print(f"1. {tr('menu_new_game')}")
+        print(f"2. {tr('menu_load')}")
+        print(f"3. {tr('menu_how_to_play')}")
+        print(f"4. {tr('menu_quit')}")
         choice = input("> ").strip().lower()
         if choice in {"1", "start", "new"}:
-            difficulty = input("Select difficulty [easy/normal/hard]: ").strip().lower()
-            players = input("Number of players [1]: ").strip()
+            difficulty = input(tr("select_difficulty_prompt")).strip().lower()
+            players = input(tr("number_of_players_prompt")).strip()
             try:
                 num_players = max(1, int(players))
             except ValueError:
                 num_players = 1
             if num_players > 1:
-                print("Multiplayer not yet supported; starting solo game.")
+                print(tr("multiplayer_not_supported"))
             campaign = Campaign(load_scenarios(), difficulty=difficulty)
             game_loop(campaign)
         elif choice in {"2", "load"}:
@@ -291,18 +276,18 @@ def main_menu() -> None:
             if os.path.exists(path):
                 try:
                     campaign = Campaign.load(path, load_scenarios())
-                    print("Loaded.")
+                    print(tr("loaded"))
                     game_loop(campaign)
                 except Exception:
-                    print("Failed to load save.")
+                    print(tr("failed_to_load_save"))
             else:
-                print("No save found.")
+                print(tr("save_not_found"))
         elif choice in {"3", "how", "help"}:
             how_to_play()
         elif choice in {"4", "exit", "quit"}:
             break
         else:
-            print("Unknown command. Choose 1-4.")
+            print(tr("unknown_menu_choice"))
 
 
 def main() -> None:

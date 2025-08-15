@@ -2,6 +2,10 @@ import json
 import os
 from typing import Optional, List, Any, Iterable
 
+from gamecore import i18n
+
+tr = i18n.gettext
+
 from inventory import Inventory
 from game_map import GameMap
 from enemies import EnemyManager, StatusEffect
@@ -150,7 +154,7 @@ class Campaign:
             self.inventory.add_item(item)
             if item == "survivor":
                 self.rescued += 1
-            print(f"You found a {item}!")
+            print(tr("found_special_item").format(item=item))
 
         # After each turn verify scenario progress -----------------------------
         self._check_scenario_conditions()
@@ -163,11 +167,11 @@ class Campaign:
             return
         scenario = self.scenarios[index]
         if scenario.is_completed(self):
-            print("Scenario Complete! Objective achieved.")
+            print(tr("scenario_complete"))
             self.record_scenario_result("player")
             self.start_next_scenario()
         elif scenario.is_failed(self):
-            print("Scenario Failed! Game over.")
+            print(tr("scenario_failed"))
             self.current_scenario_id = None
             self.progress["campaign_failed"] = True
 
@@ -193,7 +197,7 @@ class Campaign:
         """Rest at a camp — takes camp level in the zone (meta.level) into account."""
         zone = self.game_map.get_zone_at(self.game_map.player_pos)
         if not zone or zone.zone_type != "camp":
-            return "You cannot rest here — no camp found."
+            return tr("cant_rest_here")
         level = zone.meta.get("level", 1)
         missing = self.player.max_health - self.player.health
         # the higher the camp level the more healing
@@ -208,19 +212,19 @@ class Campaign:
             if e.effect_type == "poison":
                 e.duration = max(0, e.duration - 1)
         self.turn_count += 1
-        return f"You rested at a level {level} camp. Restored {heal_amount} health."
+        return tr("rested_at_camp").format(level=level, heal=heal_amount)
 
     def upgrade_camp(self):
         zone = self.game_map.get_zone_at(self.game_map.player_pos)
         if not zone or zone.zone_type != "camp":
-            return "No camp here to upgrade."
+            return tr("no_camp_to_upgrade")
         level = zone.meta.get("level", 1)
         cost = level * 6  # simple cost formula
         if not self.inventory.spend_coins(cost):
-            return f"Upgrading the camp costs {cost} coins — you don't have enough."
+            return tr("camp_upgrade_cost").format(cost=cost)
         zone.meta["level"] = level + 1
         # optional: reward for upgrading, e.g. trader reputation
-        return f"Camp upgraded to level {level+1} for {cost} coins."
+        return tr("camp_upgraded").format(level=level + 1, cost=cost)
 
     def get_trader_at_player(self) -> Optional[Trader]:
         zone = self.game_map.get_zone_at(self.game_map.player_pos)
