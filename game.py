@@ -232,9 +232,8 @@ ROLE_DEFS = {
 }
 
 # End-of-round event and loot deck configuration is now loaded from an
-# external JSON file to ease modding. Defaults are provided here as
-# fallbacks if the file is missing or malformed.
-DECK_CONFIG_FILE = "decks.json"
+# external JSON file located alongside other data files.
+DECK_CONFIG_FILE = os.path.join("data", "decks.json")
 BOARD_LAYOUT_FILE = "board_layout.json"
 
 DEFAULT_EVENT_CARD_COUNTS = {

@@ -278,7 +278,12 @@ def main_menu() -> None:
                     campaign = Campaign.load(path, load_scenarios())
                     print(tr("loaded"))
                     game_loop(campaign)
-                except Exception:
+                except Exception as exc:  # pragma: no cover - user save files may be corrupt
+                    import logging
+
+                    logging.getLogger(__name__).warning(
+                        "Failed to load save from %s: %s", path, exc
+                    )
                     print(tr("failed_to_load_save"))
             else:
                 print(tr("save_not_found"))

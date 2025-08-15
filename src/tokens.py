@@ -103,7 +103,12 @@ class TokenManager:
             with open(filename, "r", encoding="utf-8") as f:
                 data = json.load(f)
             return TokenManager.from_dict(data)
-        except Exception:
+        except Exception as exc:  # pragma: no cover - file may not exist
+            import logging
+
+            logging.getLogger(__name__).debug(
+                "Failed loading tokens from %s: %s", filename, exc
+            )
             return TokenManager()
 
     # --------------------------

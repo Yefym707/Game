@@ -4,6 +4,7 @@ from typing import Tuple
 
 DICE_RE = re.compile(r'^\s*(\d*)d(\d+)\s*([+-]\s*\d+)?\s*$')
 
+
 def roll(dice_notation: str) -> Tuple[int, str]:
     """Roll dice using NdM+K notation (e.g. "1d6", "2d8+1", "d6-1").
     Returns a tuple of ``(value, detail_string)``.
@@ -14,8 +15,8 @@ def roll(dice_notation: str) -> Tuple[int, str]:
         try:
             v = int(dice_notation.strip())
             return v, f"const {v}"
-        except Exception:
-            raise ValueError(f"Invalid dice notation: '{dice_notation}'")
+        except ValueError as exc:
+            raise ValueError(f"Invalid dice notation: '{dice_notation}'") from exc
     n_str, sides_str, mod_str = m.groups()
     n = int(n_str) if n_str else 1
     sides = int(sides_str)
