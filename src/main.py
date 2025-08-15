@@ -15,6 +15,8 @@ import os
 from typing import List
 
 from campaign import Campaign
+from scenario import Scenario
+from cli import _load_locale
 
 
 # ---------------------------------------------------------------------------
@@ -27,16 +29,48 @@ def _data_path(filename: str) -> str:
     return os.path.join(os.path.dirname(__file__), filename)
 
 
-def load_scenarios() -> List[dict]:
+def load_scenarios() -> List[Scenario]:
+    """Return list of :class:`Scenario` objects from JSON definition."""
+
     with open(_data_path("scenarios.json"), "r", encoding="utf-8") as f:
-        return json.load(f)
+        data = json.load(f)
+
+    locale = _load_locale()
+    scenarios: List[Scenario] = []
+    for sc in data:
+        name = sc.get("name") or locale.get(sc.get("name_key", ""), sc.get("name_key", ""))
+        desc = sc.get("description") or locale.get(sc.get("desc_key", ""), sc.get("desc_key", ""))
+        scenarios.append(
+            Scenario(
+                name=name,
+                description=desc,
+                win_condition=sc.get("win_condition", {}),
+                turn_limit=sc.get("turn_limit"),
+                special_conditions=sc.get("special_conditions", {}),
+                lose_condition=sc.get("lose_condition", {}),
+            )
+        )
+    return scenarios
 
 
 def print_help() -> None:
+    """Display available commands and their descriptions."""
+
+    lines = [
+        "n/s/e/w - move north/south/east/west",
+        "attack [x y] - attack an adjacent enemy or coordinates",
+        "search - scavenge the current tile for items",
+        "rest - regain some health at a camp",
+        "inv - show inventory and items",
+        "trader - trade with a merchant on the same tile",
+        "save - write the current game to disk",
+        "load - load the last save if present",
+        "map - display the map again",
+        "help - show this help message",
+        "quit - exit the game",
+    ]
+    print("Commands:\n  " + "\n  ".join(lines))
     print(
-        "Commands: n/s/e/w – move, map – map, rest – rest,\n"
-        "  trader – interact with trader, inv – inventory,\n"
-        "  save/load – save or load game, help – help, quit – exit.\n"
         "Find supplies, manage hunger and thirst, and avoid or fight zombies.\n"
         "Objective: find the antidote and return to the start."
     )
@@ -51,7 +85,7 @@ def how_to_play() -> None:
     print(
         "Use n/s/e/w to move, rest to recover, inv to view inventory, and save/load to manage progress."
     )
-    # TODO: Load and display legend image here
+    print("Legend: P=Player, Z=Zombie, #=Wall, I=Item")
 
 
 def interact_with_trader(campaign: Campaign) -> None:
@@ -99,6 +133,25 @@ def game_loop(campaign: Campaign) -> None:
     while campaign.player.is_alive():
         print(f"\nTurn: {campaign.turn_count} | Time: {campaign.time_of_day}")
         print(campaign.game_map.__str__(campaign.enemies.enemies))
+        inv = ", ".join(f"{k}({v})" for k, v in campaign.inventory.items.items()) or "empty"
+        current = None
+        if campaign.current_scenario_id:
+            for sc in campaign.scenarios:
+                sid = getattr(sc, "name", getattr(sc, "id", None))
+                if sid == campaign.current_scenario_id:
+                    current = sc
+                    break
+        else:
+            current = campaign.scenarios[0] if campaign.scenarios else None
+        obj = getattr(current, "description", "") if current else ""
+        status = ", ".join(
+            f"{e.effect_type} ({e.duration})" if e.duration >= 0 else e.effect_type
+            for e in campaign.status_effects
+        ) or "None"
+        print(
+            f"HP: {campaign.player.health}/{campaign.player.max_health} | "
+            f"Inventory: {inv} | Objective: {obj} | Status: {status}"
+        )
         command = input("> ").strip().lower()
 
         # ----- player actions -----
@@ -160,6 +213,15 @@ def game_loop(campaign: Campaign) -> None:
             else:
                 print("No enemy in range.")
             # proceed to enemy phase after a valid attack
+        elif command == "search":
+            campaign.player.set_position(*campaign.game_map.player_pos)
+            campaign.player.start_turn(1)
+            found = campaign.player.search(campaign.game_map)
+            if found:
+                print(f"You found {found}.")
+            else:
+                print("Nothing useful here.")
+            campaign.turn_count += 1
         elif command == "trader":
             interact_with_trader(campaign)
             continue
@@ -205,21 +267,42 @@ def game_loop(campaign: Campaign) -> None:
 def main_menu() -> None:
     """Display the start menu and dispatch to the game loop."""
 
+    locale = _load_locale()
     while True:
         print("\n=== Survival Game ===")
-        print("1. Start New Game")
-        print("2. How to Play")
-        print("3. Exit")
+        print(f"1. {locale.get('menu_new_game', 'Start New Game')}")
+        print(f"2. {locale.get('menu_load', 'Load Game')}")
+        print(f"3. {locale.get('menu_how_to_play', 'How to Play')}")
+        print(f"4. {locale.get('menu_quit', 'Quit')}")
         choice = input("> ").strip().lower()
         if choice in {"1", "start", "new"}:
-            campaign = Campaign(load_scenarios())
+            difficulty = input("Select difficulty [easy/normal/hard]: ").strip().lower()
+            players = input("Number of players [1]: ").strip()
+            try:
+                num_players = max(1, int(players))
+            except ValueError:
+                num_players = 1
+            if num_players > 1:
+                print("Multiplayer not yet supported; starting solo game.")
+            campaign = Campaign(load_scenarios(), difficulty=difficulty)
             game_loop(campaign)
-        elif choice in {"2", "how", "help"}:
+        elif choice in {"2", "load"}:
+            path = _data_path("savegame.json")
+            if os.path.exists(path):
+                try:
+                    campaign = Campaign.load(path, load_scenarios())
+                    print("Loaded.")
+                    game_loop(campaign)
+                except Exception:
+                    print("Failed to load save.")
+            else:
+                print("No save found.")
+        elif choice in {"3", "how", "help"}:
             how_to_play()
-        elif choice in {"3", "exit", "quit"}:
+        elif choice in {"4", "exit", "quit"}:
             break
         else:
-            print("Unknown command. Choose 1, 2 or 3.")
+            print("Unknown command. Choose 1-4.")
 
 
 def main() -> None:
