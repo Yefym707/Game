@@ -283,10 +283,12 @@ class Campaign:
         # Let the scenario perform custom setup ------------------------
         try:
             scenario.setup(self.game_map, [self.player])
-        except Exception:
-            # Setup is a convenience feature; swallow errors so tests remain
-            # lightweight.
-            pass
+        except Exception as exc:
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "Scenario setup failed: %s", exc
+            )
 
         # extract special item placements for campaign bookkeeping
         placement = scenario.special_conditions.get("item_placement", {})

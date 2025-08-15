@@ -30,8 +30,10 @@ performs a tiny convenience action of placing entities when the board exposes a
 mapping.
 """
 
+import json
+import os
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, Optional, Sequence
+from typing import Any, Dict, Iterable, Optional, Sequence, List
 
 
 @dataclass
@@ -67,10 +69,15 @@ class Scenario:
             for (x, y), symbol in items:
                 try:
                     board.place_entity(x, y, symbol)
-                except Exception:
-                    # Placement is a convenience feature; ignore errors silently
-                    # so that tests can run with very small board mocks.
-                    pass
+                except Exception as exc:
+                    # Placement is a convenience feature; log failures instead
+                    # of swallowing them entirely so unexpected issues can be
+                    # diagnosed during development and testing.
+                    import logging
+
+                    logging.getLogger(__name__).warning(
+                        "Failed to place %s at (%s,%s): %s", symbol, x, y, exc
+                    )
 
     # ------------------------------------------------------------------
     # Win condition handling
@@ -157,3 +164,32 @@ class Scenario:
             return True
 
         return False
+
+
+def load_scenarios(path: Optional[str] = None) -> List[Scenario]:
+    """Load :class:`Scenario` definitions from JSON.
+
+    The loader reads ``data/scenarios.json`` by default and returns a list of
+    :class:`Scenario` objects.  Only a subset of fields is interpreted to keep
+    the implementation compact.
+    """
+
+    path = path or os.path.join(os.path.dirname(__file__), '..', 'data', 'scenarios.json')
+    with open(path, 'r', encoding='utf-8') as fh:
+        raw = json.load(fh)
+
+    scenarios: List[Scenario] = []
+    for sc in raw:
+        name = sc.get('name') or sc.get('name_key') or sc.get('id')
+        desc = sc.get('description') or sc.get('desc_key', '')
+        scenarios.append(
+            Scenario(
+                name=name,
+                description=desc,
+                win_condition=sc.get('win_condition', {}),
+                turn_limit=sc.get('turn_limit'),
+                special_conditions=sc.get('special_conditions', {}),
+                lose_condition=sc.get('lose_condition', {}),
+            )
+        )
+    return scenarios

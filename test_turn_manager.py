@@ -7,7 +7,7 @@ import sys
 # repository root, mirroring other tests in this suite.
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
-from event_deck import GameState, Event
+from event_deck import GameState, Event, EventDeck
 from game_board import GameBoard
 from player import Player
 import turn_manager
@@ -57,8 +57,9 @@ def test_end_of_round_triggers_event(monkeypatch, capsys):
         for pl in gs.players:
             pl.take_damage(1)
 
-    event = Event("Ambush!", ambush)
-    tm = turn_manager.TurnManager([p1, p2], game_state=state, event_deck=[event])
+    event = Event(event_id="ambush", description="Ambush!", effect=ambush)
+    deck = EventDeck({"ambush": event}, {"ambush": 1})
+    tm = turn_manager.TurnManager([p1, p2], game_state=state, event_deck=deck)
 
     monkeypatch.setattr(turn_manager.dice, "roll", lambda _: (1, ""))
 

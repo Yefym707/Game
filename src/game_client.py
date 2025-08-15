@@ -76,7 +76,12 @@ class GameClient:
                         await asyncio.sleep(self.reconnect_delay)
                         await self.connect()
                         return
-                    except Exception:
+                    except Exception as exc:  # pragma: no cover - network instability
+                        import logging
+
+                        logging.getLogger(__name__).debug(
+                            "Reconnect attempt failed: %s", exc
+                        )
                         continue
 
     # ------------------------------------------------------------------

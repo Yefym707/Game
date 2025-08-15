@@ -16,10 +16,10 @@ is supplied an end-of-round event is drawn via :meth:`handle_end_of_round`.
 
 from __future__ import annotations
 
-from typing import Iterable, List, Optional, Tuple, Any, Sequence
+from typing import Iterable, List, Optional, Tuple, Any
 
 import dice
-from event_deck import draw_event, Event, GameState
+from event_deck import draw_event, Event, GameState, EventDeck
 
 
 class TurnManager:
@@ -43,7 +43,7 @@ class TurnManager:
         self,
         participants: Iterable[Any],
         game_state: Optional[GameState] = None,
-        event_deck: Optional[Sequence[Event]] = None,
+        event_deck: Optional[EventDeck] = None,
     ) -> None:
         participants = list(participants)
         if not participants:

@@ -100,8 +100,12 @@ class GameServer:
             writer.close()
             try:  # pragma: no cover - network cleanup is best effort
                 await writer.wait_closed()
-            except Exception:
-                pass
+            except Exception as exc:
+                import logging
+
+                logging.getLogger(__name__).debug(
+                    "Error while closing client connection: %s", exc
+                )
 
     async def _apply_action(self, msg: dict, writer: asyncio.StreamWriter) -> None:
         """Apply a single action sent by ``writer`` to the game state."""
