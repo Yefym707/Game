@@ -127,6 +127,23 @@ class Enemy:
             return effect
         return None
 
+    # ------------------------------------------------------------------
+    def to_dict(self) -> dict:
+        return {
+            "pos": self.pos,
+            "health": self.health,
+            "attack": self.attack_damage,
+            "type": self.__class__.__name__,
+        }
+
+    @staticmethod
+    def from_dict(data: dict) -> "Enemy":
+        return Enemy(
+            tuple(data.get("pos", (0, 0))),
+            data.get("health", 3),
+            data.get("attack", 1),
+        )
+
 
 class FastZombie(Enemy):
     """Quick but fragile zombie that moves twice per turn."""

@@ -29,6 +29,9 @@ class GameMap:
         self.width = width
         self.height = height
         self.player_pos = player_pos
+        # remember the starting tile so scenarios can reference it for
+        # objectives like "return to start"
+        self.start_pos = player_pos
         if visible is None:
             self.visible = [[False for _ in range(width)] for _ in range(height)]
         else:
@@ -65,6 +68,12 @@ class GameMap:
         new_x = max(0, min(self.width-1, x+dx))
         new_y = max(0, min(self.height-1, y+dy))
         self.player_pos = (new_x, new_y)
+        player = getattr(self, "player_entity", None)
+        if player is not None:
+            if hasattr(player, "set_position"):
+                player.set_position(new_x, new_y)
+            else:
+                player.x, player.y = new_x, new_y
         self.reveal(self.player_pos)
 
     def reveal(self, pos: Tuple[int, int]):

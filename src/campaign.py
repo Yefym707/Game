@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Iterable
 
 from inventory import Inventory
 from game_map import GameMap
@@ -56,6 +56,11 @@ class Campaign:
         self.game_map = game_map or GameMap(10, 8)
         self.inventory = inventory or Inventory()
         self.player = player or Player(health=player_hp, max_health=player_hp)
+        # ensure campaign and player reference the same inventory for item
+        # checks during scenario completion
+        self.player.inventory = self.inventory
+        # keep map and player position in sync
+        self.game_map.player_entity = self.player
         self.enemies = enemies or EnemyManager.spawn_on_map(
             self.game_map.width,
             self.game_map.height,
@@ -97,6 +102,9 @@ class Campaign:
         self.progress.setdefault("results", [])
         self.progress.setdefault("legacy", {})
         self.progress.setdefault("completed", [])
+        # objective tracking
+        self.rescued = 0
+        self.special_items: dict = {}
 
     def tick_time(self):
         # change the time of day every 5 turns
@@ -134,6 +142,34 @@ class Campaign:
                     self.status_effects.remove(effect)
                     if effect.effect_type == "decoy":
                         self.decoy_pos = None
+
+        # Check for special items on the tile ---------------------------------
+        pos = self.game_map.player_pos
+        item = self.special_items.pop(pos, None)
+        if item:
+            self.inventory.add_item(item)
+            if item == "survivor":
+                self.rescued += 1
+            print(f"You found a {item}!")
+
+        # After each turn verify scenario progress -----------------------------
+        self._check_scenario_conditions()
+
+    def _check_scenario_conditions(self):
+        """Evaluate win/lose conditions for the current scenario."""
+
+        index = self.progress.get("current_index", -1)
+        if index < 0 or index >= len(self.scenarios):
+            return
+        scenario = self.scenarios[index]
+        if scenario.is_completed(self):
+            print("Scenario Complete! Objective achieved.")
+            self.record_scenario_result("player")
+            self.start_next_scenario()
+        elif scenario.is_failed(self):
+            print("Scenario Failed! Game over.")
+            self.current_scenario_id = None
+            self.progress["campaign_failed"] = True
 
     def _apply_night_effects(self):
         # strengthen existing enemies (increase their health by +1 within logical limits)
@@ -223,6 +259,7 @@ class Campaign:
 
         # Reset transient game state -----------------------------------
         self.game_map = GameMap(self.game_map.width, self.game_map.height)
+        self.game_map.player_entity = self.player
         self.enemies = EnemyManager.spawn_on_map(
             self.game_map.width,
             self.game_map.height,
@@ -236,6 +273,8 @@ class Campaign:
         self.status_effects = []
         self.skip_turn = False
         self.decoy_pos = None
+        self.rescued = 0
+        self.special_items = {}
 
         # Let the scenario perform custom setup ------------------------
         try:
@@ -245,7 +284,25 @@ class Campaign:
             # lightweight.
             pass
 
+        # extract special item placements for campaign bookkeeping
+        placement = scenario.special_conditions.get("item_placement", {})
+        items: Iterable = []
+        if isinstance(placement, dict):
+            items = placement.items()
+        elif isinstance(placement, list):
+            items = [((x, y), sym) for x, y, sym in placement]
+        symbol_map = {"A": "antidote", "S": "survivor"}
+        for (x, y), sym in items:
+            self.special_items[(x, y)] = symbol_map.get(sym, sym)
+
         return scenario
+
+    def rescue_survivor(self, count: int = 1) -> None:
+        """Record that ``count`` survivors were rescued."""
+
+        self.rescued += count
+        # optionally grant an item for bookkeeping
+        self.inventory.add_item("survivor", count)
 
     def record_scenario_result(self, winner: Any, legacy_bonus: Optional[dict] = None) -> None:
         """Store the result of the current scenario.

@@ -19,8 +19,9 @@
         "id": "finale",
         "name_key": "scenario_finale_name",
         "desc_key": "scenario_finale_desc",
-        "win_condition": {"survive_turns": 5},
+        "win_condition": {"item": "antidote"},
         "lose_condition": {"player_dead": true},
+        "special_conditions": {"item_placement": [[2, 2, "A"]]},
         "next_scenario": null
-    }
+      }
 ]
