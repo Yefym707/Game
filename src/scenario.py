@@ -43,6 +43,7 @@ class Scenario:
     win_condition: Dict[str, Any] = field(default_factory=dict)
     turn_limit: Optional[int] = None
     special_conditions: Dict[str, Any] = field(default_factory=dict)
+    lose_condition: Dict[str, Any] = field(default_factory=dict)
 
     def setup(self, board: Any, players: Sequence[Any]) -> None:
         """Perform scenario specific initialisation.
@@ -58,7 +59,12 @@ class Scenario:
 
         placement = self.special_conditions.get("item_placement", {})
         if hasattr(board, "place_entity"):
-            for (x, y), symbol in placement.items():
+            items: Iterable = []
+            if isinstance(placement, dict):
+                items = placement.items()
+            elif isinstance(placement, list):
+                items = [((x, y), sym) for x, y, sym in placement]
+            for (x, y), symbol in items:
                 try:
                     board.place_entity(x, y, symbol)
                 except Exception:
@@ -78,7 +84,10 @@ class Scenario:
         instead of full game objects.
         """
 
-        players: Iterable[Any] = getattr(game_state, "players", [])
+        players: Iterable[Any] = getattr(game_state, "players", None)
+        if players is None:
+            single = getattr(game_state, "player", None)
+            players = [single] if single is not None else []
         win = self.win_condition
 
         # Check for item possession ---------------------------------------
@@ -93,6 +102,12 @@ class Scenario:
                 ):
                     has_item = player.inventory.has_item(item_name)
                 if has_item:
+                    if item_name == "antidote":
+                        game_map = getattr(game_state, "game_map", None)
+                        start_attr = getattr(game_map, "start_pos", None)
+                        start_pos = tuple(start_attr) if start_attr else (0, 0)
+                        if (getattr(player, "x", None), getattr(player, "y", None)) != start_pos:
+                            continue
                     return True
 
         # Check for reaching a location ----------------------------------
@@ -106,8 +121,39 @@ class Scenario:
         # Check for surviving a number of turns --------------------------
         survive_turns = win.get("survive_turns")
         if survive_turns is not None:
-            current_turn = getattr(game_state, "turn", 0)
+            current_turn = getattr(game_state, "turn", getattr(game_state, "turn_count", 0))
             if current_turn >= int(survive_turns):
                 return True
+
+        # Check rescue counters ------------------------------------------
+        rescued = win.get("rescued")
+        if rescued is not None:
+            if getattr(game_state, "rescued", 0) >= int(rescued):
+                return True
+
+        return False
+
+    def is_failed(self, game_state: Any) -> bool:
+        """Return ``True`` if a lose condition is met."""
+
+        players: Iterable[Any] = getattr(game_state, "players", None)
+        if players is None:
+            single = getattr(game_state, "player", None)
+            players = [single] if single is not None else []
+        lose = self.lose_condition
+
+        if lose.get("player_dead"):
+            for player in players:
+                if getattr(player, "health", 1) <= 0:
+                    return True
+
+        limit = lose.get("turn_limit") or self.turn_limit
+        if limit is not None:
+            current_turn = getattr(game_state, "turn", getattr(game_state, "turn_count", 0))
+            if current_turn >= int(limit):
+                return True
+
+        if lose.get("base_destroyed") and getattr(game_state, "base_destroyed", False):
+            return True
 
         return False
