@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Any
 
 from crafting import Recipe
+from enemies import StatusEffect
 
 
 @dataclass
@@ -81,6 +82,7 @@ class Inventory:
             campaign.status_effects = [
                 e for e in campaign.status_effects if e.effect_type != "hunger"
             ]
+            campaign.player.hunger = 0
             self.remove_item(item_name, 1)
             if len(campaign.status_effects) < before:
                 return "You ate and satisfied your hunger."
@@ -90,8 +92,20 @@ class Inventory:
             campaign.status_effects = [
                 e for e in campaign.status_effects if e.effect_type != "thirst"
             ]
+            campaign.player.thirst = 0
             self.remove_item(item_name, 1)
             return "You quenched your thirst."
+
+        if item_name == "armor":
+            campaign.player.armor = 2
+            self.remove_item(item_name, 1)
+            return "You equipped armor to reduce incoming damage."
+
+        if item_name == "decoy":
+            campaign.decoy_pos = (campaign.player.x, campaign.player.y)
+            campaign.status_effects.append(StatusEffect("decoy", duration=3))
+            self.remove_item(item_name, 1)
+            return "You placed a decoy to distract zombies."
 
         if item_name == "antidote":
             removed = False

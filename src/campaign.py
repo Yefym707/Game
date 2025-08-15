@@ -1,4 +1,5 @@
 import json
+import os
 from typing import Optional, List, Any
 
 from inventory import Inventory
@@ -7,6 +8,16 @@ from enemies import EnemyManager, StatusEffect
 from trader import Trader
 from player import Player
 from scenario import Scenario
+
+
+def _load_balance() -> dict:
+    path = os.path.join(os.path.dirname(__file__), "..", "data", "balance.json")
+    with open(path, "r", encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+HUNGER_THRESHOLD = 5
+THIRST_THRESHOLD = 5
 
 class Campaign:
     """Container with all mutable state of the current game session."""
@@ -23,8 +34,19 @@ class Campaign:
         time_of_day: str = "day",
         status_effects: Optional[List[StatusEffect]] = None,
         progress: Optional[dict] = None,
+        difficulty: str = "normal",
     ):
         self.scenarios = scenarios
+        self.balance = _load_balance()
+        self.difficulty = difficulty
+        diff_mult = {"easy": 0.8, "normal": 1.0, "hard": 1.2}.get(difficulty, 1.0)
+        player_hp = int(self.balance.get("player", {}).get("hp", 5))
+        if difficulty == "easy":
+            player_hp = int(player_hp * 1.2)
+        elif difficulty == "hard":
+            player_hp = int(player_hp * 0.8)
+        enemy_hp = int(self.balance.get("zombie", {}).get("hp", 3) * diff_mult)
+        enemy_dmg = int(self.balance.get("zombie", {}).get("damage", 1) * diff_mult)
         # default scenario id is not set until the first scenario starts.  A
         # saved game may supply ``current_scenario_id`` explicitly.
         if current_scenario_id is None:
@@ -33,10 +55,17 @@ class Campaign:
             self.current_scenario_id = current_scenario_id
         self.game_map = game_map or GameMap(10, 8)
         self.inventory = inventory or Inventory()
-        self.player = player or Player()
+        self.player = player or Player(health=player_hp, max_health=player_hp)
         self.enemies = enemies or EnemyManager.spawn_on_map(
-            self.game_map.width, self.game_map.height, count=3, player_pos=self.game_map.player_pos
+            self.game_map.width,
+            self.game_map.height,
+            count=3,
+            player_pos=self.game_map.player_pos,
+            health=enemy_hp,
+            attack=enemy_dmg,
         )
+        self.enemy_hp = enemy_hp
+        self.enemy_damage = enemy_dmg
         self.turn_count = turn_count
         self.time_of_day = time_of_day  # "day" or "night"
         self.status_effects = [
@@ -45,6 +74,7 @@ class Campaign:
         ]
         self.progress = progress or {}
         self.skip_turn = False
+        self.decoy_pos = None
         # campaign progression bookkeeping ------------------------------
         # ``progress`` is serialised as part of the save game and may
         # already contain campaign related information.  ``current_index``
@@ -75,6 +105,30 @@ class Campaign:
                 # implement weakening or visibility restoration etc. if desired
                 pass
 
+        # Hunger and thirst progression
+        self.player.hunger += 1
+        self.player.thirst += 1
+        if (
+            self.player.hunger >= HUNGER_THRESHOLD
+            and not any(e.effect_type == "hunger" for e in self.status_effects)
+        ):
+            self.status_effects.append(StatusEffect("hunger", duration=-1))
+        if (
+            self.player.thirst >= THIRST_THRESHOLD
+            and not any(e.effect_type == "thirst" for e in self.status_effects)
+        ):
+            self.status_effects.append(StatusEffect("thirst", duration=-1))
+
+        for effect in list(self.status_effects):
+            if effect.effect_type in ("hunger", "thirst"):
+                self.player.take_damage(1)
+            else:
+                effect.duration -= 1
+                if effect.duration <= 0:
+                    self.status_effects.remove(effect)
+                    if effect.effect_type == "decoy":
+                        self.decoy_pos = None
+
     def _apply_night_effects(self):
         # strengthen existing enemies (increase their health by +1 within logical limits)
         for e in self.enemies.enemies:
@@ -83,7 +137,12 @@ class Campaign:
         import random
         if random.random() < 0.4:
             extra = EnemyManager.spawn_on_map(
-                self.game_map.width, self.game_map.height, count=1, player_pos=self.game_map.player_pos
+                self.game_map.width,
+                self.game_map.height,
+                count=1,
+                player_pos=self.game_map.player_pos,
+                health=self.enemy_hp,
+                attack=self.enemy_damage,
             )
             # add enemies from the extra manager
             self.enemies.enemies.extend(extra.enemies)
@@ -101,6 +160,8 @@ class Campaign:
             self.player.heal(heal_amount)
         # remove hunger/thirst and reduce poison
         self.status_effects = [e for e in self.status_effects if e.effect_type not in ("thirst", "hunger")]
+        self.player.hunger = 0
+        self.player.thirst = 0
         for e in self.status_effects:
             if e.effect_type == "poison":
                 e.duration = max(0, e.duration - 1)
@@ -157,12 +218,18 @@ class Campaign:
         # Reset transient game state -----------------------------------
         self.game_map = GameMap(self.game_map.width, self.game_map.height)
         self.enemies = EnemyManager.spawn_on_map(
-            self.game_map.width, self.game_map.height, count=3, player_pos=self.game_map.player_pos
+            self.game_map.width,
+            self.game_map.height,
+            count=3,
+            player_pos=self.game_map.player_pos,
+            health=self.enemy_hp,
+            attack=self.enemy_damage,
         )
         self.turn_count = 0
         self.time_of_day = "day"
         self.status_effects = []
         self.skip_turn = False
+        self.decoy_pos = None
 
         # Let the scenario perform custom setup ------------------------
         try:
@@ -223,6 +290,7 @@ class Campaign:
             "time_of_day": self.time_of_day,
             "status_effects": [e.to_dict() for e in self.status_effects],
             "progress": self.progress,
+            "difficulty": self.difficulty,
         }
 
     @staticmethod
@@ -238,6 +306,7 @@ class Campaign:
             time_of_day=data.get("time_of_day", "day"),
             status_effects=[StatusEffect.from_dict(d) for d in data.get("status_effects", [])],
             progress=data.get("progress", {}),
+            difficulty=data.get("difficulty", "normal"),
         )
 
     def save(self, path: str) -> None:

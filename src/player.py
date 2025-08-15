@@ -10,11 +10,31 @@ the expectations of the surrounding code base.
 
 from __future__ import annotations
 
+import json
+import os
 import random
 from typing import Optional
 
 from entity import Entity
 from inventory import Inventory
+
+# ---------------------------------------------------------------------------
+# balance loading
+
+_BALANCE_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "balance.json")
+try:  # pragma: no cover - defensive, path should exist
+    with open(_BALANCE_PATH, "r", encoding="utf-8") as fh:
+        _BALANCE_DATA = json.load(fh)
+except FileNotFoundError:  # fallback for tests that manipulate paths
+    _BALANCE_DATA = {"player": {"hp": 5, "damage": 1}}
+
+_PLAYER_BAL = _BALANCE_DATA.get("player", {})
+BALANCE_HP = int(_PLAYER_BAL.get("hp", 5))
+# Defaults keep the lightweight tests predictable. The campaign applies
+# ``BALANCE_HP`` when constructing the player for a full game session.
+DEFAULT_HP = 5
+# base damage is intentionally small; weapons increase it further
+DEFAULT_DAMAGE = 1
 
 
 class Player(Entity):
@@ -24,10 +44,11 @@ class Player(Entity):
         self,
         x: int = 0,
         y: int = 0,
-        health: int = 5,
-        max_health: int = 5,
+        health: int = DEFAULT_HP,
+        max_health: int = DEFAULT_HP,
         name: str = "Hero",
         inventory: Optional[Inventory] = None,
+        base_damage: int = DEFAULT_DAMAGE,
     ) -> None:
         super().__init__(x, y, health)
         self.max_health = max_health
@@ -39,6 +60,12 @@ class Player(Entity):
         # action management
         self.actions_left: int = 0
         self.turn_over: bool = False
+        # survival stats
+        self.hunger: int = 0
+        self.thirst: int = 0
+        # combat modifiers
+        self.base_damage: int = base_damage
+        self.armor: int = 0
 
     # ------------------------------------------------------------------
     # turn helpers
@@ -73,9 +100,10 @@ class Player(Entity):
         self.health = min(self.max_health, self.health + amount)
 
     def take_damage(self, amount: int) -> None:
-        """Reduce health by ``amount`` without going below zero."""
+        """Reduce health by ``amount`` taking armor into account."""
 
-        self.health = max(0, self.health - max(0, amount))
+        amount = max(0, amount - getattr(self, "armor", 0))
+        self.health = max(0, self.health - amount)
 
     # For backwards compatibility some parts of the project still call this
     # method ``damage``.  Delegate to :meth:`take_damage` so existing tests keep
@@ -146,12 +174,19 @@ class Player(Entity):
         if abs(self.x - target.x) + abs(self.y - target.y) != 1:
             return False
 
+        # calculate damage including weapon bonuses
+        dmg = self.base_damage
+        if self.inventory.has_item("gun"):
+            dmg += 4
+        elif self.inventory.has_item("knife"):
+            dmg += 1
+
         if hasattr(target, "take_damage"):
-            target.take_damage(1)
+            target.take_damage(dmg)
         elif hasattr(target, "damage"):
-            target.damage(1)
+            target.damage(dmg)
         else:  # pragma: no cover - defensive
-            target.health = max(0, target.health - 1)
+            target.health = max(0, target.health - dmg)
 
         self._use_action()
         return True
@@ -197,15 +232,24 @@ class Player(Entity):
             "max_health": self.max_health,
             "name": self.name,
             "inventory": self.inventory.to_dict(),
+            "hunger": self.hunger,
+            "thirst": self.thirst,
+            "armor": self.armor,
+            "base_damage": self.base_damage,
         }
 
     @staticmethod
     def from_dict(d: dict) -> "Player":
-        return Player(
+        p = Player(
             x=d.get("x", 0),
             y=d.get("y", 0),
-            health=d.get("health", 5),
-            max_health=d.get("max_health", d.get("health", 5)),
+            health=d.get("health", DEFAULT_HP),
+            max_health=d.get("max_health", d.get("health", DEFAULT_HP)),
             name=d.get("name", "Hero"),
             inventory=Inventory.from_dict(d.get("inventory", {})),
+            base_damage=d.get("base_damage", DEFAULT_DAMAGE),
         )
+        p.hunger = int(d.get("hunger", 0))
+        p.thirst = int(d.get("thirst", 0))
+        p.armor = int(d.get("armor", 0))
+        return p
