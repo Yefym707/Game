@@ -47,6 +47,8 @@ class PygameUI:
         pygame.display.set_caption("Survival Game")
         self.font = pygame.font.SysFont("consolas", 18)
 
+        self.legend_image = self._create_legend_surface()
+
         # ------------------------------------------------------------------
         # Local game state used for the demo mode.  A single player is placed on
         # the board together with a zombie.  ``GameClient`` is still used for the
@@ -88,6 +90,32 @@ class PygameUI:
         ]
         self.message = "Objective: Find the antidote and survive."
         self.message_until = pygame.time.get_ticks() + 4000
+
+    # ------------------------------------------------------------------
+    def _create_legend_surface(self) -> pygame.Surface:
+        """Create a simple legend surface showing map symbols."""
+        lines = [
+            ("P", "Player", COLORS["player"]),
+            ("Z", "Zombie", COLORS["zombie"]),
+            ("#", "Wall", (100, 100, 100)),
+            ("I", "Item", COLORS["item"]),
+        ]
+        pad = 4
+        size = self.font.get_height()
+        width = 0
+        rendered = []
+        for symbol, desc, color in lines:
+            text = self.font.render(f"{symbol} - {desc}", True, (255, 255, 255))
+            width = max(width, size + pad + text.get_width())
+            rendered.append((color, text))
+        height = (size + pad) * len(rendered)
+        surf = pygame.Surface((width, height), pygame.SRCALPHA)
+        y = 0
+        for color, text in rendered:
+            pygame.draw.rect(surf, color, (0, y, size, size))
+            surf.blit(text, (size + pad, y))
+            y += size + pad
+        return surf
 
     # ------------------------------------------------------------------
     def draw_board(self) -> None:
@@ -156,6 +184,17 @@ class PygameUI:
             )
 
     # ------------------------------------------------------------------
+    def draw_hud(self) -> None:
+        """Render a minimal heads-up display with player stats."""
+
+        hp = f"HP: {self.player.health}/{self.player.max_health}"
+        surf = self.font.render(hp, True, (255, 255, 255))
+        self.screen.blit(surf, (10, 10))
+        items = ", ".join(f"{k}:{v}" for k, v in self.player.inventory.items.items()) or "none"
+        inv = self.font.render(f"Inv: {items}", True, (255, 255, 255))
+        self.screen.blit(inv, (10, 10 + surf.get_height() + 5))
+
+    # ------------------------------------------------------------------
     def draw_help(self) -> None:
         if not self.show_help:
             return
@@ -168,7 +207,7 @@ class PygameUI:
             surf = self.font.render(line, True, (255, 255, 255))
             self.screen.blit(surf, (10, y))
             y += surf.get_height() + 5
-        # TODO: Load and display legend image here
+        self.screen.blit(self.legend_image, (10, y + 10))
 
     # ------------------------------------------------------------------
     def run(self) -> None:
@@ -256,6 +295,7 @@ class PygameUI:
             # draw frame
             self.draw_board()
             self.draw_stats()
+            self.draw_hud()
             self.draw_help()
             pygame.display.flip()
             clock.tick(60)
