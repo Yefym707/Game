@@ -91,7 +91,14 @@ class EnemyManager:
 
     # factory -----------------------------------------------------------
     @staticmethod
-    def spawn_on_map(width: int, height: int, count: int, player_pos: Tuple[int, int]) -> "EnemyManager":
+    def spawn_on_map(
+        width: int,
+        height: int,
+        count: int,
+        player_pos: Tuple[int, int],
+        health: int = 3,
+        attack: int = 1,
+    ) -> "EnemyManager":
         """Spawn ``count`` enemies on random positions of the map."""
 
         positions = {player_pos}
@@ -100,7 +107,7 @@ class EnemyManager:
             x, y = random.randint(0, width - 1), random.randint(0, height - 1)
             if (x, y) in positions:
                 continue
-            enemies.append(Enemy((x, y)))
+            enemies.append(Enemy((x, y), health=health, attack=attack))
             positions.add((x, y))
         return EnemyManager(enemies)
 
@@ -114,8 +121,12 @@ class EnemyManager:
         """
 
         steps = 2 if campaign and getattr(campaign, "time_of_day", "day") == "night" else 1
+        target = player_pos
+        if campaign and getattr(campaign, "decoy_pos", None) is not None:
+            if any(e.effect_type == "decoy" for e in getattr(campaign, "status_effects", [])):
+                target = campaign.decoy_pos
         for enemy in self.enemies:
-            enemy.move_towards(player_pos, width, height, steps)
+            enemy.move_towards(target, width, height, steps)
 
     def get_enemy_at(self, pos: Tuple[int, int]) -> Optional[Enemy]:
         for enemy in self.enemies:
