@@ -1,4 +1,9 @@
 import random
+import os
+import sys
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
+
 from src.player import Player
 from src.game_board import GameBoard
 from src.zombie import Zombie
@@ -16,13 +21,19 @@ def test_move_updates_board_and_actions():
     assert player.turn_over is True
 
 
-def test_attack_adjacent_zombie():
+def test_attack_adjacent_zombie(monkeypatch):
     board = GameBoard(3, 3)
     player = Player(1, 1)
     zombie = Zombie(1, 2)
     board.place_entity(1, 1, player.symbol)
     board.place_entity(1, 2, 'Z')
     player.start_turn(1)
+    def fake_random():
+        if getattr(fake_random, 'called', False):
+            return 1.0  # no critical
+        fake_random.called = True
+        return 0.0  # hit
+    monkeypatch.setattr(random, 'random', fake_random)
     assert player.attack(zombie)
     assert zombie.health == 2
     assert player.actions_left == 0

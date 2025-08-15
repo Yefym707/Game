@@ -159,12 +159,15 @@ class Player(Entity):
         return True
 
     def attack(self, target) -> bool:
-        """Attack an adjacent ``target`` reducing its health by one.
+        """Attempt to attack an adjacent ``target``.
 
-        Returns ``True`` if the attack was executed.  The attack consumes one
-        action.  The ``target`` is expected to expose ``take_damage`` or
-        ``damage`` methods.  If the target's health drops to zero or below it is
-        considered defeated.
+        The attack has an 80% chance to hit.  Weapons modify the base damage
+        and there is a flat 20% chance for a critical hit which doubles the
+        damage.  The method returns ``True`` if the action was performed – even
+        if the attack missed – and ``False`` if no attack took place (for
+        example because the target was out of range or the player had no
+        actions left).  Whether any damage was dealt can be inferred by the
+        caller by comparing the target's health before and after the call.
         """
 
         if self.actions_left <= 0:
@@ -174,12 +177,22 @@ class Player(Entity):
         if abs(self.x - target.x) + abs(self.y - target.y) != 1:
             return False
 
-        # calculate damage including weapon bonuses
+        # consume the action regardless of hit to keep turns consistent
+        self._use_action()
+
+        # hit chance
+        if random.random() > 0.8:
+            return True  # attack attempted but missed
+
         dmg = self.base_damage
         if self.inventory.has_item("gun"):
             dmg += 4
         elif self.inventory.has_item("knife"):
             dmg += 1
+
+        # critical hit chance
+        if random.random() < 0.2:
+            dmg *= 2
 
         if hasattr(target, "take_damage"):
             target.take_damage(dmg)
@@ -188,7 +201,6 @@ class Player(Entity):
         else:  # pragma: no cover - defensive
             target.health = max(0, target.health - dmg)
 
-        self._use_action()
         return True
 
     def search(self, game_board) -> Optional[str]:

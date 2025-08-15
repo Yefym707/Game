@@ -120,6 +120,46 @@ def game_loop(campaign: Campaign) -> None:
             item = command.split(maxsplit=1)[1]
             print(campaign.inventory.use_item(item, campaign))
             continue
+        elif command.startswith("attack"):
+            parts = command.split()
+            enemy = None
+            if len(parts) == 3:
+                try:
+                    tx, ty = int(parts[1]), int(parts[2])
+                except ValueError:
+                    print("Invalid coordinates.")
+                    continue
+                enemy = campaign.enemies.get_enemy_at((tx, ty))
+                px, py = campaign.game_map.player_pos
+                if not enemy or abs(tx - px) + abs(ty - py) != 1:
+                    print("No enemy in range.")
+                    continue
+            else:
+                px, py = campaign.game_map.player_pos
+                for dx, dy in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+                    enemy = campaign.enemies.get_enemy_at((px + dx, py + dy))
+                    if enemy:
+                        break
+                if not enemy:
+                    print("No enemy in range.")
+                    continue
+
+            campaign.player.set_position(*campaign.game_map.player_pos)
+            campaign.player.start_turn(1)
+            pre_hp = enemy.health
+            if campaign.player.attack(enemy):
+                dmg = pre_hp - enemy.health
+                if dmg > 0:
+                    print(f"You attack the zombie for {dmg} damage.")
+                    if enemy.health <= 0:
+                        print("The zombie is defeated!")
+                        campaign.enemies.enemies.remove(enemy)
+                else:
+                    print("You miss.")
+                campaign.turn_count += 1
+            else:
+                print("No enemy in range.")
+            # proceed to enemy phase after a valid attack
         elif command == "trader":
             interact_with_trader(campaign)
             continue
