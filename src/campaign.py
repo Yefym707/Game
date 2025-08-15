@@ -75,6 +75,12 @@ class Campaign:
         self.progress = progress or {}
         self.skip_turn = False
         self.decoy_pos = None
+        layout_path = os.path.join(os.path.dirname(__file__), "..", "board_layout.json")
+        try:
+            with open(layout_path, "r", encoding="utf-8") as fh:
+                self.board_layout = json.load(fh)
+        except FileNotFoundError:
+            self.board_layout = ["." * self.game_map.width for _ in range(self.game_map.height)]
         # campaign progression bookkeeping ------------------------------
         # ``progress`` is serialised as part of the save game and may
         # already contain campaign related information.  ``current_index``

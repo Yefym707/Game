@@ -117,7 +117,7 @@ class GameMap:
           - #  — hidden cell
         """
         enemies = enemies or []
-        enemy_positions = set(e.pos for e in enemies)
+        enemy_symbols = {tuple(e.pos): getattr(e, "symbol", "E") for e in enemies}
         zone_positions = {tuple(z.pos): z for z in self.zones}
         lines = []
         for y in range(self.height):
@@ -140,15 +140,16 @@ class GameMap:
                     line += cell + " " if len(cell) == 1 else cell + " "
                     # cell already includes a trailing char, adjust spacing later
                     line = line[:-1]  # correct double spacing
-                elif pos in enemy_positions:
+                elif pos in enemy_symbols:
                     # enemy present
                     token_sym = ""
                     if token_manager:
                         token_sym = token_manager.get_symbols_at(pos, max_symbols=1)
+                    symbol = enemy_symbols[pos]
                     if token_sym:
-                        cell = (token_sym + "E")[:2]
+                        cell = (token_sym + symbol)[:2]
                     else:
-                        cell = "E "
+                        cell = f"{symbol} "
                     line += cell + " "
                     line = line[:-1]
                 elif token_manager:
